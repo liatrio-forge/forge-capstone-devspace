@@ -30,12 +30,14 @@ var DefaultIgnores = []string{
 }
 
 type Config struct {
-	MachineID       string `json:"machineId"`
-	MachineName     string `json:"machineName"`
-	WorkspaceRoot   string `json:"workspaceRoot"`
-	AgeIdentityPath string `json:"ageIdentityPath"`
-	CreatedAt       string `json:"createdAt"`
-	UpdatedAt       string `json:"updatedAt"`
+	MachineID        string `json:"machineId"`
+	MachineName      string `json:"machineName"`
+	WorkspaceRoot    string `json:"workspaceRoot"`
+	AgeIdentityPath  string `json:"ageIdentityPath"`
+	ManifestRemote   string `json:"manifestRemote,omitempty"`
+	ManifestRepoPath string `json:"manifestRepoPath,omitempty"`
+	CreatedAt        string `json:"createdAt"`
+	UpdatedAt        string `json:"updatedAt"`
 }
 
 type State struct {

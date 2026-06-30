@@ -65,6 +65,36 @@ func newInitCommand() *cobra.Command {
 func newWorkspaceCommand() *cobra.Command {
 	cmd := &cobra.Command{Use: "workspace", Short: "Manage workspace"}
 	cmd.AddCommand(newScanCommand())
+	cmd.AddCommand(newWorkspaceRemoteCommand())
+	cmd.AddCommand(&cobra.Command{
+		Use:   "push",
+		Short: "Push workspace manifest to the configured Git remote",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			changed, err := PushWorkspaceManifest()
+			if err != nil {
+				return err
+			}
+			if changed {
+				fmt.Fprintln(cmd.OutOrStdout(), "Pushed workspace manifest.")
+				return nil
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "Workspace manifest already up to date.")
+			return nil
+		},
+	})
+	cmd.AddCommand(&cobra.Command{
+		Use:   "pull",
+		Short: "Pull workspace manifest from the configured Git remote",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, err := PullWorkspaceManifest()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "Pulled workspace manifest.")
+			fmt.Fprintln(cmd.OutOrStdout(), "Next: devspace plan && devspace apply")
+			return nil
+		},
+	})
 	var dryRun bool
 	syncCmd := &cobra.Command{
 		Use:        "sync",
@@ -92,6 +122,37 @@ func newWorkspaceCommand() *cobra.Command {
 	}
 	syncCmd.Flags().BoolVar(&dryRun, "dry-run", false, "show planned actions without changing files")
 	cmd.AddCommand(syncCmd)
+	return cmd
+}
+
+func newWorkspaceRemoteCommand() *cobra.Command {
+	cmd := &cobra.Command{Use: "remote", Short: "Manage workspace manifest remote"}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "set <url-or-path>",
+		Short: "Set workspace manifest Git remote",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := SetManifestRemote(args[0])
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", cfg.ManifestRemote)
+			return nil
+		},
+	})
+	cmd.AddCommand(&cobra.Command{
+		Use:   "get",
+		Short: "Print workspace manifest Git remote",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := GetManifestRemote()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", cfg.ManifestRemote)
+			return nil
+		},
+	})
 	return cmd
 }
 

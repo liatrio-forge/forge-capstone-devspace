@@ -520,6 +520,9 @@ func hardeningBareRepo(t *testing.T) string {
 
 func hardeningRun(t *testing.T, dir, name string, args ...string) {
 	t.Helper()
+	if name == "git" {
+		args = append([]string{"-c", "commit.gpgsign=false"}, args...)
+	}
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()

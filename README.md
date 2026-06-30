@@ -21,8 +21,8 @@ go run ./cmd/devdrop --help
 
 ## Current MVP Status
 
-This MVP is intentionally local-only. It proves the workflow before adding
-hosted sync, background daemons, or filesystem-level lazy loading.
+This MVP is local-first. It proves the workflow before adding hosted sync,
+background daemons, or filesystem-level lazy loading.
 
 What works today:
 
@@ -34,6 +34,7 @@ What works today:
 - Add local projects to the manifest.
 - Plan and apply safe missing project structure as empty placeholder folders.
 - Hydrate placeholder Git projects with normal `git clone`.
+- Push and pull the workspace manifest through a user-owned Git repository.
 - Store encrypted per-project env profiles with native age encryption.
 - Generate local `.env` files with `0600` permissions.
 
@@ -135,6 +136,40 @@ devspace workspace sync
 
 Compatibility alias. Prefer `devspace plan` and `devspace apply`.
 
+### `devspace workspace remote`
+
+```bash
+devspace workspace remote set <git-url-or-local-path>
+devspace workspace remote get
+```
+
+Stores the Git remote used for manifest sync in local config. The remote setting
+is not written into the workspace manifest.
+
+### `devspace workspace push`
+
+```bash
+devspace workspace push
+```
+
+Validates the local manifest, clones the manifest repo cache if needed, writes
+only `manifest.json`, commits only when the manifest changed, and pushes to the
+configured Git remote. If the manifest repo is dirty or the remote branch is
+newer/diverged, the command stops and asks you to pull or reconcile first.
+
+### `devspace workspace pull`
+
+```bash
+devspace workspace pull
+devspace plan
+devspace apply
+```
+
+Fetches the configured manifest repo, validates the remote `manifest.json`, backs
+up the current local manifest, and atomically replaces it. It does not run
+`apply`, hydrate projects, pull project repos, install dependencies, or overwrite
+project contents.
+
 ### `devspace project hydrate`
 
 ```bash
@@ -176,6 +211,7 @@ export DEV_DROP_HOME="$tmp/home"
 workspace_a="$tmp/workspace-a"
 remote_src="$tmp/remote-src"
 remote_bare="$tmp/client-a-api.git"
+manifest_remote="$tmp/manifest-sync.git"
 
 mkdir -p "$remote_src"
 git -C "$remote_src" init -b main
@@ -185,12 +221,15 @@ printf '# client-a-api\n' > "$remote_src/README.md"
 git -C "$remote_src" add README.md
 git -C "$remote_src" commit -m "initial"
 git clone --bare "$remote_src" "$remote_bare"
+git init --bare -b main "$manifest_remote"
 
 bin/devspace init --workspace "$workspace_a"
 mkdir -p "$workspace_a/work/client-a-api"
 git clone "$remote_bare" "$workspace_a/work/client-a-api"
 printf '{"scripts":{"dev":"vite"}}\n' > "$workspace_a/work/client-a-api/package.json"
 bin/devspace scan
+bin/devspace workspace remote set "$manifest_remote"
+bin/devspace workspace push
 bin/devspace plan
 bin/devspace apply
 printf 'postgres://demo\n' | bin/devspace env set client-a-api DATABASE_URL
@@ -199,17 +238,26 @@ bin/devspace env pull client-a-api
 bin/devspace status
 ```
 
-## Two-Machine Simulation Workflow
+## Two-Machine Git Sync Workflow
 
-To simulate a second machine, copy the first workspace manifest into a second
-workspace and run plan/apply there.
+To simulate a second machine, use a local bare Git repo for the manifest.
 
 ```bash
 workspace_b="$tmp/workspace-b"
+manifest_remote="$tmp/manifest-sync.git"
 
+git init --bare -b main "$manifest_remote"
+
+export DEV_DROP_HOME="$tmp/home-a"
+bin/devspace init --workspace "$workspace_a"
+bin/devspace scan
+bin/devspace workspace remote set "$manifest_remote"
+bin/devspace workspace push
+
+export DEV_DROP_HOME="$tmp/home-b"
 bin/devspace init --workspace "$workspace_b"
-mkdir -p "$workspace_b/.devdrop"
-cp "$workspace_a/.devdrop/manifest.json" "$workspace_b/.devdrop/manifest.json"
+bin/devspace workspace remote set "$manifest_remote"
+bin/devspace workspace pull
 bin/devspace plan
 bin/devspace apply
 bin/devspace status
@@ -232,17 +280,31 @@ when the manifest includes its remote.
 - Env values are encrypted at rest with age.
 - `env list` masks secret values.
 - `env pull` writes `.env` with `0600` permissions.
+- Git-backed sync stores only `manifest.json`.
+- Manifest sync strips machine-local workspace paths from the synced manifest
+  and localizes the manifest on pull.
 - The MVP has no hosted control plane and no background process.
+
+## Conflict Behavior
+
+Manifest sync stops with a clear error when:
+
+- No manifest remote is configured.
+- Git is not installed.
+- The manifest repo cannot be cloned, fetched, pulled, or pushed.
+- The manifest repo has uncommitted changes.
+- The remote branch is newer or diverged.
+- The pulled manifest is invalid JSON or fails manifest validation.
+- Pull would overwrite local manifest changes.
 
 ## What This Tool Will Not Do Without Permission
 
 - Delete local projects, files, or directories.
 - Overwrite existing project contents during apply or hydrate.
-- Auto-pull, rebase, merge, or push Git repositories.
+- Auto-pull, rebase, merge, or push project Git repositories.
 - Resolve Git conflicts.
 - Install dependencies or run project setup commands.
-- Upload manifests, secrets, source code, or project metadata to a hosted
-  service.
+- Upload secrets, source code, or project files.
 - Share env profiles with teammates.
 - Rotate secrets or replace local `.env` values without an explicit command.
 - Watch the filesystem in the background.
@@ -250,7 +312,7 @@ when the manifest includes its remote.
 
 ## Known Limitations
 
-- Manifest exchange is manual; there is no Git-backed or hosted manifest sync.
+- Hosted manifest sync is not implemented.
 - Placeholder hydration uses full `git clone`; partial clone and sparse checkout
   are not implemented.
 - Secret profiles are local to the workspace; there is no team sharing, OS
@@ -279,7 +341,7 @@ when the manifest includes its remote.
 
 ## Roadmap
 
-- Git-backed manifest push/pull.
+- Manifest conflict resolution and force flags.
 - Hosted API or cloud object storage.
 - Background daemon and filesystem watchers.
 - FUSE or virtual filesystem lazy loading.
