@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "workspaceRoot": "/Users/jacob/code",
+  "machines": [
+    {
+      "id": "machine_abc123",
+      "name": "mac-mini",
+      "os": "darwin",
+      "arch": "arm64",
+      "workspaceRoot": "/Users/jacob/code",
+      "lastSeenAt": "2026-06-30T10:00:00Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "project_abc123",
+      "name": "client-a-api",
+      "path": "work/client-a-api",
+      "type": "git",
+      "remote": "git@github.com:org/client-a-api.git",
+      "defaultBranch": "main",
+      "hydrateMode": "on-demand",
+      "envProfiles": [
+        "dev"
+      ],
+      "ignore": [
+        "node_modules",
+        "dist",
+        ".next",
+        "coverage"
+      ],
+      "setup": {
+        "packageManager": "pnpm",
+        "installCommand": "pnpm install",
+        "devCommand": "pnpm dev"
+      }
+    }
+  ]
+}
+
