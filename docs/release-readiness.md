@@ -58,7 +58,7 @@
 
 - Manifest exchange between machines uses user-owned Git remotes only.
 - There is no hosted sync, daemon, FUSE layer, partial clone, or sparse checkout.
-- Secret profiles are local-only; there is no OS keychain integration, team sharing, backup, or rotation flow.
+- Secret profile sharing uses explicit age recipients only; there is no OS keychain integration, remote backup, managed identity provider, or guaranteed clawback after a recipient has copied or decrypted material.
 - Dependency/setup commands are detected only as hints and are never executed.
 - The source package path is still `cmd/devdrop`, but the intended binary name is `devspace`.
 

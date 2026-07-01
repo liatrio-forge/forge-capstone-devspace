@@ -2,7 +2,7 @@
 
 DevDrop ships the local-first CLI as a `devspace` binary built from the existing
 Go module. The release workflow below only packages the CLI; it does not add
-hosted sync, a daemon, FUSE behavior, team secret sharing, or dependency install
+hosted sync, a daemon, FUSE behavior, managed team identity, or dependency install
 behavior.
 
 ## Prerequisites

@@ -630,6 +630,104 @@ func newEnvCommand() *cobra.Command {
 	}
 	pull.Flags().StringVar(&profile, "profile", "dev", "env profile")
 	cmd.AddCommand(pull)
+	cmd.AddCommand(newEnvRecipientCommand())
+	return cmd
+}
+
+func newEnvRecipientCommand() *cobra.Command {
+	cmd := &cobra.Command{Use: "recipient", Short: "Manage encrypted env profile recipients"}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "export",
+		Short: "Print this machine's public age recipient",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			recipient, err := EnvRecipientExport()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Name: %s\n", recipient.Name)
+			fmt.Fprintf(cmd.OutOrStdout(), "ID: %s\n", recipient.ID)
+			fmt.Fprintf(cmd.OutOrStdout(), "Age recipient: %s\n", recipient.AgeRecipient)
+			return nil
+		},
+	})
+	var listProfile string
+	list := &cobra.Command{
+		Use:   "list <project>",
+		Short: "List recipients for an encrypted env profile",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			recipients, err := EnvRecipients(args[0], listProfile)
+			if err != nil {
+				return err
+			}
+			for _, recipient := range recipients {
+				status := "active"
+				if recipient.RevokedAt != "" {
+					status = "revoked"
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", recipient.ID, recipient.Name, status)
+			}
+			return nil
+		},
+	}
+	list.Flags().StringVar(&listProfile, "profile", "dev", "env profile")
+	cmd.AddCommand(list)
+
+	var inviteProfile string
+	var inviteTeam string
+	invite := &cobra.Command{
+		Use:   "invite <project> <name> <age-recipient>",
+		Short: "Encrypt an env profile for another recipient",
+		Args:  cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			recipient, err := EnvInvite(args[0], inviteProfile, args[1], args[2], inviteTeam)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Invited %s (%s) to %s/%s.\n", recipient.Name, recipient.ID, args[0], profileOrDefault(inviteProfile))
+			return nil
+		},
+	}
+	invite.Flags().StringVar(&inviteProfile, "profile", "dev", "env profile")
+	invite.Flags().StringVar(&inviteTeam, "team", "", "team name for manifest access metadata")
+	cmd.AddCommand(invite)
+
+	var revokeProfile string
+	var revokeReason string
+	revoke := &cobra.Command{
+		Use:   "revoke <project> <recipient-id-or-name>",
+		Short: "Remove a recipient from future encrypted profile writes",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			recipient, err := EnvRevoke(args[0], revokeProfile, args[1], revokeReason)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Revoked %s (%s) from %s/%s.\n", recipient.Name, recipient.ID, args[0], profileOrDefault(revokeProfile))
+			fmt.Fprintln(cmd.OutOrStdout(), "Already copied ciphertext, pulled .env files, and previously decrypted values cannot be clawed back.")
+			return nil
+		},
+	}
+	revoke.Flags().StringVar(&revokeProfile, "profile", "dev", "env profile")
+	revoke.Flags().StringVar(&revokeReason, "reason", "", "revocation note")
+	cmd.AddCommand(revoke)
+
+	var rotateProfile string
+	rotate := &cobra.Command{
+		Use:   "rotate <project>",
+		Short: "Rewrap an env profile for current active recipients",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := EnvRotateRecipients(args[0], rotateProfile); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Rewrapped %s/%s for current active recipients.\n", args[0], profileOrDefault(rotateProfile))
+			return nil
+		},
+	}
+	rotate.Flags().StringVar(&rotateProfile, "profile", "dev", "env profile")
+	cmd.AddCommand(rotate)
 	return cmd
 }
 

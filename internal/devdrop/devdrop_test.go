@@ -2,11 +2,15 @@ package devdrop
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"filippo.io/age"
 )
 
 func TestInitWorkspaceIsIdempotent(t *testing.T) {
@@ -98,7 +102,7 @@ func TestWorkspaceScanDetectsGitAndSetup(t *testing.T) {
 	run(t, app, "git", "config", "user.email", "test@example.com")
 	run(t, app, "git", "config", "user.name", "Test User")
 	write(t, filepath.Join(app, "package.json"), `{"scripts":{"dev":"vite"}}`)
-	write(t, filepath.Join(app, ".env"), "TOKEN=local\n")
+	write(t, filepath.Join(app, ".env"), "DEV_DROP_ENV_PRESENT=1\n")
 	run(t, app, "git", "add", "package.json")
 	run(t, app, "git", "commit", "-m", "initial")
 	write(t, filepath.Join(app, "README.md"), "dirty\n")
@@ -205,7 +209,8 @@ func TestEncryptedEnvProfilesRoundTripWithoutPlaintextStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := EnvSet("api", "DATABASE_URL", "dev", strings.NewReader("postgres://secret\n")); err != nil {
+	envValue := strings.Repeat("x", 12)
+	if err := EnvSet("api", "DATABASE_URL", "dev", strings.NewReader(envValue+"\n")); err != nil {
 		t.Fatal(err)
 	}
 	keys, err := EnvList("api", "dev")
@@ -219,7 +224,7 @@ func TestEncryptedEnvProfilesRoundTripWithoutPlaintextStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(ciphertext, []byte("postgres://secret")) {
+	if bytes.Contains(ciphertext, []byte(envValue)) {
 		t.Fatal("secret stored in plaintext")
 	}
 	envPath, err := EnvPull("api", "dev")
@@ -230,8 +235,8 @@ func TestEncryptedEnvProfilesRoundTripWithoutPlaintextStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(data) != "DATABASE_URL=postgres://secret\n" {
-		t.Fatalf("unexpected .env content: %q", string(data))
+	if string(data) != "DATABASE_URL="+envValue+"\n" {
+		t.Fatal("unexpected .env content")
 	}
 	info, err := os.Stat(envPath)
 	if err != nil {
@@ -246,6 +251,79 @@ func TestEncryptedEnvProfilesRoundTripWithoutPlaintextStorage(t *testing.T) {
 	}
 	if !st.Projects[p.ID].EnvFilePresent {
 		t.Fatal("state was not refreshed after env pull")
+	}
+}
+
+func TestEncryptedEnvProfilesCanInviteAndRevokeRecipients(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	cfg, err := InitWorkspace(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectPath := filepath.Join(workspace, "work", "api")
+	if err := os.MkdirAll(projectPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p, err := AddProject("work/api")
+	if err != nil {
+		t.Fatal(err)
+	}
+	envValue := strings.Repeat("y", 12)
+	if err := EnvSet("api", "TOKEN", "dev", strings.NewReader(envValue+"\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	teammate, err := age.GenerateX25519Identity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	invited, err := EnvInvite("api", "dev", "teammate", teammate.Recipient().String(), "platform")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if invited.ID == "" {
+		t.Fatal("invite did not return a recipient id")
+	}
+	profile := decryptSecretProfileForTest(t, secretPath(cfg, p.ID, "dev"), teammate)
+	if len(profile.Values) != 1 || profile.Values["TOKEN"] == "" {
+		t.Fatal("teammate could not decrypt invited profile")
+	}
+	if len(profile.Recipients) != 2 {
+		t.Fatalf("expected local and teammate recipients, got %d", len(profile.Recipients))
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Users) != 2 || len(m.Teams) != 1 {
+		t.Fatalf("manifest access metadata not populated: users=%d teams=%d", len(m.Users), len(m.Teams))
+	}
+	if len(m.Access) != 2 {
+		t.Fatalf("expected owner and team project access, got %d", len(m.Access))
+	}
+
+	revoked, err := EnvRevoke("api", "dev", invited.ID, "offboarding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if revoked.ID != invited.ID {
+		t.Fatal("revoked the wrong recipient")
+	}
+	if _, err := decryptSecretProfile(secretPath(cfg, p.ID, "dev"), teammate); err == nil {
+		t.Fatal("revoked recipient can still decrypt the rewrapped profile")
+	}
+	if err := EnvRotateRecipients("api", "dev"); err != nil {
+		t.Fatal(err)
+	}
+	local, err := loadIdentity(cfg.AgeIdentityPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	localProfile := decryptSecretProfileForTest(t, secretPath(cfg, p.ID, "dev"), local)
+	if localProfile.Values["TOKEN"] == "" {
+		t.Fatal("local recipient lost access after revocation")
 	}
 }
 
@@ -301,4 +379,33 @@ func write(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func decryptSecretProfileForTest(t *testing.T, path string, identity *age.X25519Identity) SecretProfile {
+	t.Helper()
+	profile, err := decryptSecretProfile(path, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return profile
+}
+
+func decryptSecretProfile(path string, identity *age.X25519Identity) (SecretProfile, error) {
+	ciphertext, err := os.ReadFile(path)
+	if err != nil {
+		return SecretProfile{}, err
+	}
+	reader, err := age.Decrypt(bytes.NewReader(ciphertext), identity)
+	if err != nil {
+		return SecretProfile{}, err
+	}
+	plaintext, err := io.ReadAll(reader)
+	if err != nil {
+		return SecretProfile{}, err
+	}
+	var profile SecretProfile
+	if err := json.Unmarshal(plaintext, &profile); err != nil {
+		return SecretProfile{}, err
+	}
+	return profile, nil
 }

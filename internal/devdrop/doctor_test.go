@@ -11,7 +11,7 @@ import (
 func TestDoctorReportsProjectStatesWithoutMutatingWorkspaceFiles(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	localPath := filepath.Join(workspace, "apps", "local")
-	hardeningWriteFile(t, filepath.Join(localPath, ".env"), "TOKEN=local\n", 0o600)
+	hardeningWriteFile(t, filepath.Join(localPath, ".env"), "DEV_DROP_ENV_PRESENT=1\n", 0o600)
 	placeholderPath := filepath.Join(workspace, "apps", "placeholder")
 	if err := os.MkdirAll(placeholderPath, 0o755); err != nil {
 		t.Fatal(err)

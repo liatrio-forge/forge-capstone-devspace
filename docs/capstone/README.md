@@ -48,7 +48,7 @@ encrypted locally.
    [remote-agent-case-study.md](remote-agent-case-study.md), whether via a
    wave-ship run or manually.
 3. Push the frontier track: hosted sync, daemon/watch mode, FUSE lazy mount,
-   team secret sharing, and explicit dependency install.
+   managed team identity, and explicit dependency install.
 4. Record the demo using [demo-script.md](demo-script.md).
 5. Capture final proof links in [proof-artifacts.md](proof-artifacts.md).
 6. Add the personal reflection after demo feedback is received.

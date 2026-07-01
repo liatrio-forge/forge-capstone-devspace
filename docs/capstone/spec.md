@@ -39,7 +39,7 @@ frontier work:
 - Filesystem daemon or watcher.
 - FUSE or virtual filesystem.
 - Dependency installation automation.
-- Team secret sharing.
+- Managed team identity and remote secret backup.
 
 These remain out of scope:
 

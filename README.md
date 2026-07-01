@@ -354,14 +354,30 @@ Known package managers are executed without a shell. Unknown snippets require
 ### `devspace env`
 
 ```bash
-printf 'postgres://local\n' | devspace env set client-a-api DATABASE_URL
+printf '%s\n' "$CLIENT_A_DATABASE_URL" | devspace env set client-a-api DATABASE_URL
 devspace env list client-a-api
 devspace env pull client-a-api
+devspace env recipient export
+devspace env recipient invite client-a-api teammate age1...
+devspace env recipient revoke client-a-api teammate
 ```
 
 `env set` reads from stdin when piped, or prompts for a hidden value when run in a
 terminal. `env list` prints keys only, with values masked. `env pull` writes the
 local project `.env` with `0600` permissions.
+
+`env recipient export` prints this machine's public age recipient so another
+developer can invite it. `env recipient invite` decrypts the local profile,
+updates public recipient/access metadata in `manifest.json`, and re-encrypts the
+profile for the local user plus the invited recipient. Use `--team <name>` on
+`invite` to record team-oriented project access metadata.
+
+`env recipient revoke` removes a recipient from future encrypted profile writes
+and records revocation metadata. This is an envelope rewrap, not a clawback:
+previously copied ciphertext, pulled `.env` files, and values already decrypted
+by that recipient remain outside DevDrop's control. After changing team
+membership, `env recipient rotate <project>` rewraps the profile for the current
+active recipients without changing secret values.
 
 Encrypted profiles are stored under:
 
@@ -402,7 +418,7 @@ bin/devspace workspace remote create local "$manifest_remote"
 bin/devspace workspace push
 bin/devspace plan
 bin/devspace apply
-printf 'postgres://demo\n' | bin/devspace env set client-a-api DATABASE_URL
+printf '%s\n' "$CLIENT_A_DATABASE_URL" | bin/devspace env set client-a-api DATABASE_URL
 bin/devspace env list client-a-api
 bin/devspace env pull client-a-api
 bin/devspace status
@@ -450,13 +466,15 @@ when the manifest includes its remote.
 - `watch --sync git` pushes only `manifest.json` through Git-backed sync.
 - `watch --sync hosted` pushes only the normalized manifest envelope.
 - Env values are encrypted at rest with age.
+- Env profiles can be encrypted to multiple explicit age recipients.
 - `env list` masks secret values.
 - `env pull` writes `.env` with `0600` permissions.
 - Git-backed sync stores only `manifest.json`.
 - Manifest sync strips machine-local workspace paths from the synced manifest
   and localizes the manifest on pull.
 - Hosted sync is opt-in, stores only normalized manifest metadata, and never
-  uploads source code, dependency folders, `.env` files, or secret values.
+  uploads source code, dependency folders, `.env` files, encrypted secret
+  payloads, or plaintext secret values.
 - The MVP has no background process.
 
 ## Conflict Behavior
@@ -485,8 +503,10 @@ Manifest sync stops with a clear error when:
 - Install dependencies or run project setup commands during scan, pull, apply,
   hydrate, watch, daemon, or filesystem reads.
 - Upload secrets, source code, or project files.
-- Share env profiles with teammates.
-- Rotate secrets or replace local `.env` values without an explicit command.
+- Share env profiles with teammates without an explicit recipient invite.
+- Rotate recipient access or replace local `.env` values without an explicit
+  command.
+- Watch the filesystem in the background.
 - Mount a FUSE or virtual filesystem.
 
 ## Known Limitations
@@ -494,8 +514,9 @@ Manifest sync stops with a clear error when:
 - Hosted manifest sync is a local runnable prototype, not a managed deployment.
 - Placeholder hydration uses full `git clone`; partial clone and sparse checkout
   are not implemented.
-- Secret profiles are local to the workspace; there is no team sharing, OS
-  keychain integration, remote backup, or rotation flow.
+- Secret profile sharing uses public age recipients and local re-encryption.
+  There is no remote backup, OS keychain integration, managed identity provider,
+  or guaranteed revocation of previously copied/decrypted material.
 - Setup hints are informational during scan and sync; installs only run through
   explicit `devspace setup` commands.
 - Editor settings, VS Code extensions, devcontainers, Nix, mise, and asdf are
@@ -529,9 +550,9 @@ Manifest sync stops with a clear error when:
 - Daemon process management for running watch mode outside a terminal.
 - FUSE or virtual filesystem lazy loading.
 - Git partial clone or sparse checkout.
-- Team/shared secret profiles.
+- Managed team identity provider integration.
 - OS keychain integration.
-- Secret rotation.
+- Secret value rotation.
 - Editor settings, devcontainer, Nix, mise, or asdf sync.
 - Release-readiness checklist automation.
 

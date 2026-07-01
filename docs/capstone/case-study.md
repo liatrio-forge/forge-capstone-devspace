@@ -80,8 +80,9 @@ that produced it.
   real-time collaboration or conflict resolution UI.
 - Placeholder directories are safe and simple, but they do not provide lazy file
   access like FUSE or virtual filesystem designs.
-- Env profiles are encrypted locally, but there is no team sharing, cloud
-  backup, or rotation flow.
+- Env profiles can be rewrapped for explicit age recipients, but there is no
+  cloud backup, managed identity provider, or guaranteed clawback after a
+  recipient has copied or decrypted material.
 - Setup commands are detected as hints, but DevDrop does not install
   dependencies because automatic execution would cross a safety boundary.
 
@@ -99,7 +100,7 @@ Use DevDrop as a teaching example for AI-native delivery:
 
 ## Current Limitations
 
-- Hosted sync, daemon/watch mode, FUSE lazy mounting, team secret sharing, and
+- Hosted sync, daemon/watch mode, FUSE lazy mounting, managed team identity, and
   explicit dependency install are capstone frontier work, not part of the
   completed local-first MVP baseline.
 - No source-code syncing.

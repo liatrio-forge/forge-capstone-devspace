@@ -46,6 +46,7 @@ func ValidateManifest(m Manifest) error {
 	ids := map[string]bool{}
 	paths := map[string]bool{}
 	names := map[string]bool{}
+	projectIDs := map[string]bool{}
 	for _, p := range m.Projects {
 		if p.ID == "" || p.Name == "" || p.Path == "" {
 			return fmt.Errorf("project id, name, and path are required")
@@ -57,6 +58,7 @@ func ValidateManifest(m Manifest) error {
 			return fmt.Errorf("duplicate project id %q", p.ID)
 		}
 		ids[p.ID] = true
+		projectIDs[p.ID] = true
 		if paths[p.Path] {
 			return fmt.Errorf("duplicate project path %q", p.Path)
 		}
@@ -72,6 +74,59 @@ func ValidateManifest(m Manifest) error {
 			return fmt.Errorf("project %s has unsupported hydrateMode %q", p.Name, p.HydrateMode)
 		}
 	}
+	userIDs := map[string]bool{}
+	for _, u := range m.Users {
+		if strings.TrimSpace(u.ID) == "" || strings.TrimSpace(u.Name) == "" || strings.TrimSpace(u.AgeRecipient) == "" {
+			return fmt.Errorf("user id, name, and ageRecipient are required")
+		}
+		if _, err := parseAgeRecipient(u.AgeRecipient); err != nil {
+			return fmt.Errorf("user %s has invalid ageRecipient: %w", u.ID, err)
+		}
+		if userIDs[u.ID] {
+			return fmt.Errorf("duplicate user id %q", u.ID)
+		}
+		userIDs[u.ID] = true
+	}
+	teamIDs := map[string]bool{}
+	for _, team := range m.Teams {
+		if strings.TrimSpace(team.ID) == "" || strings.TrimSpace(team.Name) == "" {
+			return fmt.Errorf("team id and name are required")
+		}
+		if teamIDs[team.ID] {
+			return fmt.Errorf("duplicate team id %q", team.ID)
+		}
+		teamIDs[team.ID] = true
+		memberIDs := map[string]bool{}
+		for _, member := range team.Members {
+			if !userIDs[member.UserID] {
+				return fmt.Errorf("team %s references unknown user %q", team.Name, member.UserID)
+			}
+			if memberIDs[member.UserID] {
+				return fmt.Errorf("team %s has duplicate member %q", team.Name, member.UserID)
+			}
+			memberIDs[member.UserID] = true
+			if !validAccessRole(member.Role) {
+				return fmt.Errorf("team %s has unsupported role %q", team.Name, member.Role)
+			}
+		}
+	}
+	for _, access := range m.Access {
+		if !projectIDs[access.ProjectID] {
+			return fmt.Errorf("access references unknown project %q", access.ProjectID)
+		}
+		if access.UserID == "" && access.TeamID == "" {
+			return fmt.Errorf("access for project %q requires userId or teamId", access.ProjectID)
+		}
+		if access.UserID != "" && !userIDs[access.UserID] {
+			return fmt.Errorf("access references unknown user %q", access.UserID)
+		}
+		if access.TeamID != "" && !teamIDs[access.TeamID] {
+			return fmt.Errorf("access references unknown team %q", access.TeamID)
+		}
+		if !validAccessRole(access.Role) {
+			return fmt.Errorf("access for project %q has unsupported role %q", access.ProjectID, access.Role)
+		}
+	}
 	return nil
 }
 
@@ -80,6 +135,13 @@ func validHydrateMode(mode string) bool {
 		mode == HydrateOnDemand ||
 		mode == HydrateMetadataOnly ||
 		mode == HydrateManual
+}
+
+func validAccessRole(role string) bool {
+	return role == AccessRoleOwner ||
+		role == AccessRoleMaintainer ||
+		role == AccessRoleDeveloper ||
+		role == AccessRoleViewer
 }
 
 func projectID(rel string) string {

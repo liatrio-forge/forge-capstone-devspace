@@ -13,6 +13,11 @@ const (
 	HydrateOnDemand     = "on-demand"
 	HydrateMetadataOnly = "metadata-only"
 	HydrateManual       = "manual"
+
+	AccessRoleOwner      = "owner"
+	AccessRoleMaintainer = "maintainer"
+	AccessRoleDeveloper  = "developer"
+	AccessRoleViewer     = "viewer"
 )
 
 var DefaultIgnores = []string{
@@ -63,10 +68,36 @@ type Machine struct {
 }
 
 type Manifest struct {
-	Version       int       `json:"version"`
-	WorkspaceRoot string    `json:"workspaceRoot"`
-	Machines      []Machine `json:"machines"`
-	Projects      []Project `json:"projects"`
+	Version       int             `json:"version"`
+	WorkspaceRoot string          `json:"workspaceRoot"`
+	Machines      []Machine       `json:"machines"`
+	Projects      []Project       `json:"projects"`
+	Users         []User          `json:"users,omitempty"`
+	Teams         []Team          `json:"teams,omitempty"`
+	Access        []ProjectAccess `json:"access,omitempty"`
+}
+
+type User struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	AgeRecipient string `json:"ageRecipient"`
+	Status       string `json:"status,omitempty"`
+	CreatedAt    string `json:"createdAt"`
+	RevokedAt    string `json:"revokedAt,omitempty"`
+}
+
+type Team struct {
+	ID        string       `json:"id"`
+	Name      string       `json:"name"`
+	Members   []TeamMember `json:"members,omitempty"`
+	CreatedAt string       `json:"createdAt"`
+}
+
+type TeamMember struct {
+	UserID    string `json:"userId"`
+	Role      string `json:"role"`
+	AddedAt   string `json:"addedAt"`
+	RevokedAt string `json:"revokedAt,omitempty"`
 }
 
 type Project struct {
@@ -80,6 +111,16 @@ type Project struct {
 	EnvProfiles   []string `json:"envProfiles,omitempty"`
 	Ignore        []string `json:"ignore,omitempty"`
 	Setup         Setup    `json:"setup,omitempty"`
+}
+
+type ProjectAccess struct {
+	ProjectID   string   `json:"projectId"`
+	UserID      string   `json:"userId,omitempty"`
+	TeamID      string   `json:"teamId,omitempty"`
+	Role        string   `json:"role"`
+	EnvProfiles []string `json:"envProfiles,omitempty"`
+	AddedAt     string   `json:"addedAt"`
+	RevokedAt   string   `json:"revokedAt,omitempty"`
 }
 
 type Setup struct {
@@ -119,10 +160,27 @@ type PlanAction struct {
 }
 
 type SecretProfile struct {
-	ProjectID string            `json:"projectId"`
-	Profile   string            `json:"profile"`
-	Values    map[string]string `json:"values"`
-	UpdatedAt string            `json:"updatedAt"`
+	ProjectID   string             `json:"projectId"`
+	Profile     string             `json:"profile"`
+	Values      map[string]string  `json:"values"`
+	Recipients  []SecretRecipient  `json:"recipients,omitempty"`
+	Revocations []SecretRevocation `json:"revocations,omitempty"`
+	UpdatedAt   string             `json:"updatedAt"`
+}
+
+type SecretRecipient struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	AgeRecipient string `json:"ageRecipient"`
+	AddedAt      string `json:"addedAt"`
+	RevokedAt    string `json:"revokedAt,omitempty"`
+}
+
+type SecretRevocation struct {
+	RecipientID string `json:"recipientId"`
+	Name        string `json:"name,omitempty"`
+	RevokedAt   string `json:"revokedAt"`
+	Reason      string `json:"reason,omitempty"`
 }
 
 func nowRFC3339() string {
