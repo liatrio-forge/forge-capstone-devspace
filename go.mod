@@ -6,6 +6,7 @@ toolchain go1.26.4
 
 require (
 	filippo.io/age v1.3.1
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.37.0
 )

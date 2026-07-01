@@ -35,8 +35,8 @@ and GitHub Release assembly instructions.
 
 ## Current MVP Status
 
-This MVP is local-first. It proves the workflow before adding hosted sync,
-background daemons, or filesystem-level lazy loading.
+This MVP is local-first. It proves the workflow before adding filesystem-level
+lazy loading.
 
 What works today:
 
@@ -56,6 +56,7 @@ What works today:
   explicit setup command.
 - Store encrypted per-project env profiles with native age encryption.
 - Generate local `.env` files with `0600` permissions.
+- Keep workspace metadata fresh with an event-driven `devspace watch` mode.
 
 ## Capstone Artifacts
 
@@ -113,6 +114,32 @@ coverage/
 .DS_Store
 *.log
 ```
+
+### `devspace watch`
+
+```bash
+devspace watch
+devspace watch --debounce 3s
+devspace watch --sync git
+devspace watch --sync hosted
+devspace watch --once
+```
+
+Runs a long-lived workspace watcher that debounces filesystem events and refreshes
+the same manifest/state metadata as `devspace scan`. It watches the configured
+workspace root, skips `.devdrop/` and the existing dependency/build/cache ignore
+rules, and tracks manifest-relevant additions, removals, package marker changes,
+`.env` presence changes, and Git branch/index/ref changes.
+
+Default behavior is local-only: after each refresh, the watcher writes the local
+manifest and state files atomically and continues watching. `--sync git`
+explicitly pushes the refreshed
+manifest to the configured Git-backed manifest remote after each refresh.
+`--sync hosted` explicitly pushes the normalized manifest to the configured
+hosted control-plane prototype after each refresh. Watch mode never pulls remote
+manifests, applies saved plans, hydrates repositories, installs dependencies,
+runs setup commands, uploads secrets, or uploads source files. Use `--once` for
+local smoke tests and demos that should perform one refresh and exit.
 
 ### `devspace status`
 
@@ -401,6 +428,10 @@ when the manifest includes its remote.
 - `apply` creates missing directories only; it skips non-empty destinations.
 - Plan reports path, dirty-repo, and remote conflicts instead of overwriting local work.
 - Hydration clones only into missing or empty directories.
+- `watch` refreshes manifest/state metadata only unless an explicit `--sync`
+  push mode is selected.
+- `watch --sync git` pushes only `manifest.json` through Git-backed sync.
+- `watch --sync hosted` pushes only the normalized manifest envelope.
 - Env values are encrypted at rest with age.
 - `env list` masks secret values.
 - `env pull` writes `.env` with `0600` permissions.
@@ -431,13 +462,14 @@ Manifest sync stops with a clear error when:
 - Delete local projects, files, or directories.
 - Overwrite existing project contents during apply or hydrate.
 - Auto-pull, rebase, merge, or push project Git repositories.
+- Auto-pull Git-backed or hosted workspace manifests from watch mode.
+- Auto-apply plans or hydrate repositories from watch mode.
 - Resolve Git conflicts.
 - Install dependencies or run project setup commands during scan, pull, apply,
-  hydrate, daemon, or filesystem reads.
+  hydrate, watch, daemon, or filesystem reads.
 - Upload secrets, source code, or project files.
 - Share env profiles with teammates.
 - Rotate secrets or replace local `.env` values without an explicit command.
-- Watch the filesystem in the background.
 - Mount a FUSE or virtual filesystem.
 
 ## Known Limitations
@@ -477,7 +509,7 @@ Manifest sync stops with a clear error when:
 
 - Manifest conflict resolution and force flags.
 - Hosted API or cloud object storage.
-- Background daemon and filesystem watchers.
+- Daemon process management for running watch mode outside a terminal.
 - FUSE or virtual filesystem lazy loading.
 - Git partial clone or sparse checkout.
 - Team/shared secret profiles.

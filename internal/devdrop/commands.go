@@ -3,13 +3,18 @@ package devdrop
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -24,6 +29,7 @@ func NewRootCommand(version string) *cobra.Command {
 	cmd.AddCommand(newVersionCommand(version))
 	cmd.AddCommand(newInitCommand())
 	cmd.AddCommand(newScanCommand())
+	cmd.AddCommand(newWatchCommand())
 	cmd.AddCommand(newPlanCommand())
 	cmd.AddCommand(newApplyCommand())
 	cmd.AddCommand(newWorkspaceCommand())
@@ -65,6 +71,42 @@ func newInitCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&workspace, "workspace", "", "workspace root")
+	return cmd
+}
+
+func newWatchCommand() *cobra.Command {
+	var debounce time.Duration
+	var syncMode string
+	var noInitial bool
+	var once bool
+	cmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Watch the workspace and refresh project metadata",
+		Long: strings.Join([]string{
+			"Watch the configured workspace for project additions, removals, and manifest-relevant file changes.",
+			"By default watch mode refreshes only local manifest/state metadata.",
+			"Use --sync git or --sync hosted to explicitly push the refreshed manifest; watch mode never pulls, applies plans, hydrates repositories, installs dependencies, or uploads secrets.",
+		}, "\n\n"),
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			err := WatchWorkspace(ctx, WatchOptions{
+				Debounce:   debounce,
+				SyncMode:   syncMode,
+				RunInitial: !noInitial,
+				Once:       once,
+			}, cmd.OutOrStdout())
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil
+			}
+			return err
+		},
+	}
+	cmd.Flags().DurationVar(&debounce, "debounce", 2*time.Second, "delay after filesystem events before refreshing metadata")
+	cmd.Flags().StringVar(&syncMode, "sync", WatchSyncOff, "post-refresh manifest sync mode: off, git, or hosted")
+	cmd.Flags().BoolVar(&noInitial, "no-initial", false, "wait for filesystem events before the first refresh")
+	cmd.Flags().BoolVar(&once, "once", false, "perform one refresh and exit")
 	return cmd
 }
 
