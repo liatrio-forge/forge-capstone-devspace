@@ -543,9 +543,9 @@
           </div>
         </div>
         <div class="stats" aria-label="Document stats">
-          <div class="stat"><strong>9</strong><span>files</span></div>
-          <div class="stat"><strong>5,140</strong><span>words</span></div>
-          <div class="stat"><strong>28</strong><span>snippets</span></div>
+          <div class="stat"><strong>10</strong><span>files</span></div>
+          <div class="stat"><strong>6,153</strong><span>words</span></div>
+          <div class="stat"><strong>31</strong><span>snippets</span></div>
         </div>
       </div>
 
@@ -584,14 +584,18 @@
         </button>
 <button type="button" data-doc="doc-7" aria-selected="false">
           <span class="num">7</span>
-          <span class="label"><span class="title">Demo Script</span><span class="path">docs/capstone/demo-script.md</span></span>
+          <span class="label"><span class="title">Remote Agent Case Study</span><span class="path">docs/capstone/remote-agent-case-study.md</span></span>
         </button>
 <button type="button" data-doc="doc-8" aria-selected="false">
           <span class="num">8</span>
-          <span class="label"><span class="title">Playbook Contribution: Client Enablement Lessons</span><span class="path">docs/capstone/playbook-contribution.md</span></span>
+          <span class="label"><span class="title">Demo Script</span><span class="path">docs/capstone/demo-script.md</span></span>
         </button>
 <button type="button" data-doc="doc-9" aria-selected="false">
           <span class="num">9</span>
+          <span class="label"><span class="title">Playbook Contribution: Client Enablement Lessons</span><span class="path">docs/capstone/playbook-contribution.md</span></span>
+        </button>
+<button type="button" data-doc="doc-10" aria-selected="false">
+          <span class="num">10</span>
           <span class="label"><span class="title">DevDrop MVP Wave-Ship Prep</span><span class="path">ops/wave-ship/README.md</span></span>
         </button>
       </nav>
@@ -605,9 +609,9 @@
           <p>Use the left navigation to switch files, search across converted content, and toggle raw Markdown under each rendered document when you need source-level review.</p>
         </div>
         <div class="badge-row">
-          <span class="badge">9 Markdown files</span>
-          <span class="badge">2 tables</span>
-          <span class="badge">28 code blocks</span>
+          <span class="badge">10 Markdown files</span>
+          <span class="badge">3 tables</span>
+          <span class="badge">31 code blocks</span>
         </div>
       </section>
 
@@ -2018,6 +2022,7 @@ encrypted locally.
 | proof artifacts | [proof-artifacts.md](proof-artifacts.md), `docs/release-readiness.md`, tests under `internal/devdrop/` |
 | final demo recording | [demo-script.md](demo-script.md) |
 | playbook contribution | [playbook-contribution.md](playbook-contribution.md), `docs/playbook.html`, and the enablement notes in [case-study.md](case-study.md) |
+| remote-agent delivery case study | [remote-agent-case-study.md](remote-agent-case-study.md), `.claude/workflows/wave-ship.js`, and `ops/wave-ship/` |
 | personal reflection | add final reflection after the recorded demo and panel feedback |
 
 ## current product surface
@@ -2036,10 +2041,12 @@ encrypted locally.
 ## remaining module 5 work
 
 1. create a tagged release binary and attach it to a github release.
-2. record the demo using [demo-script.md](demo-script.md).
-3. capture final proof links in [proof-artifacts.md](proof-artifacts.md).
-4. add the personal reflection after demo feedback is received.
-5. decide whether to rename on-disk `.devdrop` paths before release or document
+2. run the capstone stretch wave in `ops/wave-ship/devdrop-capstone.args.json`
+   or execute the same cards manually.
+3. record the demo using [demo-script.md](demo-script.md).
+4. capture final proof links in [proof-artifacts.md](proof-artifacts.md).
+5. add the personal reflection after demo feedback is received.
+6. decide whether to rename on-disk `.devdrop` paths before release or document
    the name mismatch as an mvp limitation.
 ">
           <header class="doc-header">
@@ -2048,7 +2055,7 @@ encrypted locally.
               <div class="doc-path">docs/capstone/README.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">336 words</span>
+              <span class="badge">361 words</span>
               <span class="badge">0 code</span>
               <span class="badge">1 tables</span>
             </div>
@@ -2093,6 +2100,10 @@ encrypted locally.</p>
 <td><a href="playbook-contribution.md">playbook-contribution.md</a>, <code>docs/playbook.html</code>, and the enablement notes in <a href="case-study.md">case-study.md</a></td>
 </tr>
 <tr>
+<td>Remote-agent delivery case study</td>
+<td><a href="remote-agent-case-study.md">remote-agent-case-study.md</a>, <code>.claude/workflows/wave-ship.js</code>, and <code>ops/wave-ship/</code></td>
+</tr>
+<tr>
 <td>Personal reflection</td>
 <td>Add final reflection after the recorded demo and panel feedback</td>
 </tr>
@@ -2111,6 +2122,8 @@ files with <code>0600</code> permissions.</li>
 </ul>
 <h2 id="remaining-module-5-work-38"><a class="heading-link" href="#remaining-module-5-work-38" aria-label="Link to Remaining Module 5 Work">#</a>Remaining Module 5 Work</h2><ol>
 <li>Create a tagged release binary and attach it to a GitHub release.</li>
+<li>Run the capstone stretch wave in <code>ops/wave-ship/devdrop-capstone.args.json</code>
+or execute the same cards manually.</li>
 <li>Record the demo using <a href="demo-script.md">demo-script.md</a>.</li>
 <li>Capture final proof links in <a href="proof-artifacts.md">proof-artifacts.md</a>.</li>
 <li>Add the personal reflection after demo feedback is received.</li>
@@ -2145,6 +2158,7 @@ encrypted locally.
 | Proof artifacts | [proof-artifacts.md](proof-artifacts.md), `docs/release-readiness.md`, tests under `internal/devdrop/` |
 | Final demo recording | [demo-script.md](demo-script.md) |
 | Playbook contribution | [playbook-contribution.md](playbook-contribution.md), `docs/playbook.html`, and the enablement notes in [case-study.md](case-study.md) |
+| Remote-agent delivery case study | [remote-agent-case-study.md](remote-agent-case-study.md), `.claude/workflows/wave-ship.js`, and `ops/wave-ship/` |
 | Personal reflection | Add final reflection after the recorded demo and panel feedback |
 
 ## Current Product Surface
@@ -2163,10 +2177,12 @@ encrypted locally.
 ## Remaining Module 5 Work
 
 1. Create a tagged release binary and attach it to a GitHub release.
-2. Record the demo using [demo-script.md](demo-script.md).
-3. Capture final proof links in [proof-artifacts.md](proof-artifacts.md).
-4. Add the personal reflection after demo feedback is received.
-5. Decide whether to rename on-disk `.devdrop` paths before release or document
+2. Run the capstone stretch wave in `ops/wave-ship/devdrop-capstone.args.json`
+   or execute the same cards manually.
+3. Record the demo using [demo-script.md](demo-script.md).
+4. Capture final proof links in [proof-artifacts.md](proof-artifacts.md).
+5. Add the personal reflection after demo feedback is received.
+6. Decide whether to rename on-disk `.devdrop` paths before release or document
    the name mismatch as an MVP limitation.
 </pre></div>
           </div>
@@ -2197,6 +2213,11 @@ metadata-first approach.
 ship a local-first cli that can recreate workspace structure on another machine
 from a synced manifest while preserving local control over source code and
 secrets.
+
+use the delivery process itself as part of the capstone: demonstrate how
+remote/cloud agents can execute well-scoped cards through the checked-in
+`.claude/workflows/wave-ship.js` workflow, then include that evidence in the
+case study and final demo.
 
 ## non-goals
 
@@ -2298,6 +2319,8 @@ acceptance:
   and remaining risks.
 - the demo uses temporary directories and local bare remotes so it can run
   without network access.
+- remote-agent delivery evidence identifies cards, prs, verification commands,
+  blockers, and human decisions without exposing secrets or hidden local state.
 ">
           <header class="doc-header">
             <div>
@@ -2305,7 +2328,7 @@ acceptance:
               <div class="doc-path">docs/capstone/spec.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">688 words</span>
+              <span class="badge">742 words</span>
               <span class="badge">0 code</span>
               <span class="badge">0 tables</span>
             </div>
@@ -2328,6 +2351,10 @@ recovery.</li>
 <h2 id="goal-42"><a class="heading-link" href="#goal-42" aria-label="Link to Goal">#</a>Goal</h2><p>Ship a local-first CLI that can recreate workspace structure on another machine
 from a synced manifest while preserving local control over source code and
 secrets.</p>
+<p>Use the delivery process itself as part of the capstone: demonstrate how
+remote/cloud agents can execute well-scoped cards through the checked-in
+<code>.claude/workflows/wave-ship.js</code> workflow, then include that evidence in the
+case study and final demo.</p>
 <h2 id="non-goals-43"><a class="heading-link" href="#non-goals-43" aria-label="Link to Non-Goals">#</a>Non-Goals</h2><ul>
 <li>Hosted sync service.</li>
 <li>Filesystem daemon or watcher.</li>
@@ -2406,6 +2433,8 @@ Git project becomes a real clone when I need it.</p>
 and remaining risks.</li>
 <li>The demo uses temporary directories and local bare remotes so it can run
 without network access.</li>
+<li>Remote-agent delivery evidence identifies cards, PRs, verification commands,
+blockers, and human decisions without exposing secrets or hidden local state.</li>
 </ul>
 </div>
             <div class="source"><pre># Capstone Spec: DevDrop
@@ -2434,6 +2463,11 @@ metadata-first approach.
 Ship a local-first CLI that can recreate workspace structure on another machine
 from a synced manifest while preserving local control over source code and
 secrets.
+
+Use the delivery process itself as part of the capstone: demonstrate how
+remote/cloud agents can execute well-scoped cards through the checked-in
+`.claude/workflows/wave-ship.js` workflow, then include that evidence in the
+case study and final demo.
 
 ## Non-Goals
 
@@ -2535,6 +2569,8 @@ Acceptance:
   and remaining risks.
 - The demo uses temporary directories and local bare remotes so it can run
   without network access.
+- Remote-agent delivery evidence identifies cards, PRs, verification commands,
+  blockers, and human decisions without exposing secrets or hidden local state.
 </pre></div>
           </div>
         </article>
@@ -2553,6 +2589,9 @@ links as releases, prs, and recordings are created.
 | capstone spec | done | `docs/capstone/spec.md` |
 | case study | drafted | `docs/capstone/case-study.md` |
 | demo script | drafted | `docs/capstone/demo-script.md` |
+| remote-agent case study | drafted | `docs/capstone/remote-agent-case-study.md` |
+| mvp wave args | done | `ops/wave-ship/devdrop-mvp.args.json` |
+| capstone stretch wave args | drafted | `ops/wave-ship/devdrop-capstone.args.json` |
 | release binary | pending | add github release url |
 | final demo recording | pending | add recording url |
 | personal reflection | pending | add reflection file or section after feedback |
@@ -2591,6 +2630,9 @@ record a terminal walkthrough that shows:
 10. hydrate the placeholder git project.
 11. store, list, and pull an encrypted env value.
 12. show final `devspace status`.
+13. show the remote-agent delivery workflow: `.claude/workflows/wave-ship.js`,
+    `ops/wave-ship/devdrop-mvp.args.json`, and
+    `ops/wave-ship/devdrop-capstone.args.json`.
 
 ## safety proof points
 
@@ -2613,6 +2655,9 @@ release tag:
 release url:
 commit sha:
 demo recording:
+remote-agent run:
+wave cards:
+pr evidence:
 case study reviewed by:
 final test command output:
 known limitation accepted:
@@ -2624,7 +2669,7 @@ known limitation accepted:
               <div class="doc-path">docs/capstone/proof-artifacts.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">378 words</span>
+              <span class="badge">422 words</span>
               <span class="badge">2 code</span>
               <span class="badge">1 tables</span>
             </div>
@@ -2669,6 +2714,21 @@ links as releases, PRs, and recordings are created.</p>
 <td>Demo script</td>
 <td>Drafted</td>
 <td><code>docs/capstone/demo-script.md</code></td>
+</tr>
+<tr>
+<td>Remote-agent case study</td>
+<td>Drafted</td>
+<td><code>docs/capstone/remote-agent-case-study.md</code></td>
+</tr>
+<tr>
+<td>MVP wave args</td>
+<td>Done</td>
+<td><code>ops/wave-ship/devdrop-mvp.args.json</code></td>
+</tr>
+<tr>
+<td>Capstone stretch wave args</td>
+<td>Drafted</td>
+<td><code>ops/wave-ship/devdrop-capstone.args.json</code></td>
 </tr>
 <tr>
 <td>Release binary</td>
@@ -2718,6 +2778,9 @@ and version commands.</li>
 <li>Hydrate the placeholder Git project.</li>
 <li>Store, list, and pull an encrypted env value.</li>
 <li>Show final <code>devspace status</code>.</li>
+<li>Show the remote-agent delivery workflow: <code>.claude/workflows/wave-ship.js</code>,
+<code>ops/wave-ship/devdrop-mvp.args.json</code>, and
+<code>ops/wave-ship/devdrop-capstone.args.json</code>.</li>
 </ol>
 <h2 id="safety-proof-points-56"><a class="heading-link" href="#safety-proof-points-56" aria-label="Link to Safety Proof Points">#</a>Safety Proof Points</h2><ul>
 <li>Path traversal is rejected by manifest validation and project add.</li>
@@ -2735,11 +2798,14 @@ and version commands.</li>
       <span>text</span>
       <button class="copy-btn" type="button" data-copy-code="code-21">Copy</button>
     </figcaption>
-    <div id="code-21" class="diff-render" data-code-b64="UmVsZWFzZSB0YWc6ClJlbGVhc2UgVVJMOgpDb21taXQgU0hBOgpEZW1vIHJlY29yZGluZzoKQ2FzZSBzdHVkeSByZXZpZXdlZCBieToKRmluYWwgdGVzdCBjb21tYW5kIG91dHB1dDoKS25vd24gbGltaXRhdGlvbiBhY2NlcHRlZDo=" data-lang="text"></div>
+    <div id="code-21" class="diff-render" data-code-b64="UmVsZWFzZSB0YWc6ClJlbGVhc2UgVVJMOgpDb21taXQgU0hBOgpEZW1vIHJlY29yZGluZzoKUmVtb3RlLWFnZW50IHJ1bjoKV2F2ZSBjYXJkczoKUFIgZXZpZGVuY2U6CkNhc2Ugc3R1ZHkgcmV2aWV3ZWQgYnk6CkZpbmFsIHRlc3QgY29tbWFuZCBvdXRwdXQ6Cktub3duIGxpbWl0YXRpb24gYWNjZXB0ZWQ6" data-lang="text"></div>
     <noscript><pre><code>Release tag:
 Release URL:
 Commit SHA:
 Demo recording:
+Remote-agent run:
+Wave cards:
+PR evidence:
 Case study reviewed by:
 Final test command output:
 Known limitation accepted:</code></pre></noscript>
@@ -2759,6 +2825,9 @@ links as releases, PRs, and recordings are created.
 | Capstone spec | Done | `docs/capstone/spec.md` |
 | Case study | Drafted | `docs/capstone/case-study.md` |
 | Demo script | Drafted | `docs/capstone/demo-script.md` |
+| Remote-agent case study | Drafted | `docs/capstone/remote-agent-case-study.md` |
+| MVP wave args | Done | `ops/wave-ship/devdrop-mvp.args.json` |
+| Capstone stretch wave args | Drafted | `ops/wave-ship/devdrop-capstone.args.json` |
 | Release binary | Pending | Add GitHub release URL |
 | Final demo recording | Pending | Add recording URL |
 | Personal reflection | Pending | Add reflection file or section after feedback |
@@ -2797,6 +2866,9 @@ Record a terminal walkthrough that shows:
 10. Hydrate the placeholder Git project.
 11. Store, list, and pull an encrypted env value.
 12. Show final `devspace status`.
+13. Show the remote-agent delivery workflow: `.claude/workflows/wave-ship.js`,
+    `ops/wave-ship/devdrop-mvp.args.json`, and
+    `ops/wave-ship/devdrop-capstone.args.json`.
 
 ## Safety Proof Points
 
@@ -2819,6 +2891,9 @@ Release tag:
 Release URL:
 Commit SHA:
 Demo recording:
+Remote-agent run:
+Wave cards:
+PR evidence:
 Case study reviewed by:
 Final test command output:
 Known limitation accepted:
@@ -2882,10 +2957,25 @@ product slice:
   without hosted infrastructure.
 - documentation records what was tested, what passed, what failed, and what
   remains risky.
+- the delivery plan was shaped as remote-agent cards through
+  `.claude/workflows/wave-ship.js`, giving the team a concrete example of
+  agent orchestration rather than a generic claim about ai usage.
 
 the main lesson for client enablement is that ai acceleration works best when it
 is paired with small, explicit contracts: specs, acceptance criteria, safety
 tests, and release gates.
+
+## delivery case study
+
+devdrop uses the checked-in `wave-ship` workflow as a second capstone artifact.
+the workflow decomposes a product goal into linear-backed cards, dispatches work
+to isolated agent workers, opens prs, watches ci/review feedback, and merges
+serially through the coordinator.
+
+that process is valuable to a client because it makes agent delivery auditable:
+scope, dependencies, pr evidence, verification commands, and blockers are all
+visible. the capstone demo should show both the product and the delivery system
+that produced it.
 
 ## trade-offs
 
@@ -2925,7 +3015,7 @@ use devdrop as a teaching example for ai-native delivery:
               <div class="doc-path">docs/capstone/case-study.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">533 words</span>
+              <span class="badge">641 words</span>
               <span class="badge">0 code</span>
               <span class="badge">0 tables</span>
             </div>
@@ -2972,11 +3062,22 @@ features.</li>
 without hosted infrastructure.</li>
 <li>Documentation records what was tested, what passed, what failed, and what
 remains risky.</li>
+<li>The delivery plan was shaped as remote-agent cards through
+<code>.claude/workflows/wave-ship.js</code>, giving the team a concrete example of
+agent orchestration rather than a generic claim about AI usage.</li>
 </ul>
 <p>The main lesson for client enablement is that AI acceleration works best when it
 is paired with small, explicit contracts: specs, acceptance criteria, safety
 tests, and release gates.</p>
-<h2 id="trade-offs-64"><a class="heading-link" href="#trade-offs-64" aria-label="Link to Trade-Offs">#</a>Trade-Offs</h2><ul>
+<h2 id="delivery-case-study-64"><a class="heading-link" href="#delivery-case-study-64" aria-label="Link to Delivery Case Study">#</a>Delivery Case Study</h2><p>DevDrop uses the checked-in <code>wave-ship</code> workflow as a second capstone artifact.
+The workflow decomposes a product goal into Linear-backed cards, dispatches work
+to isolated agent workers, opens PRs, watches CI/review feedback, and merges
+serially through the coordinator.</p>
+<p>That process is valuable to a client because it makes agent delivery auditable:
+scope, dependencies, PR evidence, verification commands, and blockers are all
+visible. The capstone demo should show both the product and the delivery system
+that produced it.</p>
+<h2 id="trade-offs-65"><a class="heading-link" href="#trade-offs-65" aria-label="Link to Trade-Offs">#</a>Trade-Offs</h2><ul>
 <li>Git-backed manifest sync is easy to inspect and host, but it does not provide
 real-time collaboration or conflict resolution UI.</li>
 <li>Placeholder directories are safe and simple, but they do not provide lazy file
@@ -2986,7 +3087,7 @@ backup, or rotation flow.</li>
 <li>Setup commands are detected as hints, but DevDrop does not install
 dependencies because automatic execution would cross a safety boundary.</li>
 </ul>
-<h2 id="client-enablement-notes-65"><a class="heading-link" href="#client-enablement-notes-65" aria-label="Link to Client Enablement Notes">#</a>Client Enablement Notes</h2><p>Use DevDrop as a teaching example for AI-native delivery:</p>
+<h2 id="client-enablement-notes-66"><a class="heading-link" href="#client-enablement-notes-66" aria-label="Link to Client Enablement Notes">#</a>Client Enablement Notes</h2><p>Use DevDrop as a teaching example for AI-native delivery:</p>
 <ol>
 <li>Start with the unsafe default behavior and name it plainly.</li>
 <li>Define what the tool will not do without permission.</li>
@@ -2996,7 +3097,7 @@ and case study.</li>
 <li>Show how AI helped compress delivery time while the specification preserved
 control.</li>
 </ol>
-<h2 id="current-limitations-66"><a class="heading-link" href="#current-limitations-66" aria-label="Link to Current Limitations">#</a>Current Limitations</h2><ul>
+<h2 id="current-limitations-67"><a class="heading-link" href="#current-limitations-67" aria-label="Link to Current Limitations">#</a>Current Limitations</h2><ul>
 <li>No hosted sync service.</li>
 <li>No background daemon or filesystem watcher.</li>
 <li>No source-code syncing.</li>
@@ -3061,10 +3162,25 @@ product slice:
   without hosted infrastructure.
 - Documentation records what was tested, what passed, what failed, and what
   remains risky.
+- The delivery plan was shaped as remote-agent cards through
+  `.claude/workflows/wave-ship.js`, giving the team a concrete example of
+  agent orchestration rather than a generic claim about AI usage.
 
 The main lesson for client enablement is that AI acceleration works best when it
 is paired with small, explicit contracts: specs, acceptance criteria, safety
 tests, and release gates.
+
+## Delivery Case Study
+
+DevDrop uses the checked-in `wave-ship` workflow as a second capstone artifact.
+The workflow decomposes a product goal into Linear-backed cards, dispatches work
+to isolated agent workers, opens PRs, watches CI/review feedback, and merges
+serially through the coordinator.
+
+That process is valuable to a client because it makes agent delivery auditable:
+scope, dependencies, PR evidence, verification commands, and blockers are all
+visible. The capstone demo should show both the product and the delivery system
+that produced it.
 
 ## Trade-Offs
 
@@ -3100,7 +3216,384 @@ Use DevDrop as a teaching example for AI-native delivery:
 </pre></div>
           </div>
         </article>
-<article class="doc" id="doc-7" data-title="Demo Script" data-path="docs/capstone/demo-script.md" data-search="demo script docs/capstone/demo-script.md # demo script
+<article class="doc" id="doc-7" data-title="Remote Agent Case Study" data-path="docs/capstone/remote-agent-case-study.md" data-search="remote agent case study docs/capstone/remote-agent-case-study.md # remote agent case study
+
+devdrop is also a case study in agent-orchestrated delivery. the mvp was planned
+as a set of independently shippable cards and prepared for execution through the
+checked-in claude workflow files:
+
+- `.claude/workflows/wave-ship.js`
+- `.claude/workflows/ship-card.js`
+- `ops/wave-ship/devdrop-mvp.args.json`
+
+## why this matters
+
+the capstone is not only &quot;we built a cli.&quot; the stronger claim is that a small
+team can use ai agents as a delivery system when the work is decomposed into
+clear, testable, file-scoped cards.
+
+for devdrop, the workflow turns a product goal into:
+
+1. linear cards with explicit dependencies.
+2. isolated worker execution.
+3. pull requests per card.
+4. ci and review loops.
+5. serialized merge back to the base branch.
+6. final reconciliation against the original goal.
+
+that makes the agent system inspectable. each worker either produces a pr with
+verification evidence or reports a blocker.
+
+## workflow shape
+
+`wave-ship.js` owns the portfolio-level loop:
+
+- accepts a goal, plan, cards, or waves.
+- builds a dependency graph from card `dependson` values.
+- dispatches cards as soon as dependencies are merged.
+- caps global concurrency with `maxconcurrent`.
+- serializes migration cards.
+- optionally uses the `orca` backend for isolated remote worker execution.
+- owns serialized merges when `serializedmerge` is true.
+- reconciles blocked or incomplete cards into remediation work.
+
+`ship-card.js` owns one unit of work:
+
+- resolves or creates the linear ticket.
+- creates the implementation branch/worktree.
+- runs the build agent.
+- opens the pr.
+- watches ci and review feedback.
+- pushes fixes until the pr is clean or blocked.
+- lands the work or returns `merge-ready` to the coordinator.
+
+## devdrop mvp wave
+
+the initial prepared wave is stored in
+`ops/wave-ship/devdrop-mvp.args.json`.
+
+it uses:
+
+```json
+{
+  &quot;backend&quot;: &quot;orca&quot;,
+  &quot;serializedmerge&quot;: true,
+  &quot;autocontinue&quot;: false,
+  &quot;maxconcurrent&quot;: 3,
+  &quot;engine&quot;: &quot;codex&quot;
+}
+```
+
+the five cards map to the core mvp:
+
+| card | purpose |
+| --- | --- |
+| `cil-217` | scaffold the go cli and init command |
+| `cil-218` | manifest model, workspace scan, and status |
+| `cil-219` | project add, workspace sync, and git hydration |
+| `cil-220` | encrypted env profile commands |
+| `cil-221` | readme, examples, and end-to-end mvp verification |
+
+## capstone stretch wave
+
+the next wave is stored in
+`ops/wave-ship/devdrop-capstone.args.json`.
+
+it pushes the mvp toward a stronger final demo without changing the product into
+a hosted platform:
+
+1. release packaging and install docs.
+2. executable demo-check harness.
+3. `devspace doctor` diagnostics.
+4. manifest remote diff/reconcile preview.
+5. final capstone evidence, reflection, and demo readiness.
+
+## guardrails
+
+the workflow is powerful enough to create risk if the cards are vague. devdrop
+keeps the risk controlled with these rules:
+
+- every card declares scope and explicit non-goals.
+- workers use isolated worktrees.
+- the coordinator owns serialized merge.
+- product cards must include local verification commands.
+- demo and release cards must avoid real secrets.
+- cloud-agent evidence belongs in docs and pr links, not in generated secrets,
+  logs, or hidden local state.
+
+## what to show in the final demo
+
+use the remote-agent system as the &quot;how it was built&quot; segment:
+
+1. open `ops/wave-ship/devdrop-mvp.args.json`.
+2. explain the dependency graph: init first, scan/hydrate/env in parallel, docs
+   and verification last.
+3. open `.claude/workflows/wave-ship.js`.
+4. point to `backend: &quot;orca&quot;`, `maxconcurrent`, and `serializedmerge`.
+5. show the linear/pr evidence for each card if available.
+6. explain what failed or required human judgment.
+7. tie it back to client enablement: agents work when the work is decomposed
+   into explicit contracts with observable gates.
+
+">
+          <header class="doc-header">
+            <div>
+              <h2>Remote Agent Case Study</h2>
+              <div class="doc-path">docs/capstone/remote-agent-case-study.md</div>
+            </div>
+            <div class="doc-meta">
+              <span class="badge">581 words</span>
+              <span class="badge">1 code</span>
+              <span class="badge">1 tables</span>
+            </div>
+          </header>
+          <div class="doc-body">
+            <div class="rendered markdown"><h1 id="remote-agent-case-study-68"><a class="heading-link" href="#remote-agent-case-study-68" aria-label="Link to Remote Agent Case Study">#</a>Remote Agent Case Study</h1><p>DevDrop is also a case study in agent-orchestrated delivery. The MVP was planned
+as a set of independently shippable cards and prepared for execution through the
+checked-in Claude workflow files:</p>
+<ul>
+<li><code>.claude/workflows/wave-ship.js</code></li>
+<li><code>.claude/workflows/ship-card.js</code></li>
+<li><code>ops/wave-ship/devdrop-mvp.args.json</code></li>
+</ul>
+<h2 id="why-this-matters-69"><a class="heading-link" href="#why-this-matters-69" aria-label="Link to Why This Matters">#</a>Why This Matters</h2><p>The capstone is not only &quot;we built a CLI.&quot; The stronger claim is that a small
+team can use AI agents as a delivery system when the work is decomposed into
+clear, testable, file-scoped cards.</p>
+<p>For DevDrop, the workflow turns a product goal into:</p>
+<ol>
+<li>Linear cards with explicit dependencies.</li>
+<li>Isolated worker execution.</li>
+<li>Pull requests per card.</li>
+<li>CI and review loops.</li>
+<li>Serialized merge back to the base branch.</li>
+<li>Final reconciliation against the original goal.</li>
+</ol>
+<p>That makes the agent system inspectable. Each worker either produces a PR with
+verification evidence or reports a blocker.</p>
+<h2 id="workflow-shape-70"><a class="heading-link" href="#workflow-shape-70" aria-label="Link to Workflow Shape">#</a>Workflow Shape</h2><p><code>wave-ship.js</code> owns the portfolio-level loop:</p>
+<ul>
+<li>Accepts a goal, plan, cards, or waves.</li>
+<li>Builds a dependency graph from card <code>dependsOn</code> values.</li>
+<li>Dispatches cards as soon as dependencies are merged.</li>
+<li>Caps global concurrency with <code>maxConcurrent</code>.</li>
+<li>Serializes migration cards.</li>
+<li>Optionally uses the <code>orca</code> backend for isolated remote worker execution.</li>
+<li>Owns serialized merges when <code>serializedMerge</code> is true.</li>
+<li>Reconciles blocked or incomplete cards into remediation work.</li>
+</ul>
+<p><code>ship-card.js</code> owns one unit of work:</p>
+<ul>
+<li>Resolves or creates the Linear ticket.</li>
+<li>Creates the implementation branch/worktree.</li>
+<li>Runs the build agent.</li>
+<li>Opens the PR.</li>
+<li>Watches CI and review feedback.</li>
+<li>Pushes fixes until the PR is clean or blocked.</li>
+<li>Lands the work or returns <code>merge-ready</code> to the coordinator.</li>
+</ul>
+<h2 id="devdrop-mvp-wave-71"><a class="heading-link" href="#devdrop-mvp-wave-71" aria-label="Link to DevDrop MVP Wave">#</a>DevDrop MVP Wave</h2><p>The initial prepared wave is stored in
+<code>ops/wave-ship/devdrop-mvp.args.json</code>.</p>
+<p>It uses:</p>
+<figure class="code-block" data-lang="json">
+    <figcaption>
+      <span>json</span>
+      <button class="copy-btn" type="button" data-copy-code="code-22">Copy</button>
+    </figcaption>
+    <div id="code-22" class="diff-render" data-code-b64="ewogICJiYWNrZW5kIjogIm9yY2EiLAogICJzZXJpYWxpemVkTWVyZ2UiOiB0cnVlLAogICJhdXRvQ29udGludWUiOiBmYWxzZSwKICAibWF4Q29uY3VycmVudCI6IDMsCiAgImVuZ2luZSI6ICJjb2RleCIKfQ==" data-lang="json"></div>
+    <noscript><pre><code>{
+  &quot;backend&quot;: &quot;orca&quot;,
+  &quot;serializedMerge&quot;: true,
+  &quot;autoContinue&quot;: false,
+  &quot;maxConcurrent&quot;: 3,
+  &quot;engine&quot;: &quot;codex&quot;
+}</code></pre></noscript>
+  </figure><p>The five cards map to the core MVP:</p>
+<table>
+<thead>
+<tr>
+<th>Card</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CIL-217</code></td>
+<td>Scaffold the Go CLI and init command</td>
+</tr>
+<tr>
+<td><code>CIL-218</code></td>
+<td>Manifest model, workspace scan, and status</td>
+</tr>
+<tr>
+<td><code>CIL-219</code></td>
+<td>Project add, workspace sync, and Git hydration</td>
+</tr>
+<tr>
+<td><code>CIL-220</code></td>
+<td>Encrypted env profile commands</td>
+</tr>
+<tr>
+<td><code>CIL-221</code></td>
+<td>README, examples, and end-to-end MVP verification</td>
+</tr>
+</tbody></table>
+<h2 id="capstone-stretch-wave-72"><a class="heading-link" href="#capstone-stretch-wave-72" aria-label="Link to Capstone Stretch Wave">#</a>Capstone Stretch Wave</h2><p>The next wave is stored in
+<code>ops/wave-ship/devdrop-capstone.args.json</code>.</p>
+<p>It pushes the MVP toward a stronger final demo without changing the product into
+a hosted platform:</p>
+<ol>
+<li>Release packaging and install docs.</li>
+<li>Executable demo-check harness.</li>
+<li><code>devspace doctor</code> diagnostics.</li>
+<li>Manifest remote diff/reconcile preview.</li>
+<li>Final capstone evidence, reflection, and demo readiness.</li>
+</ol>
+<h2 id="guardrails-73"><a class="heading-link" href="#guardrails-73" aria-label="Link to Guardrails">#</a>Guardrails</h2><p>The workflow is powerful enough to create risk if the cards are vague. DevDrop
+keeps the risk controlled with these rules:</p>
+<ul>
+<li>Every card declares scope and explicit non-goals.</li>
+<li>Workers use isolated worktrees.</li>
+<li>The coordinator owns serialized merge.</li>
+<li>Product cards must include local verification commands.</li>
+<li>Demo and release cards must avoid real secrets.</li>
+<li>Cloud-agent evidence belongs in docs and PR links, not in generated secrets,
+logs, or hidden local state.</li>
+</ul>
+<h2 id="what-to-show-in-the-final-demo-74"><a class="heading-link" href="#what-to-show-in-the-final-demo-74" aria-label="Link to What To Show In The Final Demo">#</a>What To Show In The Final Demo</h2><p>Use the remote-agent system as the &quot;how it was built&quot; segment:</p>
+<ol>
+<li>Open <code>ops/wave-ship/devdrop-mvp.args.json</code>.</li>
+<li>Explain the dependency graph: init first, scan/hydrate/env in parallel, docs
+and verification last.</li>
+<li>Open <code>.claude/workflows/wave-ship.js</code>.</li>
+<li>Point to <code>backend: &quot;orca&quot;</code>, <code>maxConcurrent</code>, and <code>serializedMerge</code>.</li>
+<li>Show the Linear/PR evidence for each card if available.</li>
+<li>Explain what failed or required human judgment.</li>
+<li>Tie it back to client enablement: agents work when the work is decomposed
+into explicit contracts with observable gates.</li>
+</ol>
+</div>
+            <div class="source"><pre># Remote Agent Case Study
+
+DevDrop is also a case study in agent-orchestrated delivery. The MVP was planned
+as a set of independently shippable cards and prepared for execution through the
+checked-in Claude workflow files:
+
+- `.claude/workflows/wave-ship.js`
+- `.claude/workflows/ship-card.js`
+- `ops/wave-ship/devdrop-mvp.args.json`
+
+## Why This Matters
+
+The capstone is not only &quot;we built a CLI.&quot; The stronger claim is that a small
+team can use AI agents as a delivery system when the work is decomposed into
+clear, testable, file-scoped cards.
+
+For DevDrop, the workflow turns a product goal into:
+
+1. Linear cards with explicit dependencies.
+2. Isolated worker execution.
+3. Pull requests per card.
+4. CI and review loops.
+5. Serialized merge back to the base branch.
+6. Final reconciliation against the original goal.
+
+That makes the agent system inspectable. Each worker either produces a PR with
+verification evidence or reports a blocker.
+
+## Workflow Shape
+
+`wave-ship.js` owns the portfolio-level loop:
+
+- Accepts a goal, plan, cards, or waves.
+- Builds a dependency graph from card `dependsOn` values.
+- Dispatches cards as soon as dependencies are merged.
+- Caps global concurrency with `maxConcurrent`.
+- Serializes migration cards.
+- Optionally uses the `orca` backend for isolated remote worker execution.
+- Owns serialized merges when `serializedMerge` is true.
+- Reconciles blocked or incomplete cards into remediation work.
+
+`ship-card.js` owns one unit of work:
+
+- Resolves or creates the Linear ticket.
+- Creates the implementation branch/worktree.
+- Runs the build agent.
+- Opens the PR.
+- Watches CI and review feedback.
+- Pushes fixes until the PR is clean or blocked.
+- Lands the work or returns `merge-ready` to the coordinator.
+
+## DevDrop MVP Wave
+
+The initial prepared wave is stored in
+`ops/wave-ship/devdrop-mvp.args.json`.
+
+It uses:
+
+```json
+{
+  &quot;backend&quot;: &quot;orca&quot;,
+  &quot;serializedMerge&quot;: true,
+  &quot;autoContinue&quot;: false,
+  &quot;maxConcurrent&quot;: 3,
+  &quot;engine&quot;: &quot;codex&quot;
+}
+```
+
+The five cards map to the core MVP:
+
+| Card | Purpose |
+| --- | --- |
+| `CIL-217` | Scaffold the Go CLI and init command |
+| `CIL-218` | Manifest model, workspace scan, and status |
+| `CIL-219` | Project add, workspace sync, and Git hydration |
+| `CIL-220` | Encrypted env profile commands |
+| `CIL-221` | README, examples, and end-to-end MVP verification |
+
+## Capstone Stretch Wave
+
+The next wave is stored in
+`ops/wave-ship/devdrop-capstone.args.json`.
+
+It pushes the MVP toward a stronger final demo without changing the product into
+a hosted platform:
+
+1. Release packaging and install docs.
+2. Executable demo-check harness.
+3. `devspace doctor` diagnostics.
+4. Manifest remote diff/reconcile preview.
+5. Final capstone evidence, reflection, and demo readiness.
+
+## Guardrails
+
+The workflow is powerful enough to create risk if the cards are vague. DevDrop
+keeps the risk controlled with these rules:
+
+- Every card declares scope and explicit non-goals.
+- Workers use isolated worktrees.
+- The coordinator owns serialized merge.
+- Product cards must include local verification commands.
+- Demo and release cards must avoid real secrets.
+- Cloud-agent evidence belongs in docs and PR links, not in generated secrets,
+  logs, or hidden local state.
+
+## What To Show In The Final Demo
+
+Use the remote-agent system as the &quot;how it was built&quot; segment:
+
+1. Open `ops/wave-ship/devdrop-mvp.args.json`.
+2. Explain the dependency graph: init first, scan/hydrate/env in parallel, docs
+   and verification last.
+3. Open `.claude/workflows/wave-ship.js`.
+4. Point to `backend: &quot;orca&quot;`, `maxConcurrent`, and `serializedMerge`.
+5. Show the Linear/PR evidence for each card if available.
+6. Explain what failed or required human judgment.
+7. Tie it back to client enablement: agents work when the work is decomposed
+   into explicit contracts with observable gates.
+
+</pre></div>
+          </div>
+        </article>
+<article class="doc" id="doc-8" data-title="Demo Script" data-path="docs/capstone/demo-script.md" data-search="demo script docs/capstone/demo-script.md # demo script
 
 this script is designed for the final module 5 recording. it uses temporary
 directories and local bare git remotes so the demo works without network access.
@@ -3207,11 +3700,30 @@ sed -n &#39;1,120p&#39; docs/release-readiness.md
 sed -n &#39;1,160p&#39; docs/capstone/proof-artifacts.md
 ```
 
+show the remote-agent delivery case study:
+
+```bash
+sed -n &#39;1,220p&#39; docs/capstone/remote-agent-case-study.md
+sed -n &#39;1,220p&#39; ops/wave-ship/devdrop-mvp.args.json
+sed -n &#39;1,220p&#39; ops/wave-ship/devdrop-capstone.args.json
+```
+
+narration:
+
+- the product was not built as one large ambiguous prompt.
+- the mvp was decomposed into cards with dependencies and explicit non-goals.
+- `wave-ship` can dispatch those cards through isolated remote workers with a
+  concurrency cap.
+- serialized merge keeps parallel agent work from racing on the base branch.
+- the same workflow now has a capstone stretch wave for release packaging,
+  demo verification, diagnostics, manifest diff preview, and final evidence.
+
 closing line:
 
 devdrop is intentionally conservative. it does not delete projects, auto-run
 setup commands, sync source code, or upload secrets. the capstone value is the
-safe recovery workflow and the evidence that the destructive edges are guarded.
+safe recovery workflow, the evidence that destructive edges are guarded, and the
+agent-delivery process that made the work auditable.
 ">
           <header class="doc-header">
             <div>
@@ -3219,25 +3731,25 @@ safe recovery workflow and the evidence that the destructive edges are guarded.
               <div class="doc-path">docs/capstone/demo-script.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">392 words</span>
-              <span class="badge">6 code</span>
+              <span class="badge">492 words</span>
+              <span class="badge">7 code</span>
               <span class="badge">0 tables</span>
             </div>
           </header>
           <div class="doc-body">
-            <div class="rendered markdown"><h1 id="demo-script-67"><a class="heading-link" href="#demo-script-67" aria-label="Link to Demo Script">#</a>Demo Script</h1><p>This script is designed for the final Module 5 recording. It uses temporary
+            <div class="rendered markdown"><h1 id="demo-script-75"><a class="heading-link" href="#demo-script-75" aria-label="Link to Demo Script">#</a>Demo Script</h1><p>This script is designed for the final Module 5 recording. It uses temporary
 directories and local bare Git remotes so the demo works without network access.</p>
-<h2 id="talk-track-68"><a class="heading-link" href="#talk-track-68" aria-label="Link to Talk Track">#</a>Talk Track</h2><p>DevDrop solves workspace recovery without syncing everything. The demo shows one
+<h2 id="talk-track-76"><a class="heading-link" href="#talk-track-76" aria-label="Link to Talk Track">#</a>Talk Track</h2><p>DevDrop solves workspace recovery without syncing everything. The demo shows one
 machine publishing safe workspace metadata, a second machine pulling that
 metadata, creating placeholders, hydrating a Git project, and materializing an
 encrypted env value only when requested.</p>
-<h2 id="setup-69"><a class="heading-link" href="#setup-69" aria-label="Link to Setup">#</a>Setup</h2><p>Start from the repo root:</p>
+<h2 id="setup-77"><a class="heading-link" href="#setup-77" aria-label="Link to Setup">#</a>Setup</h2><p>Start from the repo root:</p>
 <figure class="code-block" data-lang="bash">
     <figcaption>
       <span>bash</span>
-      <button class="copy-btn" type="button" data-copy-code="code-22">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-23">Copy</button>
     </figcaption>
-    <div id="code-22" class="diff-render" data-code-b64="Z28gYnVpbGQgLW8gLnRtcC9kZXZzcGFjZSAuL2NtZC9kZXZkcm9wCgp0bXA9IiQobWt0ZW1wIC1kKSIKd29ya3NwYWNlX2E9IiR0bXAvd29ya3NwYWNlLWEiCndvcmtzcGFjZV9iPSIkdG1wL3dvcmtzcGFjZS1iIgpyZW1vdGVfc3JjPSIkdG1wL3JlbW90ZS1zcmMiCnByb2plY3RfcmVtb3RlPSIkdG1wL2NsaWVudC1hLWFwaS5naXQiCm1hbmlmZXN0X3JlbW90ZT0iJHRtcC9tYW5pZmVzdC1zeW5jLmdpdCI=" data-lang="bash"></div>
+    <div id="code-23" class="diff-render" data-code-b64="Z28gYnVpbGQgLW8gLnRtcC9kZXZzcGFjZSAuL2NtZC9kZXZkcm9wCgp0bXA9IiQobWt0ZW1wIC1kKSIKd29ya3NwYWNlX2E9IiR0bXAvd29ya3NwYWNlLWEiCndvcmtzcGFjZV9iPSIkdG1wL3dvcmtzcGFjZS1iIgpyZW1vdGVfc3JjPSIkdG1wL3JlbW90ZS1zcmMiCnByb2plY3RfcmVtb3RlPSIkdG1wL2NsaWVudC1hLWFwaS5naXQiCm1hbmlmZXN0X3JlbW90ZT0iJHRtcC9tYW5pZmVzdC1zeW5jLmdpdCI=" data-lang="bash"></div>
     <noscript><pre><code>go build -o .tmp/devspace ./cmd/devdrop
 
 tmp=&quot;$(mktemp -d)&quot;
@@ -3250,9 +3762,9 @@ manifest_remote=&quot;$tmp/manifest-sync.git&quot;</code></pre></noscript>
 <figure class="code-block" data-lang="bash">
     <figcaption>
       <span>bash</span>
-      <button class="copy-btn" type="button" data-copy-code="code-23">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-24">Copy</button>
     </figcaption>
-    <div id="code-23" class="diff-render" data-code-b64="bWtkaXIgLXAgIiRyZW1vdGVfc3JjIgpnaXQgLUMgIiRyZW1vdGVfc3JjIiBpbml0IC1iIG1haW4KZ2l0IC1DICIkcmVtb3RlX3NyYyIgY29uZmlnIHVzZXIuZW1haWwgZGVtb0BleGFtcGxlLmNvbQpnaXQgLUMgIiRyZW1vdGVfc3JjIiBjb25maWcgdXNlci5uYW1lICJEZW1vIFVzZXIiCnByaW50ZiAnIyBjbGllbnQtYS1hcGlcbicgPiAiJHJlbW90ZV9zcmMvUkVBRE1FLm1kIgpnaXQgLUMgIiRyZW1vdGVfc3JjIiBhZGQgUkVBRE1FLm1kCmdpdCAtQyAiJHJlbW90ZV9zcmMiIGNvbW1pdCAtbSAiaW5pdGlhbCIKZ2l0IGNsb25lIC0tYmFyZSAiJHJlbW90ZV9zcmMiICIkcHJvamVjdF9yZW1vdGUi" data-lang="bash"></div>
+    <div id="code-24" class="diff-render" data-code-b64="bWtkaXIgLXAgIiRyZW1vdGVfc3JjIgpnaXQgLUMgIiRyZW1vdGVfc3JjIiBpbml0IC1iIG1haW4KZ2l0IC1DICIkcmVtb3RlX3NyYyIgY29uZmlnIHVzZXIuZW1haWwgZGVtb0BleGFtcGxlLmNvbQpnaXQgLUMgIiRyZW1vdGVfc3JjIiBjb25maWcgdXNlci5uYW1lICJEZW1vIFVzZXIiCnByaW50ZiAnIyBjbGllbnQtYS1hcGlcbicgPiAiJHJlbW90ZV9zcmMvUkVBRE1FLm1kIgpnaXQgLUMgIiRyZW1vdGVfc3JjIiBhZGQgUkVBRE1FLm1kCmdpdCAtQyAiJHJlbW90ZV9zcmMiIGNvbW1pdCAtbSAiaW5pdGlhbCIKZ2l0IGNsb25lIC0tYmFyZSAiJHJlbW90ZV9zcmMiICIkcHJvamVjdF9yZW1vdGUi" data-lang="bash"></div>
     <noscript><pre><code>mkdir -p &quot;$remote_src&quot;
 git -C &quot;$remote_src&quot; init -b main
 git -C &quot;$remote_src&quot; config user.email demo@example.com
@@ -3261,12 +3773,12 @@ printf &#39;# client-a-api\n&#39; &gt; &quot;$remote_src/README.md&quot;
 git -C &quot;$remote_src&quot; add README.md
 git -C &quot;$remote_src&quot; commit -m &quot;initial&quot;
 git clone --bare &quot;$remote_src&quot; &quot;$project_remote&quot;</code></pre></noscript>
-  </figure><h2 id="machine-a-publish-workspace-metadata-70"><a class="heading-link" href="#machine-a-publish-workspace-metadata-70" aria-label="Link to Machine A: Publish Workspace Metadata">#</a>Machine A: Publish Workspace Metadata</h2><figure class="code-block" data-lang="bash">
+  </figure><h2 id="machine-a-publish-workspace-metadata-78"><a class="heading-link" href="#machine-a-publish-workspace-metadata-78" aria-label="Link to Machine A: Publish Workspace Metadata">#</a>Machine A: Publish Workspace Metadata</h2><figure class="code-block" data-lang="bash">
     <figcaption>
       <span>bash</span>
-      <button class="copy-btn" type="button" data-copy-code="code-24">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-25">Copy</button>
     </figcaption>
-    <div id="code-24" class="diff-render" data-code-b64="ZXhwb3J0IERFVl9EUk9QX0hPTUU9IiR0bXAvaG9tZS1hIgoudG1wL2RldnNwYWNlIGluaXQgLS13b3Jrc3BhY2UgIiR3b3Jrc3BhY2VfYSIKbWtkaXIgLXAgIiR3b3Jrc3BhY2VfYS93b3JrIgpnaXQgY2xvbmUgIiRwcm9qZWN0X3JlbW90ZSIgIiR3b3Jrc3BhY2VfYS93b3JrL2NsaWVudC1hLWFwaSIKcHJpbnRmICd7InNjcmlwdHMiOnsiZGV2Ijoidml0ZSJ9fVxuJyA+ICIkd29ya3NwYWNlX2Evd29yay9jbGllbnQtYS1hcGkvcGFja2FnZS5qc29uIgoudG1wL2RldnNwYWNlIHNjYW4KLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcmVtb3RlIGNyZWF0ZSBsb2NhbCAiJG1hbmlmZXN0X3JlbW90ZSIKLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcHVzaAoudG1wL2RldnNwYWNlIHN0YXR1cw==" data-lang="bash"></div>
+    <div id="code-25" class="diff-render" data-code-b64="ZXhwb3J0IERFVl9EUk9QX0hPTUU9IiR0bXAvaG9tZS1hIgoudG1wL2RldnNwYWNlIGluaXQgLS13b3Jrc3BhY2UgIiR3b3Jrc3BhY2VfYSIKbWtkaXIgLXAgIiR3b3Jrc3BhY2VfYS93b3JrIgpnaXQgY2xvbmUgIiRwcm9qZWN0X3JlbW90ZSIgIiR3b3Jrc3BhY2VfYS93b3JrL2NsaWVudC1hLWFwaSIKcHJpbnRmICd7InNjcmlwdHMiOnsiZGV2Ijoidml0ZSJ9fVxuJyA+ICIkd29ya3NwYWNlX2Evd29yay9jbGllbnQtYS1hcGkvcGFja2FnZS5qc29uIgoudG1wL2RldnNwYWNlIHNjYW4KLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcmVtb3RlIGNyZWF0ZSBsb2NhbCAiJG1hbmlmZXN0X3JlbW90ZSIKLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcHVzaAoudG1wL2RldnNwYWNlIHN0YXR1cw==" data-lang="bash"></div>
     <noscript><pre><code>export DEV_DROP_HOME=&quot;$tmp/home-a&quot;
 .tmp/devspace init --workspace &quot;$workspace_a&quot;
 mkdir -p &quot;$workspace_a/work&quot;
@@ -3282,12 +3794,12 @@ printf &#39;{&quot;scripts&quot;:{&quot;dev&quot;:&quot;vite&quot;}}\n&#39; &gt;
 <li><code>scan</code> captures metadata and setup hints.</li>
 <li><code>workspace push</code> sends only <code>manifest.json</code> to the manifest remote.</li>
 </ul>
-<h2 id="machine-b-pull-plan-apply-hydrate-71"><a class="heading-link" href="#machine-b-pull-plan-apply-hydrate-71" aria-label="Link to Machine B: Pull, Plan, Apply, Hydrate">#</a>Machine B: Pull, Plan, Apply, Hydrate</h2><figure class="code-block" data-lang="bash">
+<h2 id="machine-b-pull-plan-apply-hydrate-79"><a class="heading-link" href="#machine-b-pull-plan-apply-hydrate-79" aria-label="Link to Machine B: Pull, Plan, Apply, Hydrate">#</a>Machine B: Pull, Plan, Apply, Hydrate</h2><figure class="code-block" data-lang="bash">
     <figcaption>
       <span>bash</span>
-      <button class="copy-btn" type="button" data-copy-code="code-25">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-26">Copy</button>
     </figcaption>
-    <div id="code-25" class="diff-render" data-code-b64="ZXhwb3J0IERFVl9EUk9QX0hPTUU9IiR0bXAvaG9tZS1iIgoudG1wL2RldnNwYWNlIGluaXQgLS13b3Jrc3BhY2UgIiR3b3Jrc3BhY2VfYiIKLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcmVtb3RlIHNldCAiJG1hbmlmZXN0X3JlbW90ZSIKLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcHVsbAoudG1wL2RldnNwYWNlIHBsYW4KLnRtcC9kZXZzcGFjZSBhcHBseQoudG1wL2RldnNwYWNlIHN0YXR1cwoudG1wL2RldnNwYWNlIHByb2plY3QgaHlkcmF0ZSBjbGllbnQtYS1hcGkKLnRtcC9kZXZzcGFjZSBzdGF0dXM=" data-lang="bash"></div>
+    <div id="code-26" class="diff-render" data-code-b64="ZXhwb3J0IERFVl9EUk9QX0hPTUU9IiR0bXAvaG9tZS1iIgoudG1wL2RldnNwYWNlIGluaXQgLS13b3Jrc3BhY2UgIiR3b3Jrc3BhY2VfYiIKLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcmVtb3RlIHNldCAiJG1hbmlmZXN0X3JlbW90ZSIKLnRtcC9kZXZzcGFjZSB3b3Jrc3BhY2UgcHVsbAoudG1wL2RldnNwYWNlIHBsYW4KLnRtcC9kZXZzcGFjZSBhcHBseQoudG1wL2RldnNwYWNlIHN0YXR1cwoudG1wL2RldnNwYWNlIHByb2plY3QgaHlkcmF0ZSBjbGllbnQtYS1hcGkKLnRtcC9kZXZzcGFjZSBzdGF0dXM=" data-lang="bash"></div>
     <noscript><pre><code>export DEV_DROP_HOME=&quot;$tmp/home-b&quot;
 .tmp/devspace init --workspace &quot;$workspace_b&quot;
 .tmp/devspace workspace remote set &quot;$manifest_remote&quot;
@@ -3304,12 +3816,12 @@ printf &#39;{&quot;scripts&quot;:{&quot;dev&quot;:&quot;vite&quot;}}\n&#39; &gt;
 <li><code>apply</code> creates structure only.</li>
 <li>Hydration uses normal Git clone and refuses unsafe destinations.</li>
 </ul>
-<h2 id="encrypted-env-profile-72"><a class="heading-link" href="#encrypted-env-profile-72" aria-label="Link to Encrypted Env Profile">#</a>Encrypted Env Profile</h2><figure class="code-block" data-lang="bash">
+<h2 id="encrypted-env-profile-80"><a class="heading-link" href="#encrypted-env-profile-80" aria-label="Link to Encrypted Env Profile">#</a>Encrypted Env Profile</h2><figure class="code-block" data-lang="bash">
     <figcaption>
       <span>bash</span>
-      <button class="copy-btn" type="button" data-copy-code="code-26">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-27">Copy</button>
     </figcaption>
-    <div id="code-26" class="diff-render" data-code-b64="cHJpbnRmICdwb3N0Z3JlczovL2RlbW9cbicgfCAudG1wL2RldnNwYWNlIGVudiBzZXQgY2xpZW50LWEtYXBpIERBVEFCQVNFX1VSTAoudG1wL2RldnNwYWNlIGVudiBsaXN0IGNsaWVudC1hLWFwaQoudG1wL2RldnNwYWNlIGVudiBwdWxsIGNsaWVudC1hLWFwaQpscyAtbCAiJHdvcmtzcGFjZV9iL3dvcmsvY2xpZW50LWEtYXBpLy5lbnYi" data-lang="bash"></div>
+    <div id="code-27" class="diff-render" data-code-b64="cHJpbnRmICdwb3N0Z3JlczovL2RlbW9cbicgfCAudG1wL2RldnNwYWNlIGVudiBzZXQgY2xpZW50LWEtYXBpIERBVEFCQVNFX1VSTAoudG1wL2RldnNwYWNlIGVudiBsaXN0IGNsaWVudC1hLWFwaQoudG1wL2RldnNwYWNlIGVudiBwdWxsIGNsaWVudC1hLWFwaQpscyAtbCAiJHdvcmtzcGFjZV9iL3dvcmsvY2xpZW50LWEtYXBpLy5lbnYi" data-lang="bash"></div>
     <noscript><pre><code>printf &#39;postgres://demo\n&#39; | .tmp/devspace env set client-a-api DATABASE_URL
 .tmp/devspace env list client-a-api
 .tmp/devspace env pull client-a-api
@@ -3322,19 +3834,40 @@ directory.</li>
 <li><code>env pull</code> writes the local <code>.env</code> file only on explicit request.</li>
 <li>The generated <code>.env</code> has <code>0600</code> permissions.</li>
 </ul>
-<h2 id="close-73"><a class="heading-link" href="#close-73" aria-label="Link to Close">#</a>Close</h2><p>Show the release-readiness file and proof checklist:</p>
+<h2 id="close-81"><a class="heading-link" href="#close-81" aria-label="Link to Close">#</a>Close</h2><p>Show the release-readiness file and proof checklist:</p>
 <figure class="code-block" data-lang="bash">
     <figcaption>
       <span>bash</span>
-      <button class="copy-btn" type="button" data-copy-code="code-27">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-28">Copy</button>
     </figcaption>
-    <div id="code-27" class="diff-render" data-code-b64="c2VkIC1uICcxLDEyMHAnIGRvY3MvcmVsZWFzZS1yZWFkaW5lc3MubWQKc2VkIC1uICcxLDE2MHAnIGRvY3MvY2Fwc3RvbmUvcHJvb2YtYXJ0aWZhY3RzLm1k" data-lang="bash"></div>
+    <div id="code-28" class="diff-render" data-code-b64="c2VkIC1uICcxLDEyMHAnIGRvY3MvcmVsZWFzZS1yZWFkaW5lc3MubWQKc2VkIC1uICcxLDE2MHAnIGRvY3MvY2Fwc3RvbmUvcHJvb2YtYXJ0aWZhY3RzLm1k" data-lang="bash"></div>
     <noscript><pre><code>sed -n &#39;1,120p&#39; docs/release-readiness.md
 sed -n &#39;1,160p&#39; docs/capstone/proof-artifacts.md</code></pre></noscript>
-  </figure><p>Closing line:</p>
+  </figure><p>Show the remote-agent delivery case study:</p>
+<figure class="code-block" data-lang="bash">
+    <figcaption>
+      <span>bash</span>
+      <button class="copy-btn" type="button" data-copy-code="code-29">Copy</button>
+    </figcaption>
+    <div id="code-29" class="diff-render" data-code-b64="c2VkIC1uICcxLDIyMHAnIGRvY3MvY2Fwc3RvbmUvcmVtb3RlLWFnZW50LWNhc2Utc3R1ZHkubWQKc2VkIC1uICcxLDIyMHAnIG9wcy93YXZlLXNoaXAvZGV2ZHJvcC1tdnAuYXJncy5qc29uCnNlZCAtbiAnMSwyMjBwJyBvcHMvd2F2ZS1zaGlwL2RldmRyb3AtY2Fwc3RvbmUuYXJncy5qc29u" data-lang="bash"></div>
+    <noscript><pre><code>sed -n &#39;1,220p&#39; docs/capstone/remote-agent-case-study.md
+sed -n &#39;1,220p&#39; ops/wave-ship/devdrop-mvp.args.json
+sed -n &#39;1,220p&#39; ops/wave-ship/devdrop-capstone.args.json</code></pre></noscript>
+  </figure><p>Narration:</p>
+<ul>
+<li>The product was not built as one large ambiguous prompt.</li>
+<li>The MVP was decomposed into cards with dependencies and explicit non-goals.</li>
+<li><code>wave-ship</code> can dispatch those cards through isolated remote workers with a
+concurrency cap.</li>
+<li>Serialized merge keeps parallel agent work from racing on the base branch.</li>
+<li>The same workflow now has a capstone stretch wave for release packaging,
+demo verification, diagnostics, manifest diff preview, and final evidence.</li>
+</ul>
+<p>Closing line:</p>
 <p>DevDrop is intentionally conservative. It does not delete projects, auto-run
 setup commands, sync source code, or upload secrets. The capstone value is the
-safe recovery workflow and the evidence that the destructive edges are guarded.</p>
+safe recovery workflow, the evidence that destructive edges are guarded, and the
+agent-delivery process that made the work auditable.</p>
 </div>
             <div class="source"><pre># Demo Script
 
@@ -3443,15 +3976,34 @@ sed -n &#39;1,120p&#39; docs/release-readiness.md
 sed -n &#39;1,160p&#39; docs/capstone/proof-artifacts.md
 ```
 
+Show the remote-agent delivery case study:
+
+```bash
+sed -n &#39;1,220p&#39; docs/capstone/remote-agent-case-study.md
+sed -n &#39;1,220p&#39; ops/wave-ship/devdrop-mvp.args.json
+sed -n &#39;1,220p&#39; ops/wave-ship/devdrop-capstone.args.json
+```
+
+Narration:
+
+- The product was not built as one large ambiguous prompt.
+- The MVP was decomposed into cards with dependencies and explicit non-goals.
+- `wave-ship` can dispatch those cards through isolated remote workers with a
+  concurrency cap.
+- Serialized merge keeps parallel agent work from racing on the base branch.
+- The same workflow now has a capstone stretch wave for release packaging,
+  demo verification, diagnostics, manifest diff preview, and final evidence.
+
 Closing line:
 
 DevDrop is intentionally conservative. It does not delete projects, auto-run
 setup commands, sync source code, or upload secrets. The capstone value is the
-safe recovery workflow and the evidence that the destructive edges are guarded.
+safe recovery workflow, the evidence that destructive edges are guarded, and the
+agent-delivery process that made the work auditable.
 </pre></div>
           </div>
         </article>
-<article class="doc" id="doc-8" data-title="Playbook Contribution: Client Enablement Lessons" data-path="docs/capstone/playbook-contribution.md" data-search="playbook contribution: client enablement lessons docs/capstone/playbook-contribution.md # playbook contribution: client enablement lessons
+<article class="doc" id="doc-9" data-title="Playbook Contribution: Client Enablement Lessons" data-path="docs/capstone/playbook-contribution.md" data-search="playbook contribution: client enablement lessons docs/capstone/playbook-contribution.md # playbook contribution: client enablement lessons
 
 ## principle
 
@@ -3490,6 +4042,12 @@ standard clear enough that fast code generation does not create hidden risk.
    a local bare git remote makes the capstone demo repeatable without network
    accounts, hosted infrastructure, or flaky external services.
 
+6. make agent orchestration inspectable.
+
+   the `wave-ship` workflow is useful because each agent card has a title,
+   scope, dependencies, pr, verification output, and merge status. that is the
+   difference between &quot;ai helped&quot; and a delivery system a client can review.
+
 ## how to introduce this workflow to a traditional team
 
 start with a small, bounded product slice. write the spec as a contract, not a
@@ -3506,17 +4064,17 @@ team still owns the product contract and the evidence bar.
               <div class="doc-path">docs/capstone/playbook-contribution.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">285 words</span>
+              <span class="badge">325 words</span>
               <span class="badge">0 code</span>
               <span class="badge">0 tables</span>
             </div>
           </header>
           <div class="doc-body">
-            <div class="rendered markdown"><h1 id="playbook-contribution-client-enablement-lessons-74"><a class="heading-link" href="#playbook-contribution-client-enablement-lessons-74" aria-label="Link to Playbook Contribution: Client Enablement Lessons">#</a>Playbook Contribution: Client Enablement Lessons</h1><h2 id="principle-75"><a class="heading-link" href="#principle-75" aria-label="Link to Principle">#</a>Principle</h2><p>AI-native delivery works best when the team uses specs to narrow risk before
+            <div class="rendered markdown"><h1 id="playbook-contribution-client-enablement-lessons-82"><a class="heading-link" href="#playbook-contribution-client-enablement-lessons-82" aria-label="Link to Playbook Contribution: Client Enablement Lessons">#</a>Playbook Contribution: Client Enablement Lessons</h1><h2 id="principle-83"><a class="heading-link" href="#principle-83" aria-label="Link to Principle">#</a>Principle</h2><p>AI-native delivery works best when the team uses specs to narrow risk before
 agents write code. The point is not to make the agent faster at every possible
 task. The point is to make the desired behavior, forbidden behavior, and proof
 standard clear enough that fast code generation does not create hidden risk.</p>
-<h2 id="devdrop-lessons-76"><a class="heading-link" href="#devdrop-lessons-76" aria-label="Link to DevDrop Lessons">#</a>DevDrop Lessons</h2><ol>
+<h2 id="devdrop-lessons-84"><a class="heading-link" href="#devdrop-lessons-84" aria-label="Link to DevDrop Lessons">#</a>DevDrop Lessons</h2><ol>
 <li><p>Name the dangerous default.</p>
 <p>For DevDrop, the dangerous default was &quot;sync the whole workspace.&quot; Naming
 that risk forced the product toward metadata sync, explicit hydration, and
@@ -3540,8 +4098,13 @@ local unpushed changes are rejected.</p>
 <p>A local bare Git remote makes the capstone demo repeatable without network
 accounts, hosted infrastructure, or flaky external services.</p>
 </li>
+<li><p>Make agent orchestration inspectable.</p>
+<p>The <code>wave-ship</code> workflow is useful because each agent card has a title,
+scope, dependencies, PR, verification output, and merge status. That is the
+difference between &quot;AI helped&quot; and a delivery system a client can review.</p>
+</li>
 </ol>
-<h2 id="how-to-introduce-this-workflow-to-a-traditional-team-77"><a class="heading-link" href="#how-to-introduce-this-workflow-to-a-traditional-team-77" aria-label="Link to How To Introduce This Workflow To A Traditional Team">#</a>How To Introduce This Workflow To A Traditional Team</h2><p>Start with a small, bounded product slice. Write the spec as a contract, not a
+<h2 id="how-to-introduce-this-workflow-to-a-traditional-team-85"><a class="heading-link" href="#how-to-introduce-this-workflow-to-a-traditional-team-85" aria-label="Link to How To Introduce This Workflow To A Traditional Team">#</a>How To Introduce This Workflow To A Traditional Team</h2><p>Start with a small, bounded product slice. Write the spec as a contract, not a
 brainstorm. Include user stories, non-goals, safety boundaries, and acceptance
 tests. Let agents implement against that contract, then review output through
 tests, diffs, and a release-readiness note.</p>
@@ -3587,6 +4150,12 @@ standard clear enough that fast code generation does not create hidden risk.
    A local bare Git remote makes the capstone demo repeatable without network
    accounts, hosted infrastructure, or flaky external services.
 
+6. Make agent orchestration inspectable.
+
+   The `wave-ship` workflow is useful because each agent card has a title,
+   scope, dependencies, PR, verification output, and merge status. That is the
+   difference between &quot;AI helped&quot; and a delivery system a client can review.
+
 ## How To Introduce This Workflow To A Traditional Team
 
 Start with a small, bounded product slice. Write the spec as a contract, not a
@@ -3599,22 +4168,28 @@ team still owns the product contract and the evidence bar.
 </pre></div>
           </div>
         </article>
-<article class="doc" id="doc-9" data-title="DevDrop MVP Wave-Ship Prep" data-path="ops/wave-ship/README.md" data-search="devdrop mvp wave-ship prep ops/wave-ship/readme.md # devdrop mvp wave-ship prep
+<article class="doc" id="doc-10" data-title="DevDrop MVP Wave-Ship Prep" data-path="ops/wave-ship/README.md" data-search="devdrop mvp wave-ship prep ops/wave-ship/readme.md # devdrop mvp wave-ship prep
 
 ## workflow
 
 use:
 
 ```text
+.claude/workflows/wave-ship.js
+```
+
+this repo now carries its own checked-in workflow copy. the inkwell workflow path
+can still be used as an upstream reference when comparing behavior:
+
+```text
 /users/lecoqjacob/projects/personal/inkwell/.claude/workflows/wave-ship.js
 ```
 
-the requested path with `inkwell.claude` was not present locally. the checked-in
-workflow path is under the `inkwell` repository&#39;s `.claude/workflows/` directory.
-
 ## args
 
-pass `devdrop-mvp.args.json` as the workflow args json.
+pass `devdrop-mvp.args.json` as the workflow args json for the original mvp wave.
+pass `devdrop-capstone.args.json` for the stretch wave that pushes the project to
+final capstone readiness.
 
 the prepared run uses:
 
@@ -3644,6 +4219,16 @@ wave 3:
 
 - `cil-221` — devdrop: readme, examples, and end-to-end mvp verification
 
+## capstone stretch cards
+
+`devdrop-capstone.args.json` adds the next wave:
+
+- release packaging and install docs.
+- executable local demo-check harness.
+- `devspace doctor` diagnostics.
+- manifest remote diff preview.
+- final capstone evidence and reflection.
+
 ## boundaries
 
 - workers open prs and do not merge.
@@ -3651,7 +4236,6 @@ wave 3:
 - do not build hosted sync, fuse, a daemon, team secrets, editor settings sync,
   or dependency auto-install in this run.
 - do not put real secrets in docs, fixtures, logs, or tests.
-
 ">
           <header class="doc-header">
             <div>
@@ -3659,23 +4243,32 @@ wave 3:
               <div class="doc-path">ops/wave-ship/README.md</div>
             </div>
             <div class="doc-meta">
-              <span class="badge">182 words</span>
-              <span class="badge">1 code</span>
+              <span class="badge">243 words</span>
+              <span class="badge">2 code</span>
               <span class="badge">0 tables</span>
             </div>
           </header>
           <div class="doc-body">
-            <div class="rendered markdown"><h1 id="devdrop-mvp-wave-ship-prep-78"><a class="heading-link" href="#devdrop-mvp-wave-ship-prep-78" aria-label="Link to DevDrop MVP Wave-Ship Prep">#</a>DevDrop MVP Wave-Ship Prep</h1><h2 id="workflow-79"><a class="heading-link" href="#workflow-79" aria-label="Link to Workflow">#</a>Workflow</h2><p>Use:</p>
+            <div class="rendered markdown"><h1 id="devdrop-mvp-wave-ship-prep-86"><a class="heading-link" href="#devdrop-mvp-wave-ship-prep-86" aria-label="Link to DevDrop MVP Wave-Ship Prep">#</a>DevDrop MVP Wave-Ship Prep</h1><h2 id="workflow-87"><a class="heading-link" href="#workflow-87" aria-label="Link to Workflow">#</a>Workflow</h2><p>Use:</p>
 <figure class="code-block" data-lang="text">
     <figcaption>
       <span>text</span>
-      <button class="copy-btn" type="button" data-copy-code="code-28">Copy</button>
+      <button class="copy-btn" type="button" data-copy-code="code-30">Copy</button>
     </figcaption>
-    <div id="code-28" class="diff-render" data-code-b64="L1VzZXJzL2xlY29xamFjb2IvUHJvamVjdHMvcGVyc29uYWwvaW5rd2VsbC8uY2xhdWRlL3dvcmtmbG93cy93YXZlLXNoaXAuanM=" data-lang="text"></div>
+    <div id="code-30" class="diff-render" data-code-b64="LmNsYXVkZS93b3JrZmxvd3Mvd2F2ZS1zaGlwLmpz" data-lang="text"></div>
+    <noscript><pre><code>.claude/workflows/wave-ship.js</code></pre></noscript>
+  </figure><p>This repo now carries its own checked-in workflow copy. The Inkwell workflow path
+can still be used as an upstream reference when comparing behavior:</p>
+<figure class="code-block" data-lang="text">
+    <figcaption>
+      <span>text</span>
+      <button class="copy-btn" type="button" data-copy-code="code-31">Copy</button>
+    </figcaption>
+    <div id="code-31" class="diff-render" data-code-b64="L1VzZXJzL2xlY29xamFjb2IvUHJvamVjdHMvcGVyc29uYWwvaW5rd2VsbC8uY2xhdWRlL3dvcmtmbG93cy93YXZlLXNoaXAuanM=" data-lang="text"></div>
     <noscript><pre><code>/Users/lecoqjacob/Projects/personal/inkwell/.claude/workflows/wave-ship.js</code></pre></noscript>
-  </figure><p>The requested path with <code>inkwell.claude</code> was not present locally. The checked-in
-workflow path is under the <code>inkwell</code> repository&#39;s <code>.claude/workflows/</code> directory.</p>
-<h2 id="args-80"><a class="heading-link" href="#args-80" aria-label="Link to Args">#</a>Args</h2><p>Pass <code>devdrop-mvp.args.json</code> as the workflow args JSON.</p>
+  </figure><h2 id="args-88"><a class="heading-link" href="#args-88" aria-label="Link to Args">#</a>Args</h2><p>Pass <code>devdrop-mvp.args.json</code> as the workflow args JSON for the original MVP wave.
+Pass <code>devdrop-capstone.args.json</code> for the stretch wave that pushes the project to
+final capstone readiness.</p>
 <p>The prepared run uses:</p>
 <ul>
 <li><code>repo</code>: <code>/Users/lecoqjacob/Projects/personal/devdrop</code></li>
@@ -3688,7 +4281,7 @@ workflow path is under the <code>inkwell</code> repository&#39;s <code>.claude/w
 <li><code>maxConcurrent</code>: <code>3</code></li>
 <li><code>engine</code>: <code>codex</code></li>
 </ul>
-<h2 id="linear-cards-81"><a class="heading-link" href="#linear-cards-81" aria-label="Link to Linear Cards">#</a>Linear Cards</h2><p>Wave 1:</p>
+<h2 id="linear-cards-89"><a class="heading-link" href="#linear-cards-89" aria-label="Link to Linear Cards">#</a>Linear Cards</h2><p>Wave 1:</p>
 <ul>
 <li><code>CIL-217</code> — DevDrop: scaffold Go CLI and init command</li>
 </ul>
@@ -3702,7 +4295,15 @@ workflow path is under the <code>inkwell</code> repository&#39;s <code>.claude/w
 <ul>
 <li><code>CIL-221</code> — DevDrop: README, examples, and end-to-end MVP verification</li>
 </ul>
-<h2 id="boundaries-82"><a class="heading-link" href="#boundaries-82" aria-label="Link to Boundaries">#</a>Boundaries</h2><ul>
+<h2 id="capstone-stretch-cards-90"><a class="heading-link" href="#capstone-stretch-cards-90" aria-label="Link to Capstone Stretch Cards">#</a>Capstone Stretch Cards</h2><p><code>devdrop-capstone.args.json</code> adds the next wave:</p>
+<ul>
+<li>Release packaging and install docs.</li>
+<li>Executable local demo-check harness.</li>
+<li><code>devspace doctor</code> diagnostics.</li>
+<li>Manifest remote diff preview.</li>
+<li>Final capstone evidence and reflection.</li>
+</ul>
+<h2 id="boundaries-91"><a class="heading-link" href="#boundaries-91" aria-label="Link to Boundaries">#</a>Boundaries</h2><ul>
 <li>Workers open PRs and do not merge.</li>
 <li><code>wave-ship</code> owns serialized merge and ticket closeout.</li>
 <li>Do not build hosted sync, FUSE, a daemon, team secrets, editor settings sync,
@@ -3717,15 +4318,21 @@ or dependency auto-install in this run.</li>
 Use:
 
 ```text
+.claude/workflows/wave-ship.js
+```
+
+This repo now carries its own checked-in workflow copy. The Inkwell workflow path
+can still be used as an upstream reference when comparing behavior:
+
+```text
 /Users/lecoqjacob/Projects/personal/inkwell/.claude/workflows/wave-ship.js
 ```
 
-The requested path with `inkwell.claude` was not present locally. The checked-in
-workflow path is under the `inkwell` repository&#39;s `.claude/workflows/` directory.
-
 ## Args
 
-Pass `devdrop-mvp.args.json` as the workflow args JSON.
+Pass `devdrop-mvp.args.json` as the workflow args JSON for the original MVP wave.
+Pass `devdrop-capstone.args.json` for the stretch wave that pushes the project to
+final capstone readiness.
 
 The prepared run uses:
 
@@ -3755,6 +4362,16 @@ Wave 3:
 
 - `CIL-221` — DevDrop: README, examples, and end-to-end MVP verification
 
+## Capstone Stretch Cards
+
+`devdrop-capstone.args.json` adds the next wave:
+
+- Release packaging and install docs.
+- Executable local demo-check harness.
+- `devspace doctor` diagnostics.
+- Manifest remote diff preview.
+- Final capstone evidence and reflection.
+
 ## Boundaries
 
 - Workers open PRs and do not merge.
@@ -3762,7 +4379,6 @@ Wave 3:
 - Do not build hosted sync, FUSE, a daemon, team secrets, editor settings sync,
   or dependency auto-install in this run.
 - Do not put real secrets in docs, fixtures, logs, or tests.
-
 </pre></div>
           </div>
         </article>
@@ -3770,7 +4386,7 @@ Wave 3:
     </main>
   </div>
 
-  <script id="doc-data" type="application/json">[{"id":"doc-1","title":"DevDrop","rel":"README.md"},{"id":"doc-2","title":"Release Readiness","rel":"docs/release-readiness.md"},{"id":"doc-3","title":"DevDrop Capstone Packet","rel":"docs/capstone/README.md"},{"id":"doc-4","title":"Capstone Spec: DevDrop","rel":"docs/capstone/spec.md"},{"id":"doc-5","title":"Proof Artifacts","rel":"docs/capstone/proof-artifacts.md"},{"id":"doc-6","title":"Case Study: DevDrop","rel":"docs/capstone/case-study.md"},{"id":"doc-7","title":"Demo Script","rel":"docs/capstone/demo-script.md"},{"id":"doc-8","title":"Playbook Contribution: Client Enablement Lessons","rel":"docs/capstone/playbook-contribution.md"},{"id":"doc-9","title":"DevDrop MVP Wave-Ship Prep","rel":"ops/wave-ship/README.md"}]</script>
+  <script id="doc-data" type="application/json">[{"id":"doc-1","title":"DevDrop","rel":"README.md"},{"id":"doc-2","title":"Release Readiness","rel":"docs/release-readiness.md"},{"id":"doc-3","title":"DevDrop Capstone Packet","rel":"docs/capstone/README.md"},{"id":"doc-4","title":"Capstone Spec: DevDrop","rel":"docs/capstone/spec.md"},{"id":"doc-5","title":"Proof Artifacts","rel":"docs/capstone/proof-artifacts.md"},{"id":"doc-6","title":"Case Study: DevDrop","rel":"docs/capstone/case-study.md"},{"id":"doc-7","title":"Remote Agent Case Study","rel":"docs/capstone/remote-agent-case-study.md"},{"id":"doc-8","title":"Demo Script","rel":"docs/capstone/demo-script.md"},{"id":"doc-9","title":"Playbook Contribution: Client Enablement Lessons","rel":"docs/capstone/playbook-contribution.md"},{"id":"doc-10","title":"DevDrop MVP Wave-Ship Prep","rel":"ops/wave-ship/README.md"}]</script>
   <script type="module">
     import { File } from "https://esm.sh/@pierre/diffs@1.2.10?bundle";
 

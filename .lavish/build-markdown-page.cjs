@@ -10,6 +10,7 @@ const docs = [
   "docs/capstone/spec.md",
   "docs/capstone/proof-artifacts.md",
   "docs/capstone/case-study.md",
+  "docs/capstone/remote-agent-case-study.md",
   "docs/capstone/demo-script.md",
   "docs/capstone/playbook-contribution.md",
   "ops/wave-ship/README.md",

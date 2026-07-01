@@ -37,6 +37,12 @@ standard clear enough that fast code generation does not create hidden risk.
    A local bare Git remote makes the capstone demo repeatable without network
    accounts, hosted infrastructure, or flaky external services.
 
+6. Make agent orchestration inspectable.
+
+   The `wave-ship` workflow is useful because each agent card has a title,
+   scope, dependencies, PR, verification output, and merge status. That is the
+   difference between "AI helped" and a delivery system a client can review.
+
 ## How To Introduce This Workflow To A Traditional Team
 
 Start with a small, bounded product slice. Write the spec as a contract, not a

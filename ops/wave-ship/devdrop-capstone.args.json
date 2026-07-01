@@ -1,0 +1,78 @@
+{
+  "repo": "/Users/lecoqjacob/Projects/personal/devdrop",
+  "team": "Cypress Ink Labs",
+  "project": "DevDrop Capstone",
+  "base": "main",
+  "backend": "orca",
+  "serializedMerge": true,
+  "autoContinue": true,
+  "maxConcurrent": 3,
+  "maxReviewRounds": 5,
+  "engine": "codex",
+  "labels": ["Feature", "Capstone"],
+  "priority": 2,
+  "ignoreChecks": ["evaluate_trigger", "sandbox-verify"],
+  "goal": "Push DevDrop from local-first MVP to capstone-ready CLI product without changing the bounded product thesis. Add release packaging, executable demo verification, diagnostics, manifest diff/reconcile preview, and final proof artifacts. Preserve safety boundaries: no hosted sync, no daemon, no FUSE, no team secret sharing, no dependency auto-install, and no real secrets in docs, fixtures, logs, or tests.",
+  "cards": [
+    {
+      "title": "DevDrop: release packaging and install docs",
+      "task": "Add release packaging for the `devspace` CLI. Provide a Makefile or scripts that run tests, vet, build a local binary, build release artifacts for the current platform, and generate SHA256 checksums. Document how to install from source and how a GitHub Release should be assembled. Keep the implementation simple and repo-native; do not introduce a hosted service or heavyweight release framework unless it materially reduces complexity.",
+      "plan": null,
+      "scope": "Touch release scripts, Makefile, README/install docs, and tests only as needed for packaging verification. Do not rename the Go module or change product behavior except where command naming is necessary for release packaging.",
+      "labels": ["Feature", "Infrastructure", "Documentation"],
+      "priority": 2,
+      "dependsOn": [],
+      "cil": null,
+      "migration": false
+    },
+    {
+      "title": "DevDrop: executable demo-check harness",
+      "task": "Turn the capstone two-machine demo into an executable script, for example `scripts/demo-check.sh`. It must build `devspace`, create temporary workspaces and local bare Git remotes, run init/scan/push/pull/plan/apply/hydrate/env/status, assert the generated `.env` is mode 0600, and cleanly report success. Update docs so the final demo script and proof artifacts point at this command.",
+      "plan": null,
+      "scope": "Create a deterministic local harness using temporary directories only. Do not require network access, GitHub auth, Linear auth, or real secrets. Keep generated temporary files outside the repo unless the user passes an explicit output path.",
+      "labels": ["Feature", "Testing", "Documentation"],
+      "priority": 2,
+      "dependsOn": ["DevDrop: release packaging and install docs"],
+      "cil": null,
+      "migration": false
+    },
+    {
+      "title": "DevDrop: doctor diagnostics command",
+      "task": "Add `devspace doctor` to diagnose local readiness. It should check config presence, workspace manifest validity, workspace path safety, age identity readability, Git availability, manifest remote configuration, manifest repo cleanliness if configured, last plan presence/hash status if available, and whether tracked project paths are missing, placeholders, hydrated, dirty, or missing env files. Output human-readable results and return non-zero only for hard failures that prevent core commands from working.",
+      "plan": null,
+      "scope": "Add a read-only diagnostics command and focused tests. Do not mutate config, clone repos, pull remotes, write env files, install dependencies, or contact hosted services except for existing local Git checks needed to inspect configured state.",
+      "labels": ["Feature", "CLI"],
+      "priority": 2,
+      "dependsOn": ["DevDrop: executable demo-check harness"],
+      "cil": null,
+      "migration": false
+    },
+    {
+      "title": "DevDrop: manifest remote diff preview",
+      "task": "Add a safe preview command for comparing the local workspace manifest with the configured remote manifest, for example `devspace workspace diff`. It should fetch/read the configured manifest repo cache, validate the remote manifest, localize paths for comparison, and report added, removed, and changed projects without replacing the local manifest. This gives users a reconciliation preview before `workspace pull`.",
+      "plan": null,
+      "scope": "Read-only diff preview only. Do not implement force pull, merge UI, automatic conflict resolution, remote writes, hosted sync, or source-code repo operations. Include tests with local bare Git remotes and invalid remote manifest cases.",
+      "labels": ["Feature", "CLI"],
+      "priority": 3,
+      "dependsOn": ["DevDrop: doctor diagnostics command"],
+      "cil": null,
+      "migration": false
+    },
+    {
+      "title": "DevDrop: final capstone evidence and reflection",
+      "task": "Finalize the capstone docs after the product stretch cards land. Update proof artifacts with final command output placeholders, add `docs/capstone/reflection.md`, update the case study with the remote-agent delivery system, regenerate `docs/capstone/index.html`, and make the demo script reference the executable demo-check harness. The final docs should clearly distinguish product capabilities from delivery-process evidence.",
+      "plan": null,
+      "scope": "Documentation and generated HTML only. Do not add product features in this card. Do not fabricate PR, release, or recording URLs; leave explicit placeholders when evidence is not available yet.",
+      "labels": ["Documentation", "Capstone"],
+      "priority": 2,
+      "dependsOn": [
+        "DevDrop: release packaging and install docs",
+        "DevDrop: executable demo-check harness",
+        "DevDrop: doctor diagnostics command",
+        "DevDrop: manifest remote diff preview"
+      ],
+      "cil": null,
+      "migration": false
+    }
+  ]
+}

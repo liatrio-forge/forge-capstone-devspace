@@ -54,10 +54,25 @@ product slice:
   without hosted infrastructure.
 - Documentation records what was tested, what passed, what failed, and what
   remains risky.
+- The delivery plan was shaped as remote-agent cards through
+  `.claude/workflows/wave-ship.js`, giving the team a concrete example of
+  agent orchestration rather than a generic claim about AI usage.
 
 The main lesson for client enablement is that AI acceleration works best when it
 is paired with small, explicit contracts: specs, acceptance criteria, safety
 tests, and release gates.
+
+## Delivery Case Study
+
+DevDrop uses the checked-in `wave-ship` workflow as a second capstone artifact.
+The workflow decomposes a product goal into Linear-backed cards, dispatches work
+to isolated agent workers, opens PRs, watches CI/review feedback, and merges
+serially through the coordinator.
+
+That process is valuable to a client because it makes agent delivery auditable:
+scope, dependencies, PR evidence, verification commands, and blockers are all
+visible. The capstone demo should show both the product and the delivery system
+that produced it.
 
 ## Trade-Offs
 

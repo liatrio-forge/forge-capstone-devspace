@@ -105,8 +105,27 @@ sed -n '1,120p' docs/release-readiness.md
 sed -n '1,160p' docs/capstone/proof-artifacts.md
 ```
 
+Show the remote-agent delivery case study:
+
+```bash
+sed -n '1,220p' docs/capstone/remote-agent-case-study.md
+sed -n '1,220p' ops/wave-ship/devdrop-mvp.args.json
+sed -n '1,220p' ops/wave-ship/devdrop-capstone.args.json
+```
+
+Narration:
+
+- The product was not built as one large ambiguous prompt.
+- The MVP was decomposed into cards with dependencies and explicit non-goals.
+- `wave-ship` can dispatch those cards through isolated remote workers with a
+  concurrency cap.
+- Serialized merge keeps parallel agent work from racing on the base branch.
+- The same workflow now has a capstone stretch wave for release packaging,
+  demo verification, diagnostics, manifest diff preview, and final evidence.
+
 Closing line:
 
 DevDrop is intentionally conservative. It does not delete projects, auto-run
 setup commands, sync source code, or upload secrets. The capstone value is the
-safe recovery workflow and the evidence that the destructive edges are guarded.
+safe recovery workflow, the evidence that destructive edges are guarded, and the
+agent-delivery process that made the work auditable.

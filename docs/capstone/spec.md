@@ -25,6 +25,11 @@ Ship a local-first CLI that can recreate workspace structure on another machine
 from a synced manifest while preserving local control over source code and
 secrets.
 
+Use the delivery process itself as part of the capstone: demonstrate how
+remote/cloud agents can execute well-scoped cards through the checked-in
+`.claude/workflows/wave-ship.js` workflow, then include that evidence in the
+case study and final demo.
+
 ## Non-Goals
 
 - Hosted sync service.
@@ -125,3 +130,5 @@ Acceptance:
   and remaining risks.
 - The demo uses temporary directories and local bare remotes so it can run
   without network access.
+- Remote-agent delivery evidence identifies cards, PRs, verification commands,
+  blockers, and human decisions without exposing secrets or hidden local state.

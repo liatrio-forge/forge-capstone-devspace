@@ -13,6 +13,9 @@ links as releases, PRs, and recordings are created.
 | Capstone spec | Done | `docs/capstone/spec.md` |
 | Case study | Drafted | `docs/capstone/case-study.md` |
 | Demo script | Drafted | `docs/capstone/demo-script.md` |
+| Remote-agent case study | Drafted | `docs/capstone/remote-agent-case-study.md` |
+| MVP wave args | Done | `ops/wave-ship/devdrop-mvp.args.json` |
+| Capstone stretch wave args | Drafted | `ops/wave-ship/devdrop-capstone.args.json` |
 | Release binary | Pending | Add GitHub release URL |
 | Final demo recording | Pending | Add recording URL |
 | Personal reflection | Pending | Add reflection file or section after feedback |
@@ -51,6 +54,9 @@ Record a terminal walkthrough that shows:
 10. Hydrate the placeholder Git project.
 11. Store, list, and pull an encrypted env value.
 12. Show final `devspace status`.
+13. Show the remote-agent delivery workflow: `.claude/workflows/wave-ship.js`,
+    `ops/wave-ship/devdrop-mvp.args.json`, and
+    `ops/wave-ship/devdrop-capstone.args.json`.
 
 ## Safety Proof Points
 
@@ -73,6 +79,9 @@ Release tag:
 Release URL:
 Commit SHA:
 Demo recording:
+Remote-agent run:
+Wave cards:
+PR evidence:
 Case study reviewed by:
 Final test command output:
 Known limitation accepted:
