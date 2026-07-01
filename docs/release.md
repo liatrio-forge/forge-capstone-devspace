@@ -19,11 +19,15 @@ Build a local binary into `bin/devspace`:
 make build
 ```
 
-Optionally copy it onto your `PATH`:
+Optionally copy it into a user-writable directory on your `PATH`:
 
 ```bash
-install -m 0755 bin/devspace /usr/local/bin/devspace
+mkdir -p "$HOME/.local/bin"
+install -m 0755 bin/devspace "$HOME/.local/bin/devspace"
 ```
+
+If `~/.local/bin` is not already on your `PATH`, add it in your shell profile
+before running `devspace`.
 
 Verify the installed command:
 
