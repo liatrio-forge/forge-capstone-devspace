@@ -50,6 +50,8 @@ What works today:
 - Plan and apply safe missing project structure as empty placeholder folders.
 - Hydrate placeholder Git projects with normal `git clone`.
 - Push and pull the workspace manifest through a user-owned Git repository.
+- Review detected dependency install/dev commands and run them only through an
+  explicit setup command.
 - Store encrypted per-project env profiles with native age encryption.
 - Generate local `.env` files with `0600` permissions.
 
@@ -219,6 +221,30 @@ Hydrates a placeholder Git project with normal `git clone`. The placeholder is
 an empty directory; hydration refuses to clone into non-empty directories and
 does not delete files.
 
+### `devspace setup`
+
+```bash
+devspace setup plan
+devspace setup plan --json
+devspace setup run client-a-api --yes
+devspace setup run client-a-api --command dev --yes
+devspace setup apply --yes
+```
+
+`setup plan` reports dependency setup hints already captured by `scan`, including
+the detected package manager, install command, and dev command. It does not run
+anything.
+
+`setup run <project>` executes one reviewed command in the validated project
+directory. By default it runs the install command and prompts for confirmation;
+use `--command dev` to run a detected dev command, `--dry-run` to preview, or
+`--yes` for non-interactive execution after review.
+
+`setup apply` runs install commands for all detected projects after confirmation.
+Known package managers are executed without a shell. Unknown snippets require
+`--allow-unknown`, and commands that appear to install globally also require
+`--allow-global`.
+
 ### `devspace env`
 
 ```bash
@@ -340,7 +366,8 @@ Manifest sync stops with a clear error when:
 - Overwrite existing project contents during apply or hydrate.
 - Auto-pull, rebase, merge, or push project Git repositories.
 - Resolve Git conflicts.
-- Install dependencies or run project setup commands.
+- Install dependencies or run project setup commands during scan, pull, apply,
+  hydrate, daemon, or filesystem reads.
 - Upload secrets, source code, or project files.
 - Share env profiles with teammates.
 - Rotate secrets or replace local `.env` values without an explicit command.
@@ -354,7 +381,8 @@ Manifest sync stops with a clear error when:
   are not implemented.
 - Secret profiles are local to the workspace; there is no team sharing, OS
   keychain integration, remote backup, or rotation flow.
-- Setup hints are informational only and do not install dependencies.
+- Setup hints are informational during scan and sync; installs only run through
+  explicit `devspace setup` commands.
 - Editor settings, VS Code extensions, devcontainers, Nix, mise, and asdf are
   outside the MVP.
 - The command name is documented as `devspace`, while the current source package
@@ -390,7 +418,6 @@ Manifest sync stops with a clear error when:
 - OS keychain integration.
 - Secret rotation.
 - Editor settings, devcontainer, Nix, mise, or asdf sync.
-- Optional dependency setup flows with explicit confirmation.
 - Release-readiness checklist automation.
 
 ## Manifest

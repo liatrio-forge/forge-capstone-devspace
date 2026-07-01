@@ -1,6 +1,7 @@
 package devdrop
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -28,6 +29,7 @@ func NewRootCommand(version string) *cobra.Command {
 	cmd.AddCommand(newEnvCommand())
 	cmd.AddCommand(newStatusCommand())
 	cmd.AddCommand(newDoctorCommand())
+	cmd.AddCommand(newSetupCommand())
 	return cmd
 }
 
@@ -444,6 +446,186 @@ func newDoctorCommand() *cobra.Command {
 			return RunDoctor(cmd.OutOrStdout())
 		},
 	}
+}
+
+func newSetupCommand() *cobra.Command {
+	cmd := &cobra.Command{Use: "setup", Short: "Review and run project setup commands"}
+	cmd.AddCommand(newSetupPlanCommand())
+	cmd.AddCommand(newSetupRunCommand())
+	cmd.AddCommand(newSetupApplyCommand())
+	return cmd
+}
+
+func newSetupPlanCommand() *cobra.Command {
+	var jsonOut bool
+	cmd := &cobra.Command{
+		Use:   "plan",
+		Short: "Show detected setup commands without running them",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			plan, err := BuildSetupPlan()
+			if err != nil {
+				return err
+			}
+			if jsonOut {
+				return writePrettyJSON(cmd.OutOrStdout(), plan)
+			}
+			printSetupPlan(cmd.OutOrStdout(), plan)
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "print machine-readable setup plan")
+	return cmd
+}
+
+func newSetupRunCommand() *cobra.Command {
+	var kind string
+	var yes bool
+	var dryRun bool
+	var allowUnknown bool
+	var allowGlobal bool
+	cmd := &cobra.Command{
+		Use:   "run <project>",
+		Short: "Run a reviewed setup command for one project",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			result, err := RunProjectSetup(args[0], SetupRunOptions{
+				CommandKind:  kind,
+				DryRun:       true,
+				AllowUnknown: allowUnknown,
+				AllowGlobal:  allowGlobal,
+				Stdout:       cmd.OutOrStdout(),
+				Stderr:       cmd.ErrOrStderr(),
+			})
+			if err != nil {
+				return err
+			}
+			if !dryRun && !yes {
+				if err := confirmSetup(cmd.InOrStdin(), cmd.ErrOrStderr(), fmt.Sprintf("Type %s to run `%s` in %s: ", result.Project, result.Command, result.Path), result.Project); err != nil {
+					return err
+				}
+			}
+			result, err = RunProjectSetup(args[0], SetupRunOptions{
+				CommandKind:  kind,
+				DryRun:       dryRun,
+				AllowUnknown: allowUnknown,
+				AllowGlobal:  allowGlobal,
+				Stdout:       cmd.OutOrStdout(),
+				Stderr:       cmd.ErrOrStderr(),
+			})
+			if err != nil {
+				return err
+			}
+			printSetupResult(cmd.OutOrStdout(), result)
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&kind, "command", "install", "setup command to run: install or dev")
+	cmd.Flags().BoolVar(&yes, "yes", false, "run without interactive confirmation")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the command without running it")
+	cmd.Flags().BoolVar(&allowUnknown, "allow-unknown", false, "allow an unknown setup command after review")
+	cmd.Flags().BoolVar(&allowGlobal, "allow-global", false, "allow a setup command that appears to install globally")
+	return cmd
+}
+
+func newSetupApplyCommand() *cobra.Command {
+	var yes bool
+	var dryRun bool
+	var allowUnknown bool
+	var allowGlobal bool
+	cmd := &cobra.Command{
+		Use:   "apply",
+		Short: "Run reviewed install commands for all detected projects",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			plan, err := BuildSetupPlan()
+			if err != nil {
+				return err
+			}
+			if len(plan.Projects) == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "No setup commands detected.")
+				return nil
+			}
+			if !dryRun && !yes {
+				if err := confirmSetup(cmd.InOrStdin(), cmd.ErrOrStderr(), "Type run all to run install commands for every runnable project: ", "run all"); err != nil {
+					return err
+				}
+			}
+			results, err := RunAllProjectSetups(SetupRunOptions{
+				CommandKind:  "install",
+				DryRun:       dryRun,
+				AllowUnknown: allowUnknown,
+				AllowGlobal:  allowGlobal,
+				Stdout:       cmd.OutOrStdout(),
+				Stderr:       cmd.ErrOrStderr(),
+			})
+			if err != nil {
+				return err
+			}
+			if len(results) == 0 {
+				fmt.Fprintln(cmd.OutOrStdout(), "No runnable install commands detected.")
+				return nil
+			}
+			for _, result := range results {
+				printSetupResult(cmd.OutOrStdout(), result)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().BoolVar(&yes, "yes", false, "run without interactive confirmation")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print commands without running them")
+	cmd.Flags().BoolVar(&allowUnknown, "allow-unknown", false, "allow unknown setup commands after review")
+	cmd.Flags().BoolVar(&allowGlobal, "allow-global", false, "allow setup commands that appear to install globally")
+	return cmd
+}
+
+func printSetupPlan(out io.Writer, plan SetupPlan) {
+	fmt.Fprintln(out, "Setup commands:")
+	if len(plan.Projects) == 0 {
+		fmt.Fprintln(out, "(none)")
+		return
+	}
+	for _, p := range plan.Projects {
+		status := "runnable"
+		if !p.Runnable {
+			status = "review required"
+		}
+		fmt.Fprintf(out, "- %s (%s): %s\n", p.Project, p.Path, status)
+		if p.PackageManager != "" {
+			fmt.Fprintf(out, "  package manager: %s\n", p.PackageManager)
+		}
+		if p.InstallCommand != "" {
+			fmt.Fprintf(out, "  install: %s\n", p.InstallCommand)
+		}
+		if p.DevCommand != "" {
+			fmt.Fprintf(out, "  dev: %s\n", p.DevCommand)
+		}
+		if p.Reason != "" {
+			fmt.Fprintf(out, "  reason: %s\n", p.Reason)
+		}
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "No setup commands were run.")
+}
+
+func printSetupResult(out io.Writer, result SetupRunResult) {
+	action := "Ran"
+	if result.DryRun {
+		action = "Would run"
+	}
+	fmt.Fprintf(out, "%s `%s` in %s\n", action, result.Command, result.Path)
+}
+
+func confirmSetup(in io.Reader, out io.Writer, prompt, expected string) error {
+	fmt.Fprint(out, prompt)
+	answer, err := bufio.NewReader(in).ReadString('\n')
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if strings.TrimSpace(answer) != expected {
+		return fmt.Errorf("confirmation did not match; no setup commands were run")
+	}
+	return nil
 }
 
 func printStatus(out io.Writer, args []string) error {

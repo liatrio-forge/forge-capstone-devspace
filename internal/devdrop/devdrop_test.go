@@ -257,7 +257,7 @@ func TestRootCommandHelp(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "workspace") || !strings.Contains(out.String(), "env") {
+	if !strings.Contains(out.String(), "workspace") || !strings.Contains(out.String(), "env") || !strings.Contains(out.String(), "setup") {
 		t.Fatalf("help did not include expected commands:\n%s", out.String())
 	}
 }
