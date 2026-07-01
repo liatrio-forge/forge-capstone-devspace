@@ -29,7 +29,7 @@ export const meta = {
 //                  (default ["evaluate_trigger","sandbox-verify"])
 //   maxReviewRounds : cap on CI+CodeRabbit fix rounds (default 5)
 //   engine     : engine for the reasoning-heavy subagents (Build+Review) —
-//                "opus" | "sonnet" | "codex" (orchestrator's call; see below)
+//                "opus" | "sonnet" | "codex" | "cursor" (orchestrator's call; see below)
 //   engines    : per-phase override, e.g. { build: "codex", review: "sonnet" }
 //   land       : "self" (default) merge here; "coordinator" stop at the green PR
 //                and return status "merge-ready" for wave-ship to merge serially
@@ -86,9 +86,13 @@ if (!REPO || !TITLE || (!a.plan && !a.task)) {
 //   "sonnet" → native Claude Sonnet subagent — fast/cheap (default: Review)
 //   "codex"  → a thin Claude wrapper that delegates the implementation to the
 //              Codex CLI (`codex exec`) and owns git/PR plumbing + schema return
+//   "cursor" → a thin Claude wrapper that delegates the implementation to the
+//              local `cursor-agent` CLI (Cursor's own agent, run non-interactively
+//              on this machine) and owns git/PR plumbing + schema return, same
+//              shape as "codex". Requires `cursor-agent login` already done here.
 // Args: `engine` (shorthand for build+review) or `engines:{build,review}`.
 // Ticket + Land stay native (Linear-MCP / git mechanics — no engine choice).
-const VALID_ENGINES = ["opus", "sonnet", "codex"];
+const VALID_ENGINES = ["opus", "sonnet", "codex", "cursor"];
 const ENGINES_ARG = a.engines && typeof a.engines === "object" ? a.engines : {};
 function engineFor(key, fallback) {
   const pick = ENGINES_ARG[key] || a.engine || fallback;
@@ -116,6 +120,12 @@ async function runEngine(engine, opts) {
       agentType: "general-purpose",
     });
   }
+  if (engine === "cursor") {
+    return agent(cursorDelegate(prompt, rest.label), {
+      ...rest,
+      agentType: "general-purpose",
+    });
+  }
   // "opus" | "sonnet": native Claude subagent with a model override.
   return agent(prompt, {
     ...rest,
@@ -139,6 +149,27 @@ function codexDelegate(innerPrompt, label) {
 4. INDEPENDENTLY verify the result satisfies every gate in the brief before reporting success — do not trust Codex's self-report. Then return the exact structured contract.
 
 == Task brief for Codex + the contract YOU must return ==
+${innerPrompt}`;
+}
+
+// cursorDelegate wraps an executor brief so a general-purpose Claude subagent runs
+// the heavy work through the local `cursor-agent` CLI (Cursor's own coding agent,
+// run non-interactively on THIS machine — not Cursor's hosted cloud agent), then
+// returns this workflow's schema. Mirrors codexDelegate's shape exactly.
+function cursorDelegate(innerPrompt, label) {
+  const slug = String(label || "task").replace(/[^a-zA-Z0-9_-]/g, "-");
+  return `You are a thin orchestration wrapper. Do NOT do the implementation reasoning yourself — delegate it to the **local Cursor Agent CLI** (\`cursor-agent\`). You own only the plumbing (git / gh / worktree mechanics) and returning the structured result contract exactly.
+
+== Invoke cursor-agent (non-interactive) ==
+1. First confirm it's authenticated: \`cursor-agent status\`. If not logged in, STOP — do not attempt \`cursor-agent login\` yourself (it opens a browser); return blocked=true with that note.
+2. Write the FULL task brief below to /tmp/cursor-${slug}.txt with the Write tool. NEVER inline a multi-line prompt on the shell — it has quotes/newlines that break shell quoting.
+3. Run cursor-agent non-interactively, pointed at the worktree, with full tool access and no interactive approval prompts:
+     cursor-agent --print --output-format json --force --workspace <worktree-dir> "$(cat /tmp/cursor-${slug}.txt)"
+   If that errors or the prompt is rejected as too long, re-check \`cursor-agent --help\` / \`cursor-agent agent --help\` for a stdin-friendly invocation and adapt — do not give up after one failed attempt. Use \`--model <id>\` only if you must override the default model.
+4. Parse the JSON on stdout for what it did. If cursor-agent left any mechanical step unfinished (worktree, local verify, commit, push, gh pr create), finish it yourself with the normal tools.
+5. INDEPENDENTLY verify the result satisfies every gate in the brief before reporting success — do not trust cursor-agent's self-report. Then return the exact structured contract.
+
+== Task brief for cursor-agent + the contract YOU must return ==
 ${innerPrompt}`;
 }
 

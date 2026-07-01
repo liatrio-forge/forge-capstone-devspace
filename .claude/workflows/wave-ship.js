@@ -1,7 +1,7 @@
 export const meta = {
   name: "wave-ship",
   description:
-    "Decompose a goal into a dependency DAG of cards, then ship them as a streaming fleet of autonomous ship-card runs (ticket → PR → green CI/CodeRabbit → merged → Done). Each card dispatches the moment its dependencies have merged onto the base branch, up to a global concurrency cap; migration cards serialize (≤1 unmerged at a time). Reconciles failures and auto-generates remediation/continuation cards until the goal is complete.",
+    "Decompose a goal into a dependency DAG of cards, then ship them as a streaming fleet of autonomous runs (ticket → PR → green CI/CodeRabbit → merged → Done) across a mix of agent entities — native Claude, an Orca-supervised Codex worker, or Cursor (its hosted cloud Background Agent, or the local cursor-agent CLI) — chosen per card via `entity`. Each card dispatches the moment its dependencies have merged onto the base branch, up to a global concurrency cap; migration cards serialize (≤1 unmerged at a time). Reconciles failures and auto-generates remediation/continuation cards until the goal is complete.",
   whenToUse:
     "Run a large multi-card objective end to end. Plan it into file-disjoint, independently mergeable cards with explicit dependsOn, then stream them through full ship-card autonomy: each card starts as soon as its dependencies have merged (no whole-wave barrier), bounded by maxConcurrent, with migrations serialized. Keep going (remediation + continuation) until done or a cap/budget is hit. Reusable across repos via args. Invoke at TOP LEVEL only — never nest it via workflow() from another workflow, since its parallel ship-card calls rely on being depth-1 (one-level-nesting rule).",
   phases: [
@@ -19,7 +19,17 @@ export const meta = {
 //   plan            : path (relative to repo) of a plan file/dir to follow ┤ of
 //   waves           : explicit [[card,...], ...] OR [{rationale,cards},...] ┤ these
 //   cards           : flat [card,...] (layered into waves by `dependsOn`)  ┘
-//     a "card" = { title, task?|plan?, scope?, labels?, priority?, dependsOn?, cil?, migration? }
+//     a "card" = { title, task?|plan?, scope?, labels?, priority?, dependsOn?, cil?, migration?, entity? }
+//     entity : which agent implements THIS card — "claude" (default; native
+//              ship-card Build/Review) | "codex" (Orca-supervised local Codex
+//              CLI worker) | "cursor" (Cursor's hosted cloud Background Agent —
+//              runs on Cursor's own VM, opens its own PR) | "cursor-local"
+//              (local `cursor-agent` CLI via the normal ship-card flow).
+//              null/omitted inherits `defaultEntity`. Mix entities freely
+//              across cards in one run — this is the "fleet" of heterogeneous
+//              agents. "codex"/"cursor" degrade to "claude" if their infra
+//              isn't reachable (Orca unreachable / CURSOR_API_KEY unset) rather
+//              than failing the card.
 //   team            : Linear team name (default "Cypress Ink Labs")
 //   project         : Linear project name (default "Inkwell")
 //   base            : PR base branch (default "main")
@@ -28,6 +38,9 @@ export const meta = {
 //   ignoreChecks    : CI check names ship-card treats as non-blocking
 //   maxReviewRounds : ship-card CI+CodeRabbit fix-loop cap (default 5)
 //   engine|engines  : ship-card Build/Review engine ("opus"|"sonnet"|"codex")
+//   defaultEntity   : fallback entity for cards that don't set their own
+//                     ("claude"|"codex"|"cursor"|"cursor-local"; default derives
+//                     from `backend` — "orca"→"codex", else "claude")
 //   maxWaves        : cap on continuation rounds after the planned set (default 6)
 //   maxCardsPerWave : default for maxConcurrent; planner soft target per layer (default 3)
 //   maxConcurrent   : streaming DAG — global cap on cards in flight (default maxCardsPerWave)
@@ -44,11 +57,17 @@ export const meta = {
 //   shipCardName    : registry name of the ship-card workflow (default "ship-card")
 //   shipCardPath    : absolute path to ship-card.js (overrides shipCardName)
 //   dryRun          : plan only, return the wave structure, deploy nothing (default false)
-//   backend         : "workflow" (default — each card is an in-process nested
-//                     ship-card run) | "orca" (Spike 003 — each card's Build+Review
-//                     runs as a codex worker in an isolated Orca worktree, supervised
-//                     by a thin in-process poller; execution lives in the worker's own
+//   backend         : sets `defaultEntity` when it isn't given explicitly —
+//                     "workflow" (default → "claude") | "orca" (Spike 003 →
+//                     "codex"; each card's Build+Review runs as a codex worker
+//                     in an isolated Orca worktree, supervised by a thin
+//                     in-process poller; execution lives in the worker's own
 //                     PTY so a stalled build cannot trip the no-progress watchdog).
+//                     Prefer per-card `entity` over this for a mixed fleet.
+//   (entity "cursor" requires CURSOR_API_KEY exported in THIS process's
+//   environment — never pass it as a workflow arg, it would land in an agent
+//   prompt/transcript. entity "cursor-local" just needs `cursor-agent login`
+//   to already be done on this machine.)
 
 let a = args || {};
 if (typeof a === "string") {
@@ -107,9 +126,11 @@ const SHIP_CARD_PATH = a.shipCardPath || null;
 const SHIP_REF = SHIP_CARD_PATH
   ? { scriptPath: SHIP_CARD_PATH }
   : SHIP_CARD_NAME;
-// Spike 003 (Tier-3): card execution backend. "orca" routes runCard through a thin
-// in-process supervisor that drives a codex worker in an isolated Orca worktree; the
-// scheduler (DAG/migration-serialize/merge/clarify) and landCard (D) are unchanged.
+// Spike 003 (Tier-3): whole-run default execution backend, expressed today as
+// DEFAULT_ENTITY (below) — "orca" makes cards without an explicit per-card
+// `entity` route through a thin in-process supervisor that drives a codex
+// worker in an isolated Orca worktree; the scheduler (DAG/migration-serialize/
+// merge/clarify) and landCard (D) are unchanged regardless of entity.
 const BACKEND = (() => {
   const b = a.backend;
   if (b === undefined || b === null) return "workflow";
@@ -119,6 +140,26 @@ const BACKEND = (() => {
     `wave-ship: invalid backend ${JSON.stringify(b)} (expected "workflow" or "orca")`,
   );
 })();
+
+// ── per-card entity selection (cloud agents) ─────────────────────────────────
+// Which agent actually implements a card. "claude" and "cursor-local" both run
+// through the nested ship-card workflow (runCardViaWorkflow) — they differ only
+// in which engine ship-card forces for the Build step (see cardArgs). "codex"
+// and "cursor" are bespoke end-to-end supervisors (an Orca worktree / Cursor's
+// hosted cloud API) that bypass ship-card entirely and hand back a green PR
+// directly, same "merge-ready" contract as each other. `entity` is a per-card
+// override (CARD_SCHEMA); a card that leaves it null uses DEFAULT_ENTITY.
+// Unreachable infra for "codex"/"cursor" degrades to "claude" instead of
+// failing the card (see runCardViaCodex / runCardViaCursor below).
+const VALID_ENTITIES = ["claude", "codex", "cursor", "cursor-local"];
+const DEFAULT_ENTITY = VALID_ENTITIES.includes(a.defaultEntity)
+  ? a.defaultEntity
+  : BACKEND === "orca"
+    ? "codex"
+    : "claude";
+function entityFor(c) {
+  return VALID_ENTITIES.includes(c.entity) ? c.entity : DEFAULT_ENTITY;
+}
 
 const PLANNER_MODEL =
   a.plannerEngine && ["opus", "sonnet", "haiku"].includes(a.plannerEngine)
@@ -158,6 +199,7 @@ const CARD_SCHEMA = {
     "dependsOn",
     "cil",
     "migration",
+    "entity",
   ],
   properties: {
     title: {
@@ -197,6 +239,12 @@ const CARD_SCHEMA = {
       type: "boolean",
       description:
         "true if this card adds or modifies a sqlx DB migration; these serialize (≤1 unmerged at a time)",
+    },
+    entity: {
+      type: ["string", "null"],
+      enum: ["claude", "codex", "cursor", "cursor-local", null],
+      description:
+        'which agent implements this card: "claude" (default — native Claude Build/Review via the nested ship-card flow), "codex" (Orca-supervised local Codex CLI worker in an isolated worktree), "cursor" (Cursor\'s hosted Background Agent — runs remotely on Cursor\'s own cloud VM and opens its own PR), "cursor-local" (local cursor-agent CLI via the nested ship-card flow, same lifecycle as "claude" but Cursor drives the Build step). Leave null to inherit the run\'s default entity — only set this to deliberately pin a card to a specific agent/vendor or to diversify a wide independent wave across entities.',
     },
   },
 };
@@ -279,11 +327,16 @@ function normCard(c, i) {
     dependsOn: Array.isArray(c.dependsOn) ? c.dependsOn : [],
     cil: c.cil || null,
     migration: c.migration === true,
+    entity: VALID_ENTITIES.includes(c.entity) ? c.entity : null,
   };
 }
 
-// Translate one wave card into ship-card's arg contract.
+// Translate one wave card into ship-card's arg contract. entity "cursor-local"
+// forces ship-card's Build engine to "cursor" for THIS card only, regardless of
+// the run's global `engine`/`engines` — it doesn't touch Review's engine unless
+// the caller already set engines.review explicitly.
 function cardArgs(c) {
+  const forcedBuildEngine = entityFor(c) === "cursor-local" ? "cursor" : null;
   return {
     repo: REPO,
     title: c.title,
@@ -298,33 +351,54 @@ function cardArgs(c) {
     priority: c.priority,
     ignoreChecks: IGNORE,
     maxReviewRounds: MAX_REVIEW_ROUNDS,
-    engine: ENGINE,
-    engines: ENGINES,
+    engine: forcedBuildEngine || ENGINE,
+    engines: forcedBuildEngine
+      ? { ...(ENGINES || {}), build: forcedBuildEngine }
+      : ENGINES,
     // Tier-2 D: hand the green PR back for serialized coordinator merge (or self).
     land: SERIALIZED_MERGE ? "coordinator" : "self",
   };
 }
 
-// Run ONE card through the configured execution backend. Both return the SAME
-// shape ({card, result:{status,...}, error}); the scheduler routes on status, so
-// "orca" is invisible to merge (D), retry, and DAG bookkeeping.
-async function runCard(c) {
-  if (BACKEND === "orca") {
-    const out = await runCardViaOrca(c);
-    // Spike 003: if the Orca runtime is unreachable (e.g. headless/cron), fall back
-    // to the in-process workflow backend rather than failing the card. Use the
-    // schema-enforced boolean rather than text-matching the free-form note.
-    if (!out.result?.runtimeUnavailable) return out;
-    log(
-      `wave-ship: orca runtime unreachable for "${c.title}" → workflow-backend fallback.`,
-    );
-  }
+// ── per-entity dispatch ────────────────────────────────────────────────────
+// Every runCardVia*() returns the SAME shape ({card, result:{status,entity,...},
+// error}); the scheduler routes on status, so which entity actually ran a card
+// is invisible to merge (D), retry, and DAG bookkeeping — landPrompt's cleanup
+// step is the only place that reads result.entity back out (E/backend-cleanup).
+// "claude"/"cursor-local" share the nested ship-card path; "codex"/"cursor" are
+// bespoke supervisors that degrade to "claude" when their infra isn't reachable
+// (checked via a schema-enforced `runtimeUnavailable` boolean, never by
+// text-matching the free-form note).
+async function runCardViaWorkflow(c, entityLabel) {
   try {
     const res = await workflow(SHIP_REF, cardArgs(c));
+    if (res && typeof res === "object") res.entity = entityLabel || "claude";
     return { card: c, result: res, error: null };
   } catch (e) {
     return { card: c, result: null, error: String((e && e.message) || e) };
   }
+}
+async function runCardViaCodex(c) {
+  const out = await runCardViaOrca(c);
+  if (!out.result?.runtimeUnavailable) return out;
+  log(`wave-ship: orca runtime unreachable for "${c.title}" → claude fallback.`);
+  return runCardViaWorkflow(c, "claude");
+}
+async function runCardViaCursor(c) {
+  const out = await runCardViaCursorCloud(c);
+  if (!out.result?.runtimeUnavailable) return out;
+  log(`wave-ship: CURSOR_API_KEY not set for "${c.title}" → claude fallback.`);
+  return runCardViaWorkflow(c, "claude");
+}
+const ENTITY_RUNNERS = {
+  claude: (c) => runCardViaWorkflow(c, "claude"),
+  "cursor-local": (c) => runCardViaWorkflow(c, "cursor-local"),
+  codex: runCardViaCodex,
+  cursor: runCardViaCursor,
+};
+// Run ONE card through whichever entity it (or DEFAULT_ENTITY) resolves to.
+async function runCard(c) {
+  return ENTITY_RUNNERS[entityFor(c)](c);
 }
 
 // ── Spike 003: orca execution backend ────────────────────────────────────────
@@ -469,6 +543,7 @@ async function runCardViaOrca(c) {
         worktreeSelector: r?.worktreeSelector || `name:${wtName(c)}`,
         runtimeUnavailable: r?.runtimeUnavailable ?? false,
         backend: "orca",
+        entity: "codex",
         // Carry the ship-card "blocked" contract: clarify (E) reads detail.question/
         // questionOptions, and isRetriable()'s dup-PR guard checks detail.prUrl/
         // prNumber — so a "blocked" that somehow has a PR is NOT auto-retried.
@@ -489,6 +564,151 @@ async function runCardViaOrca(c) {
           ? "orca merge-ready result missing pr/prUrl/branch"
           : r?.note || "orca worker error"
         : null,
+    };
+  } catch (e) {
+    return { card: c, result: null, error: String((e && e.message) || e) };
+  }
+}
+
+// ── entity "cursor": Cursor's hosted cloud Background Agent ─────────────────
+// Unlike orca (a local worktree + PTY, merely supervised remotely-ish), this is
+// a GENUINELY remote entity: the card's implementation runs on Cursor's own
+// cloud VM via https://api.cursor.com, not on this machine. The supervisor here
+// is even thinner than orca's — it only launches + polls a REST resource, no
+// local worktree/terminal exists at all. On success Cursor's `autoCreatePR`
+// opens the PR itself; the supervisor hands that back as "merge-ready" for the
+// SAME serialized landCard (D) to land, then archives the cloud agent.
+const CURSOR_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  // Only status + note are required: an "error" early-return legitimately omits
+  // pr/branch/etc, and forcing them would make the schema reject a valid stop.
+  required: ["status", "note"],
+  properties: {
+    status: {
+      type: "string",
+      description:
+        'one of: "merge-ready" (the Cursor cloud agent finished and opened a PR), "error" (missing/bad CURSOR_API_KEY, repo not connected to Cursor, the agent failed, or it finished with no PR)',
+    },
+    pr: { type: ["number", "null"], description: "PR number, or null" },
+    prUrl: { type: ["string", "null"] },
+    branch: { type: ["string", "null"] },
+    cil: { type: ["string", "null"] },
+    cursorAgentId: {
+      type: ["string", "null"],
+      description:
+        "the Cursor cloud agent's id (agent.id from the create response), for archive cleanup on land",
+    },
+    note: { type: "string" },
+    // Set true ONLY on a preflight failure (no CURSOR_API_KEY) so the fallback
+    // check is a boolean guard rather than text-matching the free-form note.
+    runtimeUnavailable: { type: ["boolean", "null"] },
+  },
+};
+
+// The self-contained brief handed to Cursor's cloud agent (mirrors orcaBrief,
+// minus anything worktree/orchestration-specific that has no analog on a
+// fully-remote entity with no decision-gate channel back to the coordinator).
+function cursorBrief(c) {
+  const work = c.plan
+    ? `Follow the plan file ${c.plan} EXACTLY.`
+    : `Implement this task:\n${c.task || c.title}`;
+  return [
+    `CARD: ${c.title}`,
+    `You are working autonomously on a fresh branch off ${BASE} in this repository, on Cursor's own cloud infrastructure. Do NOT ask interactive questions — make the best reasonable call on any ambiguity and note assumptions in your final summary.`,
+    ``,
+    `Read .mex/ROUTER.md for repo conventions before editing, if it exists. ${work}`,
+    `Scope: ${c.scope || "Keep the change minimal and focused on the task."}`,
+    ``,
+    `VERIFY exactly as this repo's CI does before you finish (formatter, linter, the relevant tests — whichever apply). Fix any failures yourself before finishing; do not leave the branch red.`,
+    `Use a Conventional Commit message. Do NOT merge the PR yourself — leave it open for review.`,
+    c.cil
+      ? `Linear ticket for this card: ${c.cil} (context only — you do not have Linear access; the coordinator updates it).`
+      : ``,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+// Prompt for the thin supervisor agent: launch + poll the Cursor Cloud Agents
+// REST API (https://cursor.com/docs/cloud-agent/api/endpoints). Auth is HTTP
+// Basic with the API key as the username and an empty password.
+function cursorCloudSupervisorPrompt(c) {
+  const slug = wtName(c);
+  const brief = cursorBrief(c);
+  return `You are the wave-ship CURSOR-CLOUD SUPERVISOR for ONE card. You are THIN: you ONLY call the Cursor REST API and poll — you do NOT implement the card yourself (Cursor's hosted Background Agent does, on Cursor's own cloud VM, entirely outside this machine). Work autonomously; never block on a human.
+
+CARD TITLE: ${c.title}
+REPO: ${REPO}    BASE: ${BASE}
+
+0. PREFLIGHT: run \`[ -n "$CURSOR_API_KEY" ]\` in Bash. If it's unset/empty, STOP immediately — return {status:"error", runtimeUnavailable:true, note:"CURSOR_API_KEY not set in the environment"}. Never print the key's value anywhere, including in your final report.
+1. RESOLVE REPO: \`cd ${REPO} && gh repo view --json url --jq .url\`. Cursor's Background Agents only work against a GitHub repo that has Cursor's GitHub App installed — keep that URL for step 2.
+2. LAUNCH: write the JSON request body to /tmp/cursor-launch-${slug}.json with the Write tool (NEVER inline a multi-line prompt on the shell) with this shape:
+   {"prompt":{"text": <BRIEF below, as a JSON string>}, "repos":[{"url":"<repo url from step 1>","startingRef":"${BASE}"}], "autoCreatePR": true}
+   Then: \`curl -s -u "$CURSOR_API_KEY:" -X POST https://api.cursor.com/v1/agents -H "Content-Type: application/json" --data @/tmp/cursor-launch-${slug}.json\`.
+   Parse the response: agentId = .agent.id ; runId = .run.id (fall back to .agent.latestRunId if .run.id is absent). If the call isn't 2xx, or agentId/runId are missing, return {status:"error", note:"<the response body, truncated>"} — likely causes: bad/expired key, or this repo isn't connected to Cursor (say so in the note if you suspect it).
+3. SUPERVISE — poll up to ~20 times (~10-15 min total): \`curl -s -u "$CURSOR_API_KEY:" https://api.cursor.com/v1/agents/<agentId>/runs/<runId>\`, then \`sleep 30\`. Emit one short log line after EACH poll (e.g. "poll N: status=<status>") so you stay active between polls — never a single long-blocking wait. Stop as soon as .status is terminal: FINISHED | ERROR | CANCELLED | EXPIRED.
+4. ON FINISHED: scan .git.branches[] for an entry with a non-null prUrl.
+   - Found one → parse the PR number from the URL's trailing /pull/<N> segment. Return {status:"merge-ready", pr:<N>, prUrl:"<url>", branch:"<that entry's branch>", cursorAgentId:"<agentId>", cil:${c.cil ? JSON.stringify(c.cil) : "null"}, note:"Cursor cloud agent opened a PR"}.
+   - None found → the agent finished without a PR. Return {status:"error", cursorAgentId:"<agentId>", note:"agent finished with no PR — result: <the run's .result text, truncated>"}.
+5. ON ERROR / CANCELLED / EXPIRED, or no terminal status after the poll budget → return {status:"error", cursorAgentId:"<agentId or null>", note:"<final status, or 'poll timeout'>"}.
+
+Do NOT merge the PR — the coordinator lands it. Return ONLY the structured result.
+
+BRIEF (the exact text to send as prompt.text in step 2):
+"""
+${brief}
+"""`;
+}
+
+// Supervise ONE card via Cursor's cloud API; map the result into the scheduler
+// shape used by every entity (see runCardViaOrca for the sibling implementation).
+async function runCardViaCursorCloud(c) {
+  try {
+    const r = await agent(
+      cursorCloudSupervisorPrompt(c),
+      maybeModel({
+        label: `cursor:${c.title}`,
+        phase: "Deploy",
+        schema: CURSOR_SCHEMA,
+        agentType: "general-purpose",
+        effort: "low",
+      }),
+    );
+    const rawStatus = r?.status === "merge-ready" ? "merge-ready" : "error";
+    const missingMergeCoords =
+      rawStatus === "merge-ready" && (!r?.pr || !r?.prUrl || !r?.branch);
+    const s = missingMergeCoords ? "error" : rawStatus;
+    return {
+      card: c,
+      result: {
+        status: s,
+        cil: r?.cil ?? c.cil ?? null,
+        pr: r?.pr ?? null,
+        prUrl: r?.prUrl ?? null,
+        branch: r?.branch ?? null,
+        cursorAgentId: r?.cursorAgentId ?? null,
+        runtimeUnavailable: r?.runtimeUnavailable ?? false,
+        backend: "cursor",
+        entity: "cursor",
+        // Cursor's cloud API has no decision-gate/orchestration channel back to
+        // the coordinator, so question/questionOptions are always empty — a
+        // failed run is always terminal "error", never a retriable "blocked".
+        detail: {
+          note: r?.note || "",
+          prUrl: r?.prUrl ?? null,
+          prNumber: r?.pr ?? null,
+          question: null,
+          questionOptions: [],
+          blockReason: null,
+        },
+      },
+      error:
+        s === "error"
+          ? missingMergeCoords
+            ? "cursor merge-ready result missing pr/prUrl/branch"
+            : r?.note || "cursor cloud agent error"
+          : null,
     };
   } catch (e) {
     return { card: c, result: null, error: String((e && e.message) || e) };
@@ -517,12 +737,17 @@ function landPrompt(rc) {
   const ticketStep = r.cil
     ? `Load tools: ToolSearch "select:mcp__plugin_linear_linear__save_issue,mcp__plugin_linear_linear__save_comment". save_issue { id: "${r.cil}", state: "Done" }, then save_comment on ${r.cil} recapping: "Landed on ${BASE} — squash-merged PR #${r.pr} as <sha>." If Linear is unavailable, still report merged=true with ticketDone=false and a note.`
     : `No ticket id — skip Linear and set ticketDone=true.`;
-  // Spike 003: orca-managed worktrees are torn down with `orca worktree rm` (removes
-  // worktree + branch from Orca and git); workflow-backend worktrees use plain git.
+  // Cleanup is entity-specific: orca-managed worktrees are torn down with `orca
+  // worktree rm` (removes worktree + branch from Orca and git); the Cursor cloud
+  // entity has no local worktree at all — archive the cloud agent instead;
+  // every other entity (claude/cursor-local, via ship-card's own worktree)
+  // uses plain git.
   const cleanupStep =
-    r.backend === "orca" && r.worktreeSelector
+    r.entity === "codex" && r.worktreeSelector
       ? `Remove the Orca worktree (this also deletes its branch): orca worktree rm --worktree ${r.worktreeSelector} --force ; orca worktree prune (ignore errors).`
-      : `Remove the worktree if present: git worktree remove --force ${r.worktreePath || ""} ; git worktree prune. Delete the stale local branch: git branch -D ${r.branch} (ignore errors).`;
+      : r.entity === "cursor" && r.cursorAgentId
+        ? `Archive the Cursor cloud agent so it drops out of active listings (archive, do not delete — keeps run history): curl -s -u "$CURSOR_API_KEY:" -X POST https://api.cursor.com/v1/agents/${r.cursorAgentId}/archive > /dev/null (ignore errors; skip silently if CURSOR_API_KEY is unset).`
+        : `Remove the worktree if present: git worktree remove --force ${r.worktreePath || ""} ; git worktree prune. Delete the stale local branch: git branch -D ${r.branch} (ignore errors).`;
   return `You are the wave-ship MERGE coordinator landing ONE already-green PR. Work autonomously; do not ask questions.
 PR #${r.pr} on the repo at ${REPO} — branch ${r.branch}, base ${BASE}, ticket ${r.cil || "(none)"}, worktree ${r.worktreePath || "(none)"}.
 This PR already passed CI + CodeRabbit in its ship-card run. You OWN the merge so sibling merges land serially, each on the CURRENT base.
@@ -654,6 +879,7 @@ function toFailure(r) {
     cil: r.result?.cil || null,
     pr: r.result?.pr || null,
     prUrl: r.result?.prUrl || null,
+    entity: r.result?.entity || entityFor(r.card),
     note:
       r.result?.detail?.blockReason ||
       r.result?.detail?.summary ||
@@ -669,6 +895,7 @@ function toOutcome(r) {
     cil: r.result?.cil || null,
     pr: r.result?.pr || null,
     mergeSha: r.result?.mergeSha || null,
+    entity: r.result?.entity || entityFor(r.card),
   };
 }
 
@@ -680,7 +907,7 @@ ${JSON.stringify(ctx.failures, null, 2)}
 
 Decide which failed cards can be SAFELY retried, and how.
 RULES:
-- ONLY status="blocked" cards are retriable — they stopped BEFORE opening a PR, so a re-run cannot create a duplicate PR. For each, emit a refined retry card in newWaveCards: keep the SAME title, set cil to that card's cil so its existing Linear ticket resolves, and sharpen task/scope using the block note so the executor can get past the blocker. Set dependsOn to []. Echo \`migration\` from the blocked card unchanged.
+- ONLY status="blocked" cards are retriable — they stopped BEFORE opening a PR, so a re-run cannot create a duplicate PR. For each, emit a refined retry card in newWaveCards: keep the SAME title, set cil to that card's cil so its existing Linear ticket resolves, and sharpen task/scope using the block note so the executor can get past the blocker. Set dependsOn to []. Echo \`migration\` AND \`entity\` from the blocked card unchanged — do not switch agents mid-retry unless the block note itself points at the entity (e.g. a missing credential) as the cause.
 - status="needs-attention" / "merge-failed" / "error" cards already have an open PR or a non-retriable failure. Do NOT propose auto-retry (it would duplicate the PR). Put each in blockers with a one-line human action.
 - status="merged" cards are done — ignore. status="skipped-budget" — ignore.
 Set needNewWave=true iff newWaveCards is non-empty. goalComplete=false. Return the structured result.`;
@@ -696,7 +923,7 @@ ${JSON.stringify(ctx.results, null, 2)}
 
 Judge whether the OBJECTIVE is fully delivered by the MERGED cards.
 - Complete → goalComplete=true, needNewWave=false, newWaveCards=[].
-- Not complete AND clear remaining in-scope work exists → goalComplete=false, needNewWave=true, propose newWaveCards for the NEXT wave. Those cards MUST be runnable IN PARALLEL: file-disjoint, each independently mergeable onto ${BASE} (which now contains every merged card). At most ONE may add/modify a sqlx migration (migrations serialize) — set \`migration\`:true on it and put any second migration in a later continuation; set \`migration\`:false on the rest. Each needs a precise self-contained task + scope; an autonomous executor implements it with no further questions. dependsOn lists already-merged card titles if relevant. Set each new card's cil to null.
+- Not complete AND clear remaining in-scope work exists → goalComplete=false, needNewWave=true, propose newWaveCards for the NEXT wave. Those cards MUST be runnable IN PARALLEL: file-disjoint, each independently mergeable onto ${BASE} (which now contains every merged card). At most ONE may add/modify a sqlx migration (migrations serialize) — set \`migration\`:true on it and put any second migration in a later continuation; set \`migration\`:false on the rest. Each needs a precise self-contained task + scope; an autonomous executor implements it with no further questions. dependsOn lists already-merged card titles if relevant. Set each new card's cil to null. Each may also set \`entity\` the same way the initial planner does (see the shipped cards' own \`entity\` above for what's already in play) — leave it null unless the objective calls for a specific agent/vendor or you're deliberately spreading this wave across entities.
 - Remaining work blocked on human input or unclear scope → goalComplete=false, needNewWave=false, list it in blockers.
 Return the structured result.`;
 }
@@ -778,6 +1005,7 @@ HARD INVARIANTS:
 5. Per card set labels/priority (default labels ${JSON.stringify(DEFAULT_LABELS)}, default priority ${DEFAULT_PRIORITY}). dependsOn = titles of EARLIER-wave cards it relies on.
 6. Every card is NEW work — set its \`cil\` to null (ship-card creates the ticket).
 7. DB migrations SERIALIZE. At most ONE card per wave may add or modify a sqlx migration — Railway auto-migrates on each merge and sqlx rejects out-of-order migrations, so two unmerged migration PRs race and corrupt the sequence. Put any second migration in a LATER wave. Set \`migration\`:true on every card that adds/edits a migration and false on all others.
+8. Every card may pin which AGENT ENTITY implements it via \`entity\`: "claude" (native Claude Build/Review), "codex" (Orca-supervised local Codex CLI worker), "cursor" (Cursor's hosted cloud Background Agent — runs remotely, opens its own PR), "cursor-local" (local cursor-agent CLI, same lifecycle as "claude"). Leave it null on every card UNLESS the objective explicitly names an agent/vendor to use, or you are deliberately spreading a wide independent wave across entities to raise throughput — in that case still keep every invariant above (file-disjoint, PR-sized, self-contained) per card regardless of which entity runs it.
 
 Number waves from 1. ok=true with goalSummary, the waves array, and a note. If the objective is too vague to plan safely, ok=false explaining what's missing. Return the structured result.`;
 
@@ -821,6 +1049,7 @@ if (DRY_RUN) {
         task: c.task,
         dependsOn: c.dependsOn,
         migration: c.migration,
+        entity: entityFor(c),
       })),
     })),
   };
@@ -1124,6 +1353,7 @@ while (true) {
         dependsOn: [],
         cil,
         migration: card.migration,
+        entity: card.entity,
       });
       retry._wave = card._wave;
       byTitle.set(title, retry);
@@ -1157,6 +1387,7 @@ while (true) {
       dependsOn: [],
       cil, // resolve the existing ticket instead of creating a duplicate PR
       migration: card.migration,
+      entity: card.entity,
     });
     retry._wave = card._wave;
     byTitle.set(title, retry);
@@ -1182,6 +1413,7 @@ const cards = allResults.map((r) => ({
   wave: r.wave,
   title: r.card.title,
   status: statusOf(r),
+  entity: r.result?.entity || entityFor(r.card),
   cil: r.result?.cil || null,
   pr: r.result?.pr || null,
   prUrl: r.result?.prUrl || null,
@@ -1199,7 +1431,7 @@ try {
 OBJECTIVE: ${GOAL || PLAN}
 WAVES DEPLOYED: ${wavesDeployed}${stopped ? ` (stopped: ${stopped})` : ""}
 CARDS (JSON): ${JSON.stringify(cards, null, 2)}
-Lead with the outcome (merged X/Y), list merged PRs by title + url, then anything needing attention with a one-line next action. No fluff.`,
+Lead with the outcome (merged X/Y), list merged PRs by title + url + entity, then anything needing attention with a one-line next action. If more than one distinct \`entity\` appears, add a one-line breakdown of merged count per entity. No fluff.`,
     maybeModel({
       label: "report",
       phase: "Report",
