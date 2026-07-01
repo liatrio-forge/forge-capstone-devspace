@@ -42,7 +42,9 @@ What works today:
 
 This repository is being prepared as a Liatrio Forge Module 5 capstone. See
 [`docs/capstone/README.md`](docs/capstone/README.md) for the capstone spec,
-proof checklist, case study, demo script, and playbook contribution.
+proof checklist, case study, demo script, and playbook contribution. Open
+[`docs/capstone/index.html`](docs/capstone/index.html) for an interactive HTML
+reader generated from the repository Markdown.
 
 ## Supported Commands
 

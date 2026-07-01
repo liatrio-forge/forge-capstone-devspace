@@ -5,6 +5,9 @@ DevDrop is a local-first developer workspace recovery CLI. It helps a developer
 recreate the shape of a working machine on a second machine without syncing
 source code, overwriting local work, or storing secrets in plaintext.
 
+For a browsable HTML version of the repo Markdown, open
+[`index.html`](index.html).
+
 ## Capstone Thesis
 
 Developers lose time rebuilding workspaces after machine changes, client

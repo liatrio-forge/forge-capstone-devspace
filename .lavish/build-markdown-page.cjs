@@ -816,5 +816,13 @@ const html = `<!doctype html>
 </html>
 `;
 
-fs.writeFileSync(path.join(root, ".lavish", "devdrop-markdown.html"), html);
-console.log("wrote .lavish/devdrop-markdown.html");
+const outputs = [
+  path.join(root, ".lavish", "devdrop-markdown.html"),
+  path.join(root, "docs", "capstone", "index.html"),
+];
+
+for (const output of outputs) {
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.writeFileSync(output, html);
+  console.log(`wrote ${path.relative(root, output)}`);
+}
