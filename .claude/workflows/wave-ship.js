@@ -443,7 +443,9 @@ const ORCA_SCHEMA = {
   },
 };
 
-// Deterministic Orca worktree name from the card title (no Math.random in scripts).
+// Deterministic slug from the card title (no Math.random in scripts) — used as
+// the Orca worktree name for entity "codex" and as a temp-file/id slug for
+// entity "cursor"'s cloud-launch payload; not Orca-specific despite the name.
 function wtName(c) {
   const s =
     String(c.title || "card")
