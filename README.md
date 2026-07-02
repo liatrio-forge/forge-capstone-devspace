@@ -1,6 +1,6 @@
-# DevDrop
+# DevSpace
 
-DevDrop is a local-first "Dropbox for developers" CLI prototype. It keeps a
+DevSpace is a local-first "Dropbox for developers" CLI prototype. It keeps a
 developer workspace structurally aligned across machines by tracking project
 metadata, safe placeholder folders, Git remotes, setup hints, and encrypted env
 profiles.
@@ -9,14 +9,14 @@ The intended command name is `devspace`. The current binary can also be built
 from this repository:
 
 ```bash
-go build -o bin/devspace ./cmd/devdrop
+go build -o bin/devspace ./cmd/devspace
 ```
 
 During development, you can still run the command directly from source:
 
 ```bash
 go test ./...
-go run ./cmd/devdrop --help
+go run ./cmd/devspace --help
 ```
 
 ## Release Packaging
@@ -83,10 +83,10 @@ devspace init --workspace ~/code
 
 Creates:
 
-- `~/.devdrop/config.json`
-- `~/.devdrop/state.json`
-- `~/.devdrop/identity.txt`
-- `<workspace>/.devdrop/manifest.json`
+- `~/.devspace/config.json`
+- `~/.devspace/state.json`
+- `~/.devspace/identity.txt`
+- `<workspace>/.devspace/manifest.json`
 
 The command is idempotent and does not rotate the machine ID or age identity on
 repeat runs.
@@ -134,7 +134,7 @@ devspace watch --once
 
 Runs a long-lived workspace watcher that debounces filesystem events and refreshes
 the same manifest/state metadata as `devspace scan`. It watches the configured
-workspace root, skips `.devdrop/` and the existing dependency/build/cache ignore
+workspace root, skips `.devspace/` and the existing dependency/build/cache ignore
 rules, and tracks manifest-relevant additions, removals, package marker changes,
 `.env` presence changes, and Git branch/index/ref changes.
 
@@ -202,7 +202,7 @@ devspace plan --json
 ```
 
 Builds a deterministic plan of safe and skipped actions, saves it to
-`<workspace>/.devdrop/last-plan.json`, and prints a human-readable report.
+`<workspace>/.devspace/last-plan.json`, and prints a human-readable report.
 `--json` prints the same saved plan as structured JSON for automation.
 
 ### `devspace apply`
@@ -280,7 +280,7 @@ Hosted sync is opt-in and separate from Git-backed sync. Configure it only when
 you want the manifest copied to a hosted control plane:
 
 ```bash
-devspace hosted serve --addr 127.0.0.1:8787 --store ~/.devdrop/hosted-control-plane --token dev-token
+devspace hosted serve --addr 127.0.0.1:8787 --store ~/.devspace/hosted-control-plane --token dev-token
 devspace hosted config set http://127.0.0.1:8787 --token dev-token --workspace team-a
 devspace hosted push
 devspace hosted pull
@@ -380,14 +380,14 @@ profile for the local user plus the invited recipient. Use `--team <name>` on
 `env recipient revoke` removes a recipient from future encrypted profile writes
 and records revocation metadata. This is an envelope rewrap, not a clawback:
 previously copied ciphertext, pulled `.env` files, and values already decrypted
-by that recipient remain outside DevDrop's control. After changing team
+by that recipient remain outside DevSpace's control. After changing team
 membership, `env recipient rotate <project>` rewraps the profile for the current
 active recipients without changing secret values.
 
 Encrypted profiles are stored under:
 
 ```text
-<workspace>/.devdrop/secrets/<project-id>/<profile>.age
+<workspace>/.devspace/secrets/<project-id>/<profile>.age
 ```
 
 ## Example Local Workflow
@@ -396,10 +396,10 @@ This workflow uses temporary directories and a local bare Git remote, so it does
 not need network access.
 
 ```bash
-go build -o bin/devspace ./cmd/devdrop
+go build -o bin/devspace ./cmd/devspace
 
 tmp="$(mktemp -d)"
-export DEV_DROP_HOME="$tmp/home"
+export DEVSPACE_HOME="$tmp/home"
 workspace_a="$tmp/workspace-a"
 remote_src="$tmp/remote-src"
 remote_bare="$tmp/client-a-api.git"
@@ -437,13 +437,13 @@ To simulate a second machine, use a local bare Git repo for the manifest.
 workspace_b="$tmp/workspace-b"
 manifest_remote="$tmp/manifest-sync.git"
 
-export DEV_DROP_HOME="$tmp/home-a"
+export DEVSPACE_HOME="$tmp/home-a"
 bin/devspace init --workspace "$workspace_a"
 bin/devspace scan
 bin/devspace workspace remote create local "$manifest_remote"
 bin/devspace workspace push
 
-export DEV_DROP_HOME="$tmp/home-b"
+export DEVSPACE_HOME="$tmp/home-b"
 bin/devspace init --workspace "$workspace_b"
 bin/devspace workspace remote set "$manifest_remote"
 bin/devspace workspace pull
@@ -526,22 +526,26 @@ Manifest sync stops with a clear error when:
   explicit `devspace setup` commands.
 - Editor settings, VS Code extensions, devcontainers, Nix, mise, and asdf are
   outside the MVP.
-- The command name is documented as `devspace`, while the current source package
-  still lives under `cmd/devdrop`.
+
+## Migration
+
+On first run, an existing `~/.devdrop` application home is automatically
+migrated to `~/.devspace`. `DEV_DROP_HOME` still works as a deprecated alias
+for `DEVSPACE_HOME`.
 
 ## Troubleshooting
 
 - If `devspace` is not found, build it with
-  `go build -o bin/devspace ./cmd/devdrop` and run `bin/devspace`.
+  `go build -o bin/devspace ./cmd/devspace` and run `bin/devspace`.
 - If `workspace push` says the manifest remote is not ready, create it first with
   `devspace workspace remote create github <owner/repo> --private` or
   `devspace workspace remote create local ~/Projects/devspace-manifest.git`.
-- If commands use the wrong workspace, check `DEV_DROP_HOME` and
-  `~/.devdrop/config.json`.
+- If commands use the wrong workspace, check `DEVSPACE_HOME` (or the deprecated
+  `DEV_DROP_HOME` fallback) and `~/.devspace/config.json`.
 - If `plan` reports a path conflict, inspect the existing directory and
   decide whether it should be tracked, renamed, or left unmanaged.
 - If `project hydrate` fails, confirm the project has a remote URL in
-  `<workspace>/.devdrop/manifest.json` and that `git clone <remote> <path>` works
+  `<workspace>/.devspace/manifest.json` and that `git clone <remote> <path>` works
   by itself.
 - If `env pull` cannot write `.env`, check project path permissions and whether a
   directory or symlink exists at `.env`.
@@ -568,7 +572,7 @@ See [`examples/manifest.json`](examples/manifest.json).
 The manifest is a versioned JSON file at:
 
 ```text
-<workspace>/.devdrop/manifest.json
+<workspace>/.devspace/manifest.json
 ```
 
 Project paths are always relative to the workspace root. Absolute paths and

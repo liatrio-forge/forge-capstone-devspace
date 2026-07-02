@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"bytes"
@@ -323,7 +323,11 @@ func readSecretProfile(cfg Config, projectID, profile string) (SecretProfile, er
 	if !exists(path) {
 		return empty, os.ErrNotExist
 	}
-	identity, err := loadIdentity(cfg.AgeIdentityPath)
+	identityPath, err := resolveAgeIdentityPath(cfg)
+	if err != nil {
+		return empty, err
+	}
+	identity, err := loadIdentity(identityPath)
 	if err != nil {
 		return empty, err
 	}
@@ -404,7 +408,11 @@ func activeAgeRecipients(cfg Config, sp SecretProfile) ([]age.Recipient, SecretP
 }
 
 func localSecretRecipient(cfg Config, addedAt string) (SecretRecipient, error) {
-	identity, err := loadIdentity(cfg.AgeIdentityPath)
+	identityPath, err := resolveAgeIdentityPath(cfg)
+	if err != nil {
+		return SecretRecipient{}, err
+	}
+	identity, err := loadIdentity(identityPath)
 	if err != nil {
 		return SecretRecipient{}, err
 	}
@@ -656,7 +664,7 @@ func stableNameID(prefix, name string) string {
 }
 
 func secretPath(cfg Config, projectID, profile string) string {
-	return filepath.Join(cfg.WorkspaceRoot, ".devdrop", "secrets", projectID, profile+".age")
+	return filepath.Join(workspaceDevdrop(cfg.WorkspaceRoot), "secrets", projectID, profile+".age")
 }
 
 // validSecretName rejects profile names that could escape the per-project

@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"context"
@@ -16,8 +16,8 @@ func TestWatchEventFilteringPreservesIgnoreRules(t *testing.T) {
 	if watchableDirectory(workspace, filepath.Join(workspace, "node_modules")) {
 		t.Fatal("node_modules should not be watched")
 	}
-	if watchableDirectory(workspace, filepath.Join(workspace, ".devdrop")) {
-		t.Fatal(".devdrop should not be watched")
+	if watchableDirectory(workspace, filepath.Join(workspace, ".devspace")) {
+		t.Fatal(".devspace should not be watched")
 	}
 	if !watchableDirectory(workspace, filepath.Join(workspace, "apps", "api")) {
 		t.Fatal("regular project directory should be watched")

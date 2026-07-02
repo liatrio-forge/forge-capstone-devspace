@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 
 BINARY_NAME ?= devspace
-CMD_PATH ?= ./cmd/devdrop
+CMD_PATH ?= ./cmd/devspace
 BIN_DIR ?= bin
 DIST_DIR ?= dist
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)

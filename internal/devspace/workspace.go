@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"fmt"
@@ -47,7 +47,7 @@ func ScanWorkspace() (ScanSummary, error) {
 			return nil
 		}
 		name := d.Name()
-		if name == ".git" || name == ".devdrop" || ignoredName(name) {
+		if name == ".git" || name == workspaceDirName || name == legacyWorkspaceDirName || ignoredName(name) {
 			return filepath.SkipDir
 		}
 		rel, err := filepath.Rel(cfg.WorkspaceRoot, path)
@@ -219,7 +219,7 @@ func BuildPlan() (Plan, error) {
 		}
 		if p.Type == ProjectTypeGit && info.IsRepo {
 			if info.Dirty {
-				plan.Actions = append(plan.Actions, PlanAction{Safety: "skipped", Kind: "skip", Path: p.Path, Project: p.Name, Reason: "repo is dirty; DevDrop will not pull or modify it"})
+				plan.Actions = append(plan.Actions, PlanAction{Safety: "skipped", Kind: "skip", Path: p.Path, Project: p.Name, Reason: "repo is dirty; DevSpace will not pull or modify it"})
 			}
 			if p.Remote != "" && info.Remote != "" && info.Remote != p.Remote {
 				plan.Warnings = append(plan.Warnings, fmt.Sprintf("%s has a different Git remote than manifest: %s != %s", p.Path, info.Remote, p.Remote))
@@ -348,7 +348,7 @@ func HydrateProject(ref string) (Project, error) {
 	}
 	// Clone into a sibling temp dir first so a failed or interrupted clone
 	// cannot leave partial contents at the destination and block a retry.
-	tmp, err := os.MkdirTemp(parent, ".devdrop-hydrate-*")
+	tmp, err := os.MkdirTemp(parent, ".devspace-hydrate-*")
 	if err != nil {
 		return Project{}, err
 	}
@@ -405,6 +405,11 @@ func findProject(m Manifest, ref string) (Project, bool) {
 
 func ignoredName(name string) bool {
 	if slices.Contains(DefaultIgnores, name) {
+		return true
+	}
+	// Leftover hydration temp dirs (see HydrateProject) must never be scanned
+	// as real projects if a hydrate was interrupted mid-clone.
+	if strings.HasPrefix(name, ".devspace-hydrate-") || strings.HasPrefix(name, ".devdrop-hydrate-") {
 		return true
 	}
 	return strings.HasSuffix(name, ".log")

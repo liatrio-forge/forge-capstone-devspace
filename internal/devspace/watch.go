@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"context"
@@ -269,7 +269,7 @@ func watchableDirectory(workspace, path string) bool {
 
 func hasIgnoredWatchComponent(components []string) bool {
 	for _, component := range components {
-		if component == ".devdrop" || ignoredName(component) {
+		if component == workspaceDirName || component == legacyWorkspaceDirName || ignoredName(component) {
 			return true
 		}
 	}

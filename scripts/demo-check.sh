@@ -100,7 +100,7 @@ manifest_remote="$run_root/manifest-sync.git"
 log "Using run directory: $run_root"
 
 run mkdir -p "$run_root/bin" "$remote_src"
-run go build -trimpath -o "$devspace" "$repo_root/cmd/devdrop"
+run go build -trimpath -o "$devspace" "$repo_root/cmd/devspace"
 
 log "Creating local project remote"
 run git -C "$remote_src" init -b main

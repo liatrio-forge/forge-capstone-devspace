@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"bytes"
@@ -57,7 +57,7 @@ func TestMountPreviewCommandDoesNotRequireFUSE(t *testing.T) {
 	}
 	got := out.String()
 	for _, want := range []string{
-		"DevDrop lazy mount preview",
+		"DevSpace lazy mount preview",
 		"github.com/hanwen/go-fuse/v2/fs",
 		"apps/lazy\tgit\ton-demand\tlazy",
 	} {

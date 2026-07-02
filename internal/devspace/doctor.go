@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"context"
@@ -111,15 +111,16 @@ func checkWorkspace(report *doctorReport, cfg Config) bool {
 }
 
 func checkAgeIdentity(report *doctorReport, cfg Config) {
-	if strings.TrimSpace(cfg.AgeIdentityPath) == "" {
-		report.add(doctorFail, "Age identity", "ageIdentityPath is empty in config", true)
+	identityPath, err := resolveAgeIdentityPath(cfg)
+	if err != nil {
+		report.add(doctorFail, "Age identity", fmt.Sprintf("cannot resolve age identity path: %s", err), true)
 		return
 	}
-	if _, err := loadIdentity(cfg.AgeIdentityPath); err != nil {
-		report.add(doctorFail, "Age identity", fmt.Sprintf("cannot read %s: %s", cfg.AgeIdentityPath, err), true)
+	if _, err := loadIdentity(identityPath); err != nil {
+		report.add(doctorFail, "Age identity", fmt.Sprintf("cannot read %s: %s", identityPath, err), true)
 		return
 	}
-	report.add(doctorOK, "Age identity", cfg.AgeIdentityPath, false)
+	report.add(doctorOK, "Age identity", identityPath, false)
 }
 
 func checkManifest(report *doctorReport, cfg Config, workspaceReady bool) (Manifest, bool) {
@@ -318,7 +319,7 @@ func projectStateDetail(p projectDoctorState) string {
 }
 
 func printDoctorReport(out io.Writer, report doctorReport) {
-	fmt.Fprintln(out, "DevDrop doctor")
+	fmt.Fprintln(out, "DevSpace doctor")
 	fmt.Fprintln(out)
 	for _, check := range report.Checks {
 		fmt.Fprintf(out, "[%s] %s: %s\n", check.Severity, check.Subject, check.Detail)

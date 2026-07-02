@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"fmt"
@@ -41,10 +41,14 @@ func InitWorkspace(workspaceArg string) (Config, error) {
 	}
 	cfg.WorkspaceRoot = workspace
 	cfg.UpdatedAt = now
-	if cfg.AgeIdentityPath == "" {
-		cfg.AgeIdentityPath = filepath.Join(home, "identity.txt")
+	// The default identity path is intentionally left unset in cfg so it is
+	// not persisted as an absolute path; resolveAgeIdentityPath fills it in
+	// at read time. Only a custom, user-set AgeIdentityPath is persisted.
+	identityPath, err := resolveAgeIdentityPath(cfg)
+	if err != nil {
+		return Config{}, err
 	}
-	if err := ensureAgeIdentity(cfg.AgeIdentityPath); err != nil {
+	if err := ensureAgeIdentity(identityPath); err != nil {
 		return Config{}, err
 	}
 	if err := SaveConfig(cfg); err != nil {
@@ -74,6 +78,23 @@ func InitWorkspace(workspaceArg string) (Config, error) {
 	return cfg, nil
 }
 
+// resolveAgeIdentityPath returns the effective age identity path for cfg. A
+// non-empty cfg.AgeIdentityPath is a user-configured override and is
+// returned as-is. Otherwise the default location under the app home
+// directory is resolved on demand rather than persisted, so a rename of the
+// app home directory (e.g. .devdrop -> .devspace) does not require
+// rewriting every config.json that relied on the default path.
+func resolveAgeIdentityPath(cfg Config) (string, error) {
+	if cfg.AgeIdentityPath != "" {
+		return cfg.AgeIdentityPath, nil
+	}
+	home, err := appHome()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "identity.txt"), nil
+}
+
 func ensureAgeIdentity(path string) error {
 	if info, err := os.Lstat(path); err == nil {
 		if !info.Mode().IsRegular() {
@@ -92,7 +113,7 @@ func ensureAgeIdentity(path string) error {
 	if err != nil {
 		return err
 	}
-	content := fmt.Sprintf("# devdrop age identity\n%s\n", identity.String())
+	content := fmt.Sprintf("# devspace age identity\n%s\n", identity.String())
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
