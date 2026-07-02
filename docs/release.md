@@ -112,7 +112,7 @@ devspace --help
 You can also run the equivalent Go command directly:
 
 ```bash
-go build -trimpath -o bin/devspace ./cmd/devdrop
+go build -trimpath -o bin/devspace ./cmd/devspace
 ```
 
 ## Local verification targets
@@ -127,7 +127,7 @@ make verify
 
 1. `go test ./...`
 2. `go vet ./...`
-3. `go build -trimpath -o bin/devspace ./cmd/devdrop`
+3. `go build -trimpath -o bin/devspace ./cmd/devspace`
 
 Individual targets are also available:
 

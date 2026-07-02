@@ -3,7 +3,7 @@ version: 2
 project_name: devspace
 
 builds:
-  - main: ./cmd/devdrop
+  - main: ./cmd/devspace
     binary: devspace
     env:
       - CGO_ENABLED=0
