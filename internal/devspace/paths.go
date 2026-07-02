@@ -81,6 +81,12 @@ func lastPlanPath(workspace string) string {
 // workspace. It prefers an existing .devspace directory, falls back to
 // reading a legacy .devdrop directory if that is what is present (read-both
 // transition support), and otherwise defaults to .devspace for creation.
+//
+// Reads and writes deliberately resolve to the SAME directory so a workspace
+// stays coherent: splitting reads (.devdrop fallback) from writes (.devspace)
+// would strand the manifest in one dir while writing updates to the other. An
+// existing .devdrop workspace is left in place rather than force-renamed, so a
+// machine still on the old binary keeps working during the transition window.
 func workspaceDevdrop(workspace string) string {
 	current := filepath.Join(workspace, workspaceDirName)
 	if exists(current) {

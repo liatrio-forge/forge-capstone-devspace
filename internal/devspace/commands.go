@@ -27,7 +27,7 @@ func NewRootCommand(version string) *cobra.Command {
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := migrateLegacyHome(); err != nil {
-				fmt.Fprintf(cmd.ErrOrStderr(), "devspace: legacy home migration failed: %v\n", err)
+				return fmt.Errorf("legacy home migration failed: %w", err)
 			}
 			return nil
 		},

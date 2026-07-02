@@ -30,6 +30,12 @@ func migrateLegacyHome() error {
 		return fmt.Errorf("migrate %s to %s: %w", oldPath, newPath, err)
 	}
 	if err := rewriteMigratedConfigPaths(oldPath, newPath); err != nil {
+		// Roll the rename back so the migration retries cleanly on the next
+		// run instead of stranding a moved-but-unrepaired home whose
+		// config.json still points inside the old directory.
+		if rbErr := os.Rename(newPath, oldPath); rbErr != nil {
+			return fmt.Errorf("rewrite config paths after migrating %s to %s failed (%w); rollback also failed (%v) — ~/.devspace may be inconsistent", oldPath, newPath, err, rbErr)
+		}
 		return fmt.Errorf("rewrite config paths after migrating %s to %s: %w", oldPath, newPath, err)
 	}
 	fmt.Fprintln(os.Stderr, "devspace: migrated ~/.devdrop -> ~/.devspace")

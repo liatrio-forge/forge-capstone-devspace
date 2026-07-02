@@ -407,6 +407,11 @@ func ignoredName(name string) bool {
 	if slices.Contains(DefaultIgnores, name) {
 		return true
 	}
+	// Leftover hydration temp dirs (see HydrateProject) must never be scanned
+	// as real projects if a hydrate was interrupted mid-clone.
+	if strings.HasPrefix(name, ".devspace-hydrate-") || strings.HasPrefix(name, ".devdrop-hydrate-") {
+		return true
+	}
 	return strings.HasSuffix(name, ".log")
 }
 
