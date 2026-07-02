@@ -68,7 +68,10 @@ sha256sum -c --ignore-missing checksums.txt # or: shasum -a 256 -c checksums.txt
 ```
 
 Verify build provenance (proves the artifact was built by this repository's
-release workflow):
+release workflow). Note: GitHub artifact attestations are only generated while
+the repository is public — the attest step skips automatically on private
+repositories, so provenance verification applies to releases cut after the
+repo is made public:
 
 ```bash
 gh attestation verify checksums.txt --repo HexSleeves/devdrop

@@ -29,7 +29,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Artifact attestations are unavailable on user-owned private repos;
+      # this step activates automatically once the repository is public.
       - name: Attest release artifacts
+        if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: dist/checksums.txt
