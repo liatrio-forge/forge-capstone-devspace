@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -35,6 +36,39 @@ func TestHostedConfigSetGetStoresEndpointTokenAndWorkspace(t *testing.T) {
 	}
 	if got.HostedSyncEndpoint != cfg.HostedSyncEndpoint || got.HostedSyncToken != cfg.HostedSyncToken || got.HostedSyncWorkspace != cfg.HostedSyncWorkspace {
 		t.Fatalf("get hosted config = %+v", got)
+	}
+}
+
+func TestSetHostedSyncRejectsPlainHTTPForNonLoopbackHost(t *testing.T) {
+	hardeningInitWorkspace(t, "code")
+
+	_, err := SetHostedSync("http://evil.example.com", "test-token", "team-a")
+	if err == nil || !strings.Contains(err.Error(), "must use https") {
+		t.Fatalf("plain http to public host error = %v", err)
+	}
+}
+
+func TestSetHostedSyncAllowsHTTPSForNonLoopbackHost(t *testing.T) {
+	hardeningInitWorkspace(t, "code")
+
+	cfg, err := SetHostedSync("https://evil.example.com", "test-token", "team-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HostedSyncEndpoint != "https://evil.example.com" {
+		t.Fatalf("endpoint = %q", cfg.HostedSyncEndpoint)
+	}
+}
+
+func TestSetHostedSyncAllowsPlainHTTPForLoopbackHost(t *testing.T) {
+	hardeningInitWorkspace(t, "code")
+
+	cfg, err := SetHostedSync("http://127.0.0.1:8787", "test-token", "team-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HostedSyncEndpoint != "http://127.0.0.1:8787" {
+		t.Fatalf("endpoint = %q", cfg.HostedSyncEndpoint)
 	}
 }
 
@@ -301,9 +335,160 @@ func TestHostedServerHealthzDoesNotOpenAuthHole(t *testing.T) {
 	}
 }
 
+func TestHostedServerAuthConstantTimeCompareRejectsInvalidTokens(t *testing.T) {
+	server := hostedSyncTestServer(t)
+
+	cases := []struct {
+		name   string
+		header string
+	}{
+		{"missing", ""},
+		{"wrong token", "Bearer wrong-token"},
+		{"wrong scheme", "Basic dGVzdC10b2tlbg=="},
+		{"empty bearer", "Bearer "},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/v1/workspaces/team-a/manifest", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.header != "" {
+				req.Header.Set("Authorization", tc.header)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusUnauthorized {
+				t.Fatalf("status = %d", resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestHostedServerPutSerializesConcurrentRequestsPerWorkspace(t *testing.T) {
+	server := hostedSyncTestServer(t)
+	manifest := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: ".",
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}
+	body, err := json.Marshal(hostedManifestPutRequest{ExpectedVersion: 0, Manifest: manifest})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const attempts = 2
+	statuses := make([]int, attempts)
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < attempts; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			<-start
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, server.URL+"/v1/workspaces/concurrent/manifest", bytes.NewReader(body))
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			req.Header.Set("Authorization", "Bearer test-token")
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			defer resp.Body.Close()
+			statuses[idx] = resp.StatusCode
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	var ok, conflict int
+	for _, code := range statuses {
+		switch code {
+		case http.StatusOK:
+			ok++
+		case http.StatusConflict:
+			conflict++
+		default:
+			t.Fatalf("unexpected status %d in %v", code, statuses)
+		}
+	}
+	if ok != 1 {
+		t.Fatalf("expected exactly one 200, got %d (statuses=%v)", ok, statuses)
+	}
+	if conflict != 1 {
+		t.Fatalf("expected exactly one 409, got %d (statuses=%v)", conflict, statuses)
+	}
+
+	final := hostedSyncGet(t, server.URL, "concurrent")
+	if final.Version != 1 {
+		t.Fatalf("final version = %d, want 1 (no lost update)", final.Version)
+	}
+}
+
+func TestHostedServerRateLimitReturns429ButExemptsHealthz(t *testing.T) {
+	server := hostedSyncTestServerWithOptions(t, HostedSyncServerOptions{RateLimit: 1, RateBurst: 1})
+
+	got429 := false
+	for i := 0; i < 10; i++ {
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/v1/workspaces/team-a/manifest", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer test-token")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusTooManyRequests {
+			got429 = true
+			break
+		}
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("unexpected status %d before rate limit tripped", resp.StatusCode)
+		}
+	}
+	if !got429 {
+		t.Fatal("expected at least one 429 response under a tiny rate limit")
+	}
+
+	for i := 0; i < 20; i++ {
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/healthz", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("healthz status = %d, want 200 (must never be rate limited)", resp.StatusCode)
+		}
+	}
+}
+
 func hostedSyncTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	handler, err := NewHostedSyncServer(HostedSyncServerOptions{StoreDir: t.TempDir(), Token: "test-token"})
+	return hostedSyncTestServerWithOptions(t, HostedSyncServerOptions{})
+}
+
+func hostedSyncTestServerWithOptions(t *testing.T, opts HostedSyncServerOptions) *httptest.Server {
+	t.Helper()
+	if opts.StoreDir == "" {
+		opts.StoreDir = t.TempDir()
+	}
+	if opts.Token == "" {
+		opts.Token = "test-token"
+	}
+	handler, err := NewHostedSyncServer(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
