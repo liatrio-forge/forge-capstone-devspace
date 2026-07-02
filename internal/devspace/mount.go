@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 )
 
-const mountStatusFile = ".devdrop-status"
+const mountStatusFile = ".devspace-status"
 
 type WorkspaceMountOptions struct {
 	HydrateOnLookup bool
@@ -93,7 +93,7 @@ func MountWorkspace(ctx context.Context, mountpoint string, opts WorkspaceMountO
 		MountOptions: fuse.MountOptions{
 			Debug:  opts.Debug,
 			FsName: cfg.WorkspaceRoot,
-			Name:   "devdrop",
+			Name:   "devspace",
 			Options: []string{
 				"ro",
 			},
@@ -102,7 +102,7 @@ func MountWorkspace(ctx context.Context, mountpoint string, opts WorkspaceMountO
 	if err != nil {
 		return fmt.Errorf("FUSE mount failed at %s: %w\n\nFallback: run `devspace mount %s --preview` to inspect tracked mount entries without requiring FUSE", mountpoint, err, mountpoint)
 	}
-	fmt.Fprintf(out, "Mounted DevDrop workspace at %s\n", mountpoint)
+	fmt.Fprintf(out, "Mounted DevSpace workspace at %s\n", mountpoint)
 	fmt.Fprintln(out, "Accessing an on-demand Git project through the mount triggers `devspace project hydrate` safety checks.")
 	fmt.Fprintln(out, "Press Ctrl-C to unmount.")
 
@@ -122,7 +122,7 @@ func MountWorkspace(ctx context.Context, mountpoint string, opts WorkspaceMountO
 }
 
 func PrintMountPreview(out io.Writer, entries []MountEntry) {
-	fmt.Fprintln(out, "DevDrop lazy mount preview")
+	fmt.Fprintln(out, "DevSpace lazy mount preview")
 	fmt.Fprintln(out, "FUSE library: github.com/hanwen/go-fuse/v2/fs")
 	fmt.Fprintln(out)
 	if len(entries) == 0 {

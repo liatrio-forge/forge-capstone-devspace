@@ -9,8 +9,12 @@ coverage/
 *.test
 *.out
 
-# Local devdrop test/state data
+# Local devspace test/state data
 .devdrop/
+.devspace/
 .tmp/
 
 .gstack/
+
+# Lavish review artifacts (local review surfaces)
+.lavish/

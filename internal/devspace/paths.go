@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"crypto/rand"
@@ -10,17 +10,33 @@ import (
 	"strings"
 )
 
-const envHome = "DEV_DROP_HOME"
+const (
+	envHome       = "DEVSPACE_HOME"
+	envHomeLegacy = "DEV_DROP_HOME"
+)
 
+const (
+	appDirName             = ".devspace"
+	legacyAppDirName       = ".devdrop"
+	workspaceDirName       = ".devspace"
+	legacyWorkspaceDirName = ".devdrop"
+)
+
+// appHome is a pure resolver: it never touches the filesystem beyond
+// reading environment variables. Migrating a legacy ~/.devdrop directory to
+// ~/.devspace is handled separately by migrateLegacyHome.
 func appHome() (string, error) {
 	if override := os.Getenv(envHome); override != "" {
+		return expandPath(override)
+	}
+	if override := os.Getenv(envHomeLegacy); override != "" {
 		return expandPath(override)
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".devdrop"), nil
+	return filepath.Join(home, appDirName), nil
 }
 
 func configPath() (string, error) {
@@ -54,15 +70,27 @@ func expandPath(path string) (string, error) {
 }
 
 func manifestPath(workspace string) string {
-	return filepath.Join(workspace, ".devdrop", "manifest.json")
+	return filepath.Join(workspaceDevdrop(workspace), "manifest.json")
 }
 
 func lastPlanPath(workspace string) string {
-	return filepath.Join(workspace, ".devdrop", "last-plan.json")
+	return filepath.Join(workspaceDevdrop(workspace), "last-plan.json")
 }
 
+// workspaceDevdrop returns the active devspace metadata directory for a
+// workspace. It prefers an existing .devspace directory, falls back to
+// reading a legacy .devdrop directory if that is what is present (read-both
+// transition support), and otherwise defaults to .devspace for creation.
 func workspaceDevdrop(workspace string) string {
-	return filepath.Join(workspace, ".devdrop")
+	current := filepath.Join(workspace, workspaceDirName)
+	if exists(current) {
+		return current
+	}
+	legacy := filepath.Join(workspace, legacyWorkspaceDirName)
+	if exists(legacy) {
+		return legacy
+	}
+	return current
 }
 
 func safeWorkspacePath(workspace, rel string) (string, string, error) {

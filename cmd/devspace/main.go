@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/HexSleeves/devdrop/internal/devdrop"
+	"github.com/HexSleeves/devspace/internal/devspace"
 )
 
 var version = "dev"
 
 func main() {
-	if err := devdrop.NewRootCommand(version).Execute(); err != nil {
+	if err := devspace.NewRootCommand(version).Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

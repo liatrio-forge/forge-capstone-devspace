@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"bufio"
@@ -25,6 +25,12 @@ func NewRootCommand(version string) *cobra.Command {
 		Use:          "devspace",
 		Short:        "Synchronize local developer workspace metadata",
 		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := migrateLegacyHome(); err != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "devspace: legacy home migration failed: %v\n", err)
+			}
+			return nil
+		},
 	}
 	cmd.AddCommand(newVersionCommand(version))
 	cmd.AddCommand(newInitCommand())
@@ -57,7 +63,7 @@ func newInitCommand() *cobra.Command {
 	var workspace string
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize a DevDrop workspace",
+		Short: "Initialize a DevSpace workspace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if workspace == "" {
 				workspace = "~/code"
@@ -66,7 +72,7 @@ func newInitCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Initialized DevDrop workspace: %s\n", cfg.WorkspaceRoot)
+			fmt.Fprintf(cmd.OutOrStdout(), "Initialized DevSpace workspace: %s\n", cfg.WorkspaceRoot)
 			fmt.Fprintf(cmd.OutOrStdout(), "Machine: %s (%s)\n", cfg.MachineName, cfg.MachineID)
 			return nil
 		},
@@ -772,7 +778,7 @@ func newStatusCommand() *cobra.Command {
 func newDoctorCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
-		Short: "Diagnose local DevDrop readiness",
+		Short: "Diagnose local DevSpace readiness",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return RunDoctor(cmd.OutOrStdout())
 		},

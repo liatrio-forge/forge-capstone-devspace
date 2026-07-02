@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"bytes"
@@ -22,7 +22,11 @@ func TestInitWorkspaceIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	identity, err := os.ReadFile(first.AgeIdentityPath)
+	firstIdentityPath, err := resolveAgeIdentityPath(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := os.ReadFile(firstIdentityPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +34,11 @@ func TestInitWorkspaceIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	identityAgain, err := os.ReadFile(second.AgeIdentityPath)
+	secondIdentityPath, err := resolveAgeIdentityPath(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identityAgain, err := os.ReadFile(secondIdentityPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,11 +49,11 @@ func TestInitWorkspaceIsIdempotent(t *testing.T) {
 	if !bytes.Equal(identity, identityAgain) {
 		t.Fatal("age identity rotated on second init")
 	}
-	if !exists(filepath.Join(workspace, ".devdrop", "manifest.json")) {
+	if !exists(filepath.Join(workspace, ".devspace", "manifest.json")) {
 		t.Fatal("manifest was not created")
 	}
 	if !exists(filepath.Join(home, "config.json")) {
-		t.Fatal("config was not created in DEV_DROP_HOME")
+		t.Fatal("config was not created in DEVSPACE_HOME")
 	}
 }
 
@@ -317,7 +325,11 @@ func TestEncryptedEnvProfilesCanInviteAndRevokeRecipients(t *testing.T) {
 	if err := EnvRotateRecipients("api", "dev"); err != nil {
 		t.Fatal(err)
 	}
-	local, err := loadIdentity(cfg.AgeIdentityPath)
+	identityPath, err := resolveAgeIdentityPath(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	local, err := loadIdentity(identityPath)
 	if err != nil {
 		t.Fatal(err)
 	}

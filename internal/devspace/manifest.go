@@ -1,4 +1,4 @@
-package devdrop
+package devspace
 
 import (
 	"crypto/sha1"
