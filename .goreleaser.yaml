@@ -1,0 +1,46 @@
+version: 2
+
+project_name: devspace
+
+builds:
+  - main: ./cmd/devdrop
+    binary: devspace
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version=v{{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - src: README.md
+      - src: docs/release.md
+        dst: RELEASE.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^feat(\(.*\))?!?:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix(\(.*\))?!?:'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - "^docs"
+      - "^chore"
+      - "^test"
+
+release:
+  prerelease: auto
