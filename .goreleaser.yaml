@@ -18,6 +18,9 @@ builds:
 kos:
   - id: devspace-hosted
     build: devspace
+    # bare: publish to exactly `repositories` (.../devspace-hosted:<tag>) instead
+    # of ko's default nested `<repo>/<md5-of-import-path>` layout.
+    bare: true
     # Pinned for reproducible builds. chainguard rotates :latest and GCs old
     # digests, so refresh this periodically:
     #   docker buildx imagetools inspect cgr.dev/chainguard/static:latest --format '{{.Manifest.Digest}}'
