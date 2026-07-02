@@ -415,6 +415,11 @@ func validateHostedWorkspaceID(workspace string) error {
 const (
 	defaultHostedSyncRateLimit = rate.Limit(10)
 	defaultHostedSyncRateBurst = 20
+	// defaultHostedSyncMaxLimiters bounds the per-IP limiter map so a stream of
+	// distinct client IPs cannot exhaust memory. Idle entries are evicted
+	// first; the oldest is dropped if the cap is still hit.
+	defaultHostedSyncMaxLimiters = 4096
+	hostedSyncLimiterIdleTTL     = 10 * time.Minute
 )
 
 type HostedSyncServerOptions struct {
@@ -425,6 +430,8 @@ type HostedSyncServerOptions struct {
 	// limiter. Zero values fall back to sensible defaults.
 	RateLimit rate.Limit
 	RateBurst int
+	// MaxLimiters bounds the number of tracked per-IP limiters (0 = default).
+	MaxLimiters int
 }
 
 func NewHostedSyncServer(opts HostedSyncServerOptions) (http.Handler, error) {
@@ -451,13 +458,18 @@ func NewHostedSyncServer(opts HostedSyncServerOptions) (http.Handler, error) {
 	if rateBurst == 0 {
 		rateBurst = defaultHostedSyncRateBurst
 	}
+	maxLimiters := opts.MaxLimiters
+	if maxLimiters <= 0 {
+		maxLimiters = defaultHostedSyncMaxLimiters
+	}
 	return &hostedSyncServer{
 		storeDir:     storeDir,
 		token:        token,
 		workspaceMus: map[string]*sync.Mutex{},
-		limiters:     map[string]*rate.Limiter{},
+		limiters:     map[string]*hostedIPLimiter{},
 		rateLimit:    rateLimit,
 		rateBurst:    rateBurst,
+		maxLimiters:  maxLimiters,
 	}, nil
 }
 
@@ -468,10 +480,18 @@ type hostedSyncServer struct {
 	mu           sync.Mutex
 	workspaceMus map[string]*sync.Mutex
 
-	limiterMu sync.Mutex
-	limiters  map[string]*rate.Limiter
-	rateLimit rate.Limit
-	rateBurst int
+	limiterMu   sync.Mutex
+	limiters    map[string]*hostedIPLimiter
+	rateLimit   rate.Limit
+	rateBurst   int
+	maxLimiters int
+}
+
+// hostedIPLimiter is a per-client rate limiter plus the last time it was used,
+// so idle entries can be evicted to keep the limiter map bounded.
+type hostedIPLimiter struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
 // workspaceMutex lazily creates and returns the mutex used to serialize
@@ -491,14 +511,38 @@ func (s *hostedSyncServer) workspaceMutex(workspace string) *sync.Mutex {
 // within its rate limit, lazily creating a per-client token-bucket limiter.
 func (s *hostedSyncServer) allowRequest(r *http.Request) bool {
 	ip := hostedClientIP(r.RemoteAddr)
+	now := time.Now()
 	s.limiterMu.Lock()
-	limiter, ok := s.limiters[ip]
+	entry, ok := s.limiters[ip]
 	if !ok {
-		limiter = rate.NewLimiter(s.rateLimit, s.rateBurst)
-		s.limiters[ip] = limiter
+		if len(s.limiters) >= s.maxLimiters {
+			s.evictLimitersLocked(now)
+		}
+		entry = &hostedIPLimiter{limiter: rate.NewLimiter(s.rateLimit, s.rateBurst)}
+		s.limiters[ip] = entry
 	}
+	entry.lastSeen = now
 	s.limiterMu.Unlock()
-	return limiter.Allow()
+	return entry.limiter.Allow()
+}
+
+// evictLimitersLocked drops limiters idle beyond the TTL and, if the map is
+// still at capacity, the single oldest entry. The caller must hold limiterMu.
+func (s *hostedSyncServer) evictLimitersLocked(now time.Time) {
+	var oldestKey string
+	var oldest time.Time
+	for k, e := range s.limiters {
+		if now.Sub(e.lastSeen) > hostedSyncLimiterIdleTTL {
+			delete(s.limiters, k)
+			continue
+		}
+		if oldestKey == "" || e.lastSeen.Before(oldest) {
+			oldestKey, oldest = k, e.lastSeen
+		}
+	}
+	if len(s.limiters) >= s.maxLimiters && oldestKey != "" {
+		delete(s.limiters, oldestKey)
+	}
 }
 
 func hostedClientIP(remoteAddr string) string {

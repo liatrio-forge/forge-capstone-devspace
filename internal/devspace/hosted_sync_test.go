@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -36,6 +37,25 @@ func TestHostedConfigSetGetStoresEndpointTokenAndWorkspace(t *testing.T) {
 	}
 	if got.HostedSyncEndpoint != cfg.HostedSyncEndpoint || got.HostedSyncToken != cfg.HostedSyncToken || got.HostedSyncWorkspace != cfg.HostedSyncWorkspace {
 		t.Fatalf("get hosted config = %+v", got)
+	}
+}
+
+func TestHostedServerRateLimiterMapIsBounded(t *testing.T) {
+	handler, err := NewHostedSyncServer(HostedSyncServerOptions{StoreDir: t.TempDir(), Token: "test-token", MaxLimiters: 8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := handler.(*hostedSyncServer)
+	for i := 0; i < 100; i++ {
+		r := httptest.NewRequest(http.MethodGet, "/v1/workspaces/x/manifest", nil)
+		r.RemoteAddr = "203.0.113." + strconv.Itoa(i) + ":9999"
+		s.allowRequest(r)
+	}
+	s.limiterMu.Lock()
+	n := len(s.limiters)
+	s.limiterMu.Unlock()
+	if n > 8 {
+		t.Fatalf("per-IP limiter map grew past cap: %d entries (max 8)", n)
 	}
 }
 

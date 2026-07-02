@@ -32,7 +32,7 @@ kos:
       # only move `latest` for stable releases, not prereleases (rc/beta)
       - "{{ if not .Prerelease }}latest{{ end }}"
     labels:
-      org.opencontainers.image.source: https://github.com/HexSleeves/devspace
+      org.opencontainers.image.source: https://github.com/liatrio-forge/devdrop-capstone
       org.opencontainers.image.description: DevSpace hosted manifest sync server
 
 archives:
