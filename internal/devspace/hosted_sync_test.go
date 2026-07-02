@@ -2,6 +2,7 @@ package devspace
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -248,7 +249,11 @@ func TestHostedPullLocalizesManifestForSecondWorkspace(t *testing.T) {
 func TestHostedServerHealthzOkWithoutAuth(t *testing.T) {
 	server := hostedSyncTestServer(t)
 
-	resp, err := http.Get(server.URL + "/healthz")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/healthz", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +273,7 @@ func TestHostedServerHealthzOkWithoutAuth(t *testing.T) {
 func TestHostedServerHealthzDoesNotOpenAuthHole(t *testing.T) {
 	server := hostedSyncTestServer(t)
 
-	req, err := http.NewRequest(http.MethodGet, server.URL+"/v1/workspaces/team-a/manifest", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/v1/workspaces/team-a/manifest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +286,7 @@ func TestHostedServerHealthzDoesNotOpenAuthHole(t *testing.T) {
 		t.Fatalf("status = %d", resp.StatusCode)
 	}
 
-	reqBadAuth, err := http.NewRequest(http.MethodGet, server.URL+"/v1/workspaces/team-a/manifest", nil)
+	reqBadAuth, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL+"/v1/workspaces/team-a/manifest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
