@@ -207,6 +207,14 @@ func newHostedServeCommand() *cobra.Command {
 		Short: "Run a local hosted manifest sync prototype server",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !cmd.Flags().Changed("addr") {
+				if port := strings.TrimSpace(os.Getenv("PORT")); port != "" {
+					addr = "0.0.0.0:" + port
+				}
+			}
+			if token == "" {
+				token = strings.TrimSpace(os.Getenv("HOSTED_TOKEN"))
+			}
 			if store == "" {
 				home, err := appHome()
 				if err != nil {
@@ -221,8 +229,37 @@ func newHostedServeCommand() *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "Hosted manifest sync listening on http://%s\n", addr)
 			fmt.Fprintf(cmd.OutOrStdout(), "Storage: %s\n", store)
 			fmt.Fprintln(cmd.OutOrStdout(), "API: GET/PUT /v1/workspaces/{workspace}/manifest")
-			server := &http.Server{Addr: addr, Handler: handler}
-			return server.ListenAndServe()
+			server := &http.Server{
+				Addr:              addr,
+				Handler:           handler,
+				ReadTimeout:       10 * time.Second,
+				WriteTimeout:      10 * time.Second,
+				IdleTimeout:       120 * time.Second,
+				ReadHeaderTimeout: 5 * time.Second,
+			}
+
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+
+			errCh := make(chan error, 1)
+			go func() {
+				errCh <- server.ListenAndServe()
+			}()
+
+			select {
+			case err := <-errCh:
+				if errors.Is(err, http.ErrServerClosed) {
+					return nil
+				}
+				return err
+			case <-ctx.Done():
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				if err := server.Shutdown(shutdownCtx); err != nil {
+					return err
+				}
+				return nil
+			}
 		},
 	}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:8787", "listen address")

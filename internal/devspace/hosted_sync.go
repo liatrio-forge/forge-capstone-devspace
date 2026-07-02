@@ -420,6 +420,11 @@ type hostedSyncServer struct {
 }
 
 func (s *hostedSyncServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/healthz" {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	if r.Header.Get("Authorization") != "Bearer "+s.token {
 		http.Error(w, "unauthorized\n", http.StatusUnauthorized)
