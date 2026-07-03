@@ -13,9 +13,10 @@ progress — see Migration below).
 ## Commands
 
 ```bash
-make verify        # test + vet + build — the same gate CI runs; use before pushing
+make verify        # test + vet + lint + build — the local gate; use before pushing
 make test          # go test ./...
 make build         # builds bin/devspace (-trimpath)
+make vulncheck     # govulncheck; CI-only (network-dependent), not part of verify
 go run ./cmd/devspace --help
 
 # Run one test / package

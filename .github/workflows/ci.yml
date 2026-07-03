@@ -25,34 +25,14 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Build
-        run: go build -trimpath -o bin/devspace ./cmd/devspace
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: golangci-lint
+      - name: Lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1
           args: --timeout 5m
 
-  vuln:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+      - name: Vulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+      - name: Build
+        run: go build -trimpath -o bin/devspace ./cmd/devspace

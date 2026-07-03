@@ -1,45 +1,57 @@
-# golangci-lint configuration — a focused security-and-quality gate.
+# golangci-lint configuration (v2 schema) — a focused security-and-quality gate.
 # CI runs `golangci-lint run --timeout 5m`; `make lint` runs the same locally.
+version: "2"
 run:
-  timeout: 5m
   go: "1.26"
-
 linters:
+  # default: standard = govet, errcheck, ineffassign, staticcheck, unused.
+  # gosec is added on top for security-focused checks (G*).
   enable:
-    - errcheck       # flag unchecked errors (e.g. ignored http.ResponseWriter writes)
-    - gosimple       # simplifications
-    - govet          # go vet checks
-    - ineffassign    # ineffectual assignments
-    - staticcheck    # the SA suite
-    - unused         # unused code
-    - gosec          # security-focused checks (G*)
-  disable:
-    - typecheck      # redundant with the build step
-
-linters-settings:
-  errcheck:
-    # Ignore writes to http.ResponseWriter/http.Header under a handler: the
-    # client may have gone away and there is nothing actionable to do.
-    exclude-functions:
-      - (net/http.ResponseWriter).Write
-      - (io.Closer).Close
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment  # micro-optimize struct layout; too noisy for this CLI
-  gosec:
-    excludes:
-      - G104  # unhandled errors are covered by errcheck with the exclusions above
-      - G304  # file inclusion via variable is intentional throughout (config/state/manifest paths)
-
+    - gosec
+  settings:
+    errcheck:
+      # Ignore writes to http.ResponseWriter/http.Header under a handler: the
+      # client may have gone away and there is nothing actionable to do.
+      exclude-functions:
+        - (net/http.ResponseWriter).Write
+        - (io.Closer).Close
+    gosec:
+      excludes:
+        - G104  # unhandled errors are covered by errcheck with the exclusions above
+        - G304  # file inclusion via variable is intentional throughout (config/state/manifest paths)
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # micro-optimize struct layout; too noisy for this CLI
+        - shadow          # vanilla `go vet` leaves this opt-in; flags idiomatic
+                           # `if err := f(); err != nil` reuse as "shadowing" with
+                           # no real bug — too noisy for this codebase's style
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # tests legitimately use weak randomness / hardcoded sample tokens
+      - linters:
+          - gosec
+        path: _test\.go
+    paths:
+      - dist
+      - bin
+      - .tmp
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-dirs:
-    - dist
-    - bin
-    - .tmp
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec        # tests legitimately use weak randomness / hardcoded sample tokens
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
