@@ -157,7 +157,7 @@ func PushWorkspaceManifest() (bool, error) {
 	if !changed {
 		return false, nil
 	}
-	if err := commitManifestRepo(repo); err != nil {
+	if err := commitManifestRepo(repo, cfg); err != nil {
 		return false, err
 	}
 	if err := pushManifestRepo(repo); err != nil {
@@ -462,10 +462,10 @@ func manifestBytes(m Manifest) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-func commitManifestRepo(repo string) error {
+func commitManifestRepo(repo string, cfg Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if err := ensureManifestCommitIdentity(ctx, repo); err != nil {
+	if err := ensureManifestCommitIdentity(ctx, repo, cfg); err != nil {
 		return err
 	}
 	if _, err := runGit(ctx, repo, "add", syncedManifestName); err != nil {
@@ -477,13 +477,28 @@ func commitManifestRepo(repo string) error {
 	return nil
 }
 
-func ensureManifestCommitIdentity(ctx context.Context, repo string) error {
-	if mustGit(ctx, repo, "config", "--get", "user.email") == "" {
+// ensureManifestCommitIdentity makes sure the manifest repo has a git author.
+// Config values (cfg.ManifestCommitEmail/Name) take precedence and are set
+// unconditionally so a team can re-attribute commits by updating config; when
+// they are empty the legacy fixed identity (devspace@example.invalid / DevSpace)
+// is applied only if the repo has no identity yet.
+func ensureManifestCommitIdentity(ctx context.Context, repo string, cfg Config) error {
+	email := strings.TrimSpace(cfg.ManifestCommitEmail)
+	name := strings.TrimSpace(cfg.ManifestCommitName)
+	if email != "" {
+		if _, err := runGit(ctx, repo, "config", "user.email", email); err != nil {
+			return fmt.Errorf("manifest repo user.email config failed: %w", err)
+		}
+	} else if mustGit(ctx, repo, "config", "--get", "user.email") == "" {
 		if _, err := runGit(ctx, repo, "config", "user.email", "devspace@example.invalid"); err != nil {
 			return fmt.Errorf("manifest repo user.email config failed: %w", err)
 		}
 	}
-	if mustGit(ctx, repo, "config", "--get", "user.name") == "" {
+	if name != "" {
+		if _, err := runGit(ctx, repo, "config", "user.name", name); err != nil {
+			return fmt.Errorf("manifest repo user.name config failed: %w", err)
+		}
+	} else if mustGit(ctx, repo, "config", "--get", "user.name") == "" {
 		if _, err := runGit(ctx, repo, "config", "user.name", "DevSpace"); err != nil {
 			return fmt.Errorf("manifest repo user.name config failed: %w", err)
 		}

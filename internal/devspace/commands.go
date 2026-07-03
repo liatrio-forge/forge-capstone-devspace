@@ -413,7 +413,8 @@ func newWorkspaceCommand() *cobra.Command {
 
 func newWorkspaceRemoteCommand() *cobra.Command {
 	cmd := &cobra.Command{Use: "remote", Short: "Manage workspace manifest remote"}
-	cmd.AddCommand(&cobra.Command{
+	var commitEmail, commitName string
+	setCmd := &cobra.Command{
 		Use:   "set <url-or-path>",
 		Short: "Set workspace manifest Git remote",
 		Args:  cobra.ExactArgs(1),
@@ -422,10 +423,27 @@ func newWorkspaceRemoteCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if cmd.Flags().Changed("commit-email") || cmd.Flags().Changed("commit-name") {
+				commitEmail = strings.TrimSpace(commitEmail)
+				commitName = strings.TrimSpace(commitName)
+				if commitEmail != "" {
+					cfg.ManifestCommitEmail = commitEmail
+				}
+				if commitName != "" {
+					cfg.ManifestCommitName = commitName
+				}
+				cfg.UpdatedAt = nowRFC3339()
+				if err := SaveConfig(cfg); err != nil {
+					return err
+				}
+			}
 			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", cfg.ManifestRemote)
 			return nil
 		},
-	})
+	}
+	setCmd.Flags().StringVar(&commitEmail, "commit-email", "", "git author email for manifest commits (default devspace@example.invalid)")
+	setCmd.Flags().StringVar(&commitName, "commit-name", "", "git author name for manifest commits (default DevSpace)")
+	cmd.AddCommand(setCmd)
 	create := &cobra.Command{Use: "create", Short: "Create and set a workspace manifest remote"}
 	create.AddCommand(&cobra.Command{
 		Use:   "local <path>",

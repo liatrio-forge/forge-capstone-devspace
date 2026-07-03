@@ -41,6 +41,14 @@ type Config struct {
 	AgeIdentityPath     string `json:"ageIdentityPath"`
 	ManifestRemote      string `json:"manifestRemote,omitempty"`
 	ManifestRepoPath    string `json:"manifestRepoPath,omitempty"`
+	// ManifestCommitEmail and ManifestCommitName override the identity used
+	// when committing synced manifests to the manifest remote. When empty,
+	// PushWorkspaceManifest falls back to a fixed synthetic identity
+	// (devspace@example.invalid / DevSpace) so commits are still attributable
+	// to the tool. Configurable values let teams attribute manifest history
+	// to a real owner for auditability.
+	ManifestCommitEmail string `json:"manifestCommitEmail,omitempty"`
+	ManifestCommitName  string `json:"manifestCommitName,omitempty"`
 	HostedSyncEndpoint  string `json:"hostedSyncEndpoint,omitempty"`
 	HostedSyncToken     string `json:"hostedSyncToken,omitempty"`
 	HostedSyncWorkspace string `json:"hostedSyncWorkspace,omitempty"`

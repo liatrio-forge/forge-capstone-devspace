@@ -149,6 +149,76 @@ func TestWorkspacePushIdempotentWhenNothingChanged(t *testing.T) {
 	}
 }
 
+func TestWorkspacePushUsesConfiguredCommitIdentity(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	// Configure a custom commit identity before pushing.
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ManifestCommitEmail = "bot@forge.example"
+	cfg.ManifestCommitName = "Forge Bot"
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatalf("push failed: %v", err)
+	}
+	cfg, err = LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	author := workspaceSyncRun(t, cfg.ManifestRepoPath, "git", "log", "-1", "--format=%ae %an")
+	author = strings.TrimSpace(author)
+	if author != "bot@forge.example Forge Bot" {
+		t.Fatalf("commit author = %q, want %q", author, "bot@forge.example Forge Bot")
+	}
+}
+
+func TestWorkspacePushFallsBackToDefaultCommitIdentity(t *testing.T) {
+	// Isolate git from the developer's real global config so the "no identity
+	// configured" fallback path is actually exercised.
+	globalCfg := filepath.Join(t.TempDir(), "git-config")
+	t.Setenv("GIT_CONFIG_GLOBAL", globalCfg)
+
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatalf("push failed: %v", err)
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	author := workspaceSyncRun(t, cfg.ManifestRepoPath, "git", "log", "-1", "--format=%ae %an")
+	author = strings.TrimSpace(author)
+	if author != "devspace@example.invalid DevSpace" {
+		t.Fatalf("default commit author = %q, want %q", author, "devspace@example.invalid DevSpace")
+	}
+}
+
 func TestWorkspacePullCopiesManifestToSecondWorkspaceAndCreatesBackup(t *testing.T) {
 	root := t.TempDir()
 	remote := workspaceSyncBareRepo(t)
