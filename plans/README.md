@@ -25,9 +25,9 @@ your row when done.
 | 010 | Scan: one project per monorepo, not per nested package.json | P2 | M | 006 | DONE |
 | 011 | Watch: scoped refresh instead of full rescan per event | P3 | M | 009, 010 | DONE |
 | 012 | `devspace project remove` (untrack + cascade) | P2 | M | 009 (soft) | DONE |
-| 013 | SPIKE: manifest conflict reconciliation design + prototype | P3 | M | — | DRIFTED |
-| 014 | SPIKE: access-role posture decision doc | P3 | M | — | DRIFTED |
-| 015 | SPIKE: FUSE-capable CI go/no-go + mount backlog | P3 | M | — | READY |
+| 013 | SPIKE: manifest conflict reconciliation design + prototype | P3 | M | — | DONE |
+| 014 | SPIKE: access-role posture decision doc | P3 | M | — | DONE |
+| 015 | SPIKE: FUSE-capable CI go/no-go + mount backlog | P3 | M | — | BLOCKED: no observable FUSE probe workflow run |
 
 Status values during SDD execution: TODO | READY | IN PROGRESS | DONE |
 BRANCH (already implemented on `chore/hardening-pass`) | DRIFTED |
@@ -45,6 +45,8 @@ BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
 - Task 4 completed Plans 009, 010, 011, and 012 with app-home locking,
   monorepo scan descent, scoped watch refresh, project removal, race tests,
   smoke flows, and `make verify`.
+- Task 5 completed Plans 013 and 014, and documented Plan 015 as blocked
+  because no FUSE probe workflow run was available to observe.
 
 ## SDD execution notes
 

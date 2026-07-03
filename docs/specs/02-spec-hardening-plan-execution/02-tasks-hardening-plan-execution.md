@@ -133,9 +133,9 @@ All source-plan drift checks against `595d158..HEAD` returned no in-scope code d
 | 010 | DONE | Implemented in Task 4 with monorepo scan descent that suppresses nested non-git marker projects while preserving nested git repos. |
 | 011 | DONE | Implemented in Task 4 with scoped watch refresh, full-scan safety valve, and watch refresh evidence. |
 | 012 | DONE | Implemented in Task 4 with `devspace project remove`, manifest/access/state cascade, and non-destructive secret retention output. |
-| 013 | DRIFTED | Branch commits `e4f7bd0` and hosted changes touch sync inputs; design spike must reread current sync refusal paths first. |
-| 014 | DRIFTED | Branch commits touch `types.go` and hosted sync surfaces; role-posture spike must account for configurable identity and hosted auth state. |
-| 015 | READY | No mount/doc drift; CI feasibility still requires observed workflow evidence during Task 5. |
+| 013 | DONE | Completed in Task 5 with `docs/manifest-merge.md` and an unwired `mergeManifests` prototype plus tests. |
+| 014 | DONE | Completed in Task 5 with `docs/access-roles.md`; no prototype was added because document-as-advisory is the chosen posture. |
+| 015 | BLOCKED | Task 5 updated `docs/fuse-lazy-mount.md` with CI feasibility UNKNOWN; no FUSE probe workflow run was available to observe. |
 
 Branch commit decisions:
 
@@ -214,7 +214,7 @@ Source-plan STOP conditions remain in force. Task grouping does not relax file s
 
 Plans 009-012 are complete. Task 4 proof evidence is saved in `02-proofs/02-task-04-proofs.md`; remaining SDD work is Task 5 direction spikes and validation handoff.
 
-### [ ] 5.0 Complete direction spikes and final SDD validation handoff
+### [x] 5.0 Complete direction spikes and final SDD validation handoff
 
 #### 5.0 Proof Artifact(s)
 
@@ -224,11 +224,15 @@ Plans 009-012 are complete. Task 4 proof evidence is saved in `02-proofs/02-task
 
 #### 5.0 Tasks
 
-- [ ] 5.1 Re-read Plans 013, 014, and 015 fully and run their drift checks before creating or updating design documents.
-- [ ] 5.2 Complete Plan 013 as a spike: create `docs/manifest-merge.md` and any unwired prototype/tests allowed by the plan, with explicit open questions and recommendations.
-- [ ] 5.3 Complete Plan 014 as a spike: create `docs/access-roles.md` and only optional warning-only prototype code if the source plan still supports it after drift review.
-- [ ] 5.4 Complete Plan 015 as a spike: run the FUSE feasibility probe, document GO/NO-GO evidence in `docs/fuse-lazy-mount.md`, and only add real CI/tests if the probe supports it.
-- [ ] 5.5 Reconcile final statuses for all Plans 001-015, including incomplete, rejected, blocked, and deferred items with one-line rationale.
-- [ ] 5.6 Run final `make verify`, collect final `git status --short`, and create `02-validation-hardening-plan-execution.md` mapping evidence to each demoable unit.
-- [ ] 5.7 Run a sensitive-content review over source and proof artifacts for real `.env` values, hosted tokens, age private keys, and generated `.devspace/` or `.devdrop/` state.
-- [ ] 5.8 Save final validation and handoff evidence to `02-task-05-proofs.md`, including remaining gaps and the recommended next SDD action.
+- [x] 5.1 Re-read Plans 013, 014, and 015 fully and run their drift checks before creating or updating design documents.
+- [x] 5.2 Complete Plan 013 as a spike: create `docs/manifest-merge.md` and any unwired prototype/tests allowed by the plan, with explicit open questions and recommendations.
+- [x] 5.3 Complete Plan 014 as a spike: create `docs/access-roles.md` and only optional warning-only prototype code if the source plan still supports it after drift review.
+- [x] 5.4 Complete Plan 015 as a spike: run the FUSE feasibility probe, document GO/NO-GO evidence in `docs/fuse-lazy-mount.md`, and only add real CI/tests if the probe supports it.
+- [x] 5.5 Reconcile final statuses for all Plans 001-015, including incomplete, rejected, blocked, and deferred items with one-line rationale.
+- [x] 5.6 Run final `make verify`, collect final `git status --short`, and create `02-validation-hardening-plan-execution.md` mapping evidence to each demoable unit.
+- [x] 5.7 Run a sensitive-content review over source and proof artifacts for real `.env` values, hosted tokens, age private keys, and generated `.devspace/` or `.devdrop/` state.
+- [x] 5.8 Save final validation and handoff evidence to `02-task-05-proofs.md`, including remaining gaps and the recommended next SDD action.
+
+#### 5.0 Completion Notes
+
+Plans 013 and 014 are complete. Plan 015 is blocked at its required CI-evidence gate because no FUSE probe workflow run was available to observe; `docs/fuse-lazy-mount.md` records UNKNOWN hosted-CI feasibility and future probe options. Final validation is saved in `02-validation-hardening-plan-execution.md`.
