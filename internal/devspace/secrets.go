@@ -290,7 +290,7 @@ func EnvPull(projectRef, profile string) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(full, []byte(b.String()), 0o600); err != nil {
+	if err := atomicWriteFile(full, []byte(b.String()), 0o600, false); err != nil {
 		return "", err
 	}
 	if st, err := LoadState(); err == nil {
@@ -318,7 +318,10 @@ func projectContext(projectRef string) (Config, Manifest, Project, error) {
 }
 
 func readSecretProfile(cfg Config, projectID, profile string) (SecretProfile, error) {
-	path := secretPath(cfg, projectID, profile)
+	path, err := secretPath(cfg, projectID, profile)
+	if err != nil {
+		return SecretProfile{}, err
+	}
 	var empty SecretProfile
 	if !exists(path) {
 		return empty, os.ErrNotExist
@@ -370,11 +373,14 @@ func writeSecretProfile(cfg Config, sp SecretProfile) error {
 	if err := w.Close(); err != nil {
 		return err
 	}
-	path := secretPath(cfg, normalized.ProjectID, normalized.Profile)
+	path, err := secretPath(cfg, normalized.ProjectID, normalized.Profile)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return os.WriteFile(path, buf.Bytes(), 0o600)
+	return atomicWriteFile(path, buf.Bytes(), 0o600, false)
 }
 
 func activeAgeRecipients(cfg Config, sp SecretProfile) ([]age.Recipient, SecretProfile, error) {
@@ -663,8 +669,11 @@ func stableNameID(prefix, name string) string {
 	return prefix + "_" + hex.EncodeToString(sum[:])[:12]
 }
 
-func secretPath(cfg Config, projectID, profile string) string {
-	return filepath.Join(workspaceDevdrop(cfg.WorkspaceRoot), "secrets", projectID, profile+".age")
+func secretPath(cfg Config, projectID, profile string) (string, error) {
+	if err := validateProjectID(projectID); err != nil {
+		return "", err
+	}
+	return filepath.Join(workspaceDevdrop(cfg.WorkspaceRoot), "secrets", projectID, profile+".age"), nil
 }
 
 // validSecretName rejects profile names that could escape the per-project

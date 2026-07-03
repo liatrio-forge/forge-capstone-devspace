@@ -117,5 +117,5 @@ func ensureAgeIdentity(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte(content), 0o600)
+	return atomicWriteFile(path, []byte(content), 0o600, false)
 }

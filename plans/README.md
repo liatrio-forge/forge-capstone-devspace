@@ -13,12 +13,12 @@ your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001 | Reject unsafe manifest project IDs (secrets path traversal) | P1 | S | — | READY |
-| 002 | Atomic writes for secrets, .env, and age identity | P1 | S | — | READY |
-| 003 | Safety-net tests: symlink escape + recipient listing | P1 | S | — | READY |
+| 001 | Reject unsafe manifest project IDs (secrets path traversal) | P1 | S | — | DONE |
+| 002 | Atomic writes for secrets, .env, and age identity | P1 | S | — | DONE |
+| 003 | Safety-net tests: symlink escape + recipient listing | P1 | S | — | DONE |
 | 004 | Validate manifest-supplied git remotes before clone | P2 | S | — | READY |
 | 005 | Hosted client: re-validate endpoint at use; env-var token | P2 | S | — | DRIFTED |
-| 006 | Fix mergeProject so rescans preserve user overrides | P1 | S | — | READY |
+| 006 | Fix mergeProject so rescans preserve user overrides | P1 | S | — | DONE |
 | 007 | Bound hosted server's per-workspace mutex map (striped locks) | P2 | S | — | DRIFTED |
 | 008 | CI/Makefile lint + gofmt + govulncheck gates | P2 | S | — | BRANCH |
 | 009 | Cross-process app-home locking for mutating commands | P2 | M | — | READY |
@@ -40,8 +40,14 @@ BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
 - `chore/hardening-pass` contains overlapping branch work for Plans 005, 007,
   008, 013, and 014. Treat those commits as evidence to cherry-pick, rework,
   defer, or reject; do not merge the branch wholesale.
-- Plans 001, 002, 003, and 006 are the first READY implementation group.
+- Plans 001, 002, 003, and 006 were the first READY implementation group and
+  are now DONE.
 - Plan 011 remains BLOCKED until Plans 009 and 010 are complete.
+
+## SDD execution notes
+
+- Task 2 completed Plans 001, 002, 003, and 006 with targeted safety tests,
+  coverage checks for recipient listing/export, and `make verify`.
 
 ## Dependency notes
 

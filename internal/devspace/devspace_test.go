@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -59,28 +61,50 @@ func TestInitWorkspaceIsIdempotent(t *testing.T) {
 
 func TestValidateManifestRejectsUnsafeProjects(t *testing.T) {
 	base := Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code"}
-	cases := []Manifest{
-		{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+	cases := []struct {
+		name    string
+		input   Manifest
+		wantErr string
+	}{
+		{name: "absolute path", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
 			{ID: "a", Name: "one", Path: "/abs", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
-		}},
-		{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+		}}, wantErr: "invalid relative path"},
+		{name: "duplicate path", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
 			{ID: "a", Name: "one", Path: "one", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
 			{ID: "b", Name: "two", Path: "one", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
-		}},
-		{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+		}}, wantErr: "duplicate project path"},
+		{name: "unsupported type", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
 			{ID: "a", Name: "one", Path: "one", Type: "weird", HydrateMode: HydrateManual},
-		}},
-		{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+		}}, wantErr: "unsupported type"},
+		{name: "unsupported hydrate mode", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
 			{ID: "a", Name: "one", Path: "one", Type: ProjectTypeLocal, HydrateMode: "sometimes"},
-		}},
+		}}, wantErr: "unsupported hydrateMode"},
+		{name: "traversal id", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+			{ID: "../escape", Name: "one", Path: "one", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+		}}, wantErr: "invalid id"},
+		{name: "slash id", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+			{ID: "team/project", Name: "one", Path: "one", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+		}}, wantErr: "invalid id"},
+		{name: "backslash id", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+			{ID: `team\project`, Name: "one", Path: "one", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+		}}, wantErr: "invalid id"},
+		{name: "dot id", input: Manifest{Version: ManifestVersion, WorkspaceRoot: "/tmp/code", Projects: []Project{
+			{ID: ".", Name: "one", Path: "one", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+		}}, wantErr: "invalid id"},
 	}
 	if err := ValidateManifest(base); err != nil {
 		t.Fatalf("base manifest should validate: %v", err)
 	}
 	for _, tc := range cases {
-		if err := ValidateManifest(tc); err == nil {
-			t.Fatalf("expected validation failure for %#v", tc)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateManifest(tc.input)
+			if err == nil {
+				t.Fatalf("expected validation failure for %#v", tc.input)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
+			}
+		})
 	}
 }
 
@@ -201,6 +225,281 @@ func TestSyncCreatesPlaceholderAndHydrateClonesLocalRemote(t *testing.T) {
 	}
 }
 
+func TestSecretPathRejectsUnsafeProjectID(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	cfg, err := InitWorkspace(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = writeSecretProfile(cfg, SecretProfile{
+		ProjectID: "../escape",
+		Profile:   "dev",
+		Values:    map[string]string{"TOKEN": "example"},
+	})
+	if err == nil {
+		t.Fatal("expected unsafe project id to be rejected")
+	}
+	if !strings.Contains(err.Error(), "project id") {
+		t.Fatalf("expected project id error, got %v", err)
+	}
+	if exists(filepath.Join(workspace, ".devspace", "escape", "dev.age")) {
+		t.Fatal("unsafe project id wrote outside the secrets directory")
+	}
+}
+
+func TestEnvPullReplacesSymlinkedEnvFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink replacement semantics are covered on Linux CI")
+	}
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	projectPath := filepath.Join(workspace, "work", "api")
+	if err := os.MkdirAll(projectPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddProject("work/api"); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnvSet("api", "TOKEN", "dev", strings.NewReader("example-token\n")); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "target.txt")
+	write(t, target, "unchanged\n")
+	envPath := filepath.Join(projectPath, ".env")
+	if err := os.Symlink(target, envPath); err != nil {
+		t.Fatal(err)
+	}
+
+	pulled, err := EnvPull("api", "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pulled != envPath {
+		t.Fatalf("unexpected env path: %s", pulled)
+	}
+	info, err := os.Lstat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Fatal(".env is still a symlink after EnvPull")
+	}
+	targetData, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(targetData) != "unchanged\n" {
+		t.Fatal("EnvPull followed the symlink target")
+	}
+}
+
+func TestSecretWritesLeaveNoBackupFiles(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	projectPath := filepath.Join(workspace, "work", "api")
+	if err := os.MkdirAll(projectPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddProject("work/api"); err != nil {
+		t.Fatal(err)
+	}
+	if err := EnvSet("api", "TOKEN", "dev", strings.NewReader("example-token\n")); err != nil {
+		t.Fatal(err)
+	}
+	teammate, err := age.GenerateX25519Identity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	invited, err := EnvInvite("api", "dev", "teammate", teammate.Recipient().String(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := EnvRevoke("api", "dev", invited.ID, "offboarding"); err != nil {
+		t.Fatal(err)
+	}
+	secretsDir := filepath.Join(workspaceDevdrop(workspace), "secrets")
+	err = filepath.WalkDir(secretsDir, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		name := d.Name()
+		if strings.HasSuffix(name, ".bak") || strings.Contains(name, ".tmp-") {
+			t.Fatalf("unexpected backup or temp file under secrets dir: %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSafeWorkspacePathRejectsSymlinkEscape(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink containment is covered on Linux CI")
+	}
+	workspace := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(workspace, "linked")); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := safeWorkspacePath(workspace, "linked/project"); err == nil || !strings.Contains(err.Error(), "escapes workspace via symlink") {
+		t.Fatalf("expected symlink escape error, got %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, "real", "project"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, clean, err := safeWorkspacePath(workspace, "real/project"); err != nil || clean != "real/project" {
+		t.Fatalf("expected real subdirectory to resolve, clean=%q err=%v", clean, err)
+	}
+}
+
+func TestScanRejectsSymlinkEscapeProjectPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlink containment is covered on Linux CI")
+	}
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	cfg, err := InitWorkspace(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(workspace, "linked")); err != nil {
+		t.Fatal(err)
+	}
+	m := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Machines:      []Machine{machineFromConfig(cfg)},
+		Projects: []Project{{
+			ID:          projectID("linked/project"),
+			Name:        "escape",
+			Path:        "linked/project",
+			Type:        ProjectTypeGit,
+			Remote:      makeBareRepo(t),
+			HydrateMode: HydrateOnDemand,
+			Ignore:      append([]string{}, DefaultIgnores...),
+		}},
+	}
+	if err := writeJSON(manifestPath(workspace), m, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := HydrateProject("escape"); err == nil || !strings.Contains(err.Error(), "escapes workspace via symlink") {
+		t.Fatalf("expected symlink escape error, got %v", err)
+	}
+	if exists(filepath.Join(outside, "project")) {
+		t.Fatal("hydrate created a project outside the workspace")
+	}
+}
+
+func TestMergeProjectPreservesUserOverrides(t *testing.T) {
+	cases := []struct {
+		name string
+		old  Project
+		next Project
+		want Project
+	}{
+		{
+			name: "git custom hydrate mode wins",
+			old:  Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateImmediate},
+			next: Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateOnDemand},
+			want: Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateImmediate},
+		},
+		{
+			name: "custom ignore wins",
+			old:  Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual, Ignore: []string{"tmp"}},
+			next: Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual, Ignore: append([]string{}, DefaultIgnores...)},
+			want: Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual, Ignore: []string{"tmp"}},
+		},
+		{
+			name: "local default upgrades to git default",
+			old:  Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+			next: Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateOnDemand},
+			want: Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateOnDemand},
+		},
+		{
+			name: "local custom hydrate mode survives git upgrade",
+			old:  Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateMetadataOnly},
+			next: Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateOnDemand},
+			want: Project{ID: "p", Type: ProjectTypeGit, HydrateMode: HydrateMetadataOnly},
+		},
+		{
+			name: "env profiles still preserved",
+			old:  Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual, EnvProfiles: []string{"dev"}},
+			next: Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+			want: Project{ID: "p", Type: ProjectTypeLocal, HydrateMode: HydrateManual, EnvProfiles: []string{"dev"}},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mergeProject(tc.old, tc.next)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("mergeProject() = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestScanPreservesManualHydrateModeAndIgnore(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	app := filepath.Join(workspace, "work", "app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, app, "git", "init", "-b", "main")
+	run(t, app, "git", "config", "user.email", "test@example.com")
+	run(t, app, "git", "config", "user.name", "Test User")
+	write(t, filepath.Join(app, "README.md"), "hello\n")
+	run(t, app, "git", "add", "README.md")
+	run(t, app, "git", "commit", "-m", "initial")
+
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Projects) != 1 {
+		t.Fatalf("expected one project, got %d", len(m.Projects))
+	}
+	m.Projects[0].HydrateMode = HydrateImmediate
+	m.Projects[0].Ignore = []string{"custom"}
+	if err := SaveManifest(workspace, m); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	m, err = LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Projects[0].HydrateMode; got != HydrateImmediate {
+		t.Fatalf("hydrateMode = %q, want %q", got, HydrateImmediate)
+	}
+	if len(m.Projects[0].Ignore) != 1 || m.Projects[0].Ignore[0] != "custom" {
+		t.Fatalf("ignore = %v, want [custom]", m.Projects[0].Ignore)
+	}
+}
+
 func TestEncryptedEnvProfilesRoundTripWithoutPlaintextStorage(t *testing.T) {
 	home := t.TempDir()
 	workspace := filepath.Join(t.TempDir(), "code")
@@ -228,7 +527,7 @@ func TestEncryptedEnvProfilesRoundTripWithoutPlaintextStorage(t *testing.T) {
 	if len(keys) != 1 || keys[0] != "DATABASE_URL" {
 		t.Fatalf("unexpected env keys: %v", keys)
 	}
-	ciphertext, err := os.ReadFile(secretPath(cfg, p.ID, "dev"))
+	ciphertext, err := os.ReadFile(mustSecretPath(t, cfg, p.ID, "dev"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +593,22 @@ func TestEncryptedEnvProfilesCanInviteAndRevokeRecipients(t *testing.T) {
 	if invited.ID == "" {
 		t.Fatal("invite did not return a recipient id")
 	}
-	profile := decryptSecretProfileForTest(t, secretPath(cfg, p.ID, "dev"), teammate)
+	recipients, err := EnvRecipients("api", "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recipients) != 2 {
+		t.Fatalf("expected local and teammate recipients, got %d", len(recipients))
+	}
+	if recipients[0].Name > recipients[1].Name {
+		t.Fatalf("recipients are not sorted by name: %+v", recipients)
+	}
+	for _, recipient := range recipients {
+		if recipient.RevokedAt != "" {
+			t.Fatalf("recipient should be active before revoke: %+v", recipient)
+		}
+	}
+	profile := decryptSecretProfileForTest(t, mustSecretPath(t, cfg, p.ID, "dev"), teammate)
 	if len(profile.Values) != 1 || profile.Values["TOKEN"] == "" {
 		t.Fatal("teammate could not decrypt invited profile")
 	}
@@ -319,7 +633,27 @@ func TestEncryptedEnvProfilesCanInviteAndRevokeRecipients(t *testing.T) {
 	if revoked.ID != invited.ID {
 		t.Fatal("revoked the wrong recipient")
 	}
-	if _, err := decryptSecretProfile(secretPath(cfg, p.ID, "dev"), teammate); err == nil {
+	recipients, err = EnvRecipients("api", "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sawRevoked bool
+	for _, recipient := range recipients {
+		if recipient.ID == invited.ID {
+			sawRevoked = true
+			if recipient.RevokedAt == "" {
+				t.Fatal("revoked recipient did not retain revokedAt in listing")
+			}
+			continue
+		}
+		if recipient.RevokedAt != "" {
+			t.Fatalf("active recipient was marked revoked: %+v", recipient)
+		}
+	}
+	if !sawRevoked {
+		t.Fatal("revoked recipient missing from listing")
+	}
+	if _, err := decryptSecretProfile(mustSecretPath(t, cfg, p.ID, "dev"), teammate); err == nil {
 		t.Fatal("revoked recipient can still decrypt the rewrapped profile")
 	}
 	if err := EnvRotateRecipients("api", "dev"); err != nil {
@@ -333,9 +667,28 @@ func TestEncryptedEnvProfilesCanInviteAndRevokeRecipients(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	localProfile := decryptSecretProfileForTest(t, secretPath(cfg, p.ID, "dev"), local)
+	localProfile := decryptSecretProfileForTest(t, mustSecretPath(t, cfg, p.ID, "dev"), local)
 	if localProfile.Values["TOKEN"] == "" {
 		t.Fatal("local recipient lost access after revocation")
+	}
+}
+
+func TestEnvRecipientExportReturnsLocalIdentity(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	recipient, err := EnvRecipientExport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recipient.ID == "" || recipient.Name == "" {
+		t.Fatalf("local recipient is missing identity metadata: %+v", recipient)
+	}
+	if !strings.HasPrefix(recipient.AgeRecipient, "age1") {
+		t.Fatalf("age recipient = %q, want age1 prefix", recipient.AgeRecipient)
 	}
 }
 
@@ -391,6 +744,15 @@ func write(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func mustSecretPath(t *testing.T, cfg Config, projectID, profile string) string {
+	t.Helper()
+	path, err := secretPath(cfg, projectID, profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 func decryptSecretProfileForTest(t *testing.T, path string, identity *age.X25519Identity) SecretProfile {

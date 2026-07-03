@@ -121,12 +121,12 @@ All source-plan drift checks against `595d158..HEAD` returned no in-scope code d
 
 | Plan | Reconciled Status | Branch/Drift Rationale |
 | --- | --- | --- |
-| 001 | READY | No in-scope drift; no branch implementation found. Execute in Task 2. |
-| 002 | READY | No in-scope drift; no branch implementation found. Execute after or beside Plan 001 in Task 2. |
-| 003 | READY | No in-scope drift; no branch implementation found. Execute as test-only coverage in Task 2. |
+| 001 | DONE | Implemented in Task 2 with unsafe-ID validation and secret-path defense-in-depth tests. |
+| 002 | DONE | Implemented in Task 2 with atomic secret, `.env`, and age identity writes. |
+| 003 | DONE | Implemented in Task 2 with symlink containment and recipient listing/export tests. |
 | 004 | READY | No in-scope drift; no branch implementation found. Execute in Task 3. |
 | 005 | DRIFTED | Branch commits `70509e8` and `ae5a61c` touch hosted client/server safety surfaces; rework against current hosted contracts in Task 3. |
-| 006 | READY | No in-scope drift; no branch implementation found. Execute in Task 2 before Plans 010 and 011. |
+| 006 | DONE | Implemented in Task 2 with mergeProject preservation and scan regression tests. |
 | 007 | DRIFTED | Branch commit `70509e8` changes hosted rate-limit behavior near the workspace lock map; reconcile before implementing bounded locks. |
 | 008 | ALREADY IMPLEMENTED ON BRANCH | Branch commit `c890b39` adds golangci-lint, govulncheck, Dependabot, and Makefile gates. Cherry-pick or rework in Task 3. |
 | 009 | READY | No in-scope drift; branch command/output commits do not implement app-home locking. Execute in Task 4. |
@@ -153,7 +153,7 @@ Branch commit decisions:
 
 Source-plan STOP conditions remain in force. Task grouping does not relax file scope, dependency order, no-secret requirements, or spike limits; each later parent task must reread the relevant source plans before editing implementation files.
 
-### [ ] 2.0 Implement the priority local safety and correctness slice
+### [x] 2.0 Implement the priority local safety and correctness slice
 
 #### 2.0 Proof Artifact(s)
 
@@ -163,13 +163,13 @@ Source-plan STOP conditions remain in force. Task grouping does not relax file s
 
 #### 2.0 Tasks
 
-- [ ] 2.1 Re-read Plans 001, 002, 003, and 006 fully and run their drift checks before editing any source file.
-- [ ] 2.2 Implement Plan 001: reject unsafe manifest project IDs and add tests for invalid ID segments and secret-path defense-in-depth.
-- [ ] 2.3 Implement Plan 002: route secret profile, `.env`, and age identity writes through `atomicWriteFile` with `backup=false`, adapting to any Plan 001 signature changes.
-- [ ] 2.4 Implement Plan 003: add test-only coverage for symlink escape containment, recipient listing, revoked recipient state, and local recipient export.
-- [ ] 2.5 Implement Plan 006: update `mergeProject` to preserve user-set ignore lists and hydrate mode according to the source plan's semantics table, with regression tests.
-- [ ] 2.6 Run the targeted P1 test command and `make verify`; save sanitized output plus `git diff --stat` to `02-task-02-proofs.md`.
-- [ ] 2.7 Update `plans/README.md` and this task file to reflect completed or blocked P1 plans, without committing real secrets or generated workspace state.
+- [x] 2.1 Re-read Plans 001, 002, 003, and 006 fully and run their drift checks before editing any source file.
+- [x] 2.2 Implement Plan 001: reject unsafe manifest project IDs and add tests for invalid ID segments and secret-path defense-in-depth.
+- [x] 2.3 Implement Plan 002: route secret profile, `.env`, and age identity writes through `atomicWriteFile` with `backup=false`, adapting to any Plan 001 signature changes.
+- [x] 2.4 Implement Plan 003: add test-only coverage for symlink escape containment, recipient listing, revoked recipient state, and local recipient export.
+- [x] 2.5 Implement Plan 006: update `mergeProject` to preserve user-set ignore lists and hydrate mode according to the source plan's semantics table, with regression tests.
+- [x] 2.6 Run the targeted P1 test command and `make verify`; save sanitized output plus `git diff --stat` to `02-task-02-proofs.md`.
+- [x] 2.7 Update `plans/README.md` and this task file to reflect completed or blocked P1 plans, without committing real secrets or generated workspace state.
 
 ### [ ] 3.0 Reconcile and land CI, hosted, and sync hardening work without duplication
 
