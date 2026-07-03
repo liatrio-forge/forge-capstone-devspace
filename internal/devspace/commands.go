@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -203,15 +204,18 @@ func newHostedServeCommand() *cobra.Command {
 	var store string
 	var token string
 	var trustedProxies []string
+	var allowPublicHTTP bool
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run a local hosted manifest sync prototype server",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !cmd.Flags().Changed("addr") {
-				if port := strings.TrimSpace(os.Getenv("PORT")); port != "" {
-					addr = "0.0.0.0:" + port
-				}
+			resolved, err := resolveServeAddr(addr, cmd.Flags().Changed("addr"), os.Getenv("PORT"), allowPublicHTTP)
+			if err != nil {
+				return err
+			}
+			if resolved.public {
+				fmt.Fprintln(cmd.ErrOrStderr(), "warning: binding a public address over plain HTTP; terminate TLS at a reverse proxy or tokens will traverse the network in cleartext")
 			}
 			if token == "" {
 				token = strings.TrimSpace(os.Getenv("HOSTED_TOKEN"))
@@ -235,11 +239,11 @@ func newHostedServeCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Hosted manifest sync listening on http://%s\n", addr)
+			fmt.Fprintf(cmd.OutOrStdout(), "Hosted manifest sync listening on http://%s\n", resolved.addr)
 			fmt.Fprintf(cmd.OutOrStdout(), "Storage: %s\n", store)
 			fmt.Fprintln(cmd.OutOrStdout(), "API: GET/PUT /v1/workspaces/{workspace}/manifest")
 			server := &http.Server{
-				Addr:              addr,
+				Addr:              resolved.addr,
 				Handler:           handler,
 				ReadTimeout:       10 * time.Second,
 				WriteTimeout:      10 * time.Second,
@@ -275,7 +279,60 @@ func newHostedServeCommand() *cobra.Command {
 	cmd.Flags().StringVar(&store, "store", "", "directory for hosted manifest storage")
 	cmd.Flags().StringVar(&token, "token", "", "required bearer token")
 	cmd.Flags().StringSliceVar(&trustedProxies, "trusted-proxy", nil, "trusted proxy CIDR (repeatable); enables X-Forwarded-For client identification for rate limiting")
+	cmd.Flags().BoolVar(&allowPublicHTTP, "allow-public-http", false, "allow binding a public (non-loopback) address over plain HTTP; TLS is expected to be terminated by a reverse proxy")
 	return cmd
+}
+
+// serveAddr is the resolved listen address plus whether it is a public bind
+// (a non-loopback host), which the caller may want to warn about.
+type serveAddr struct {
+	addr   string
+	public bool
+}
+
+// resolveServeAddr applies the serve-command address resolution rules and a
+// safety guard against accidental public cleartext binds. Resolution order:
+// an explicit --addr flag wins; otherwise a PORT env var binds all interfaces
+// (the PaaS/proxy model, where TLS is terminated upstream); otherwise the
+// loopback default is used.
+//
+// The guard refuses a non-loopback bind unless the caller opts in with
+// allowPublicHTTP or signals a proxy environment via a non-empty portEnv
+// (which implies TLS termination upstream). This prevents bearer tokens
+// crossing the wire in cleartext when someone runs `--addr 0.0.0.0:8787` on
+// a bare host without a TLS-terminating proxy.
+func resolveServeAddr(addrFlag string, addrFlagChanged bool, portEnv string, allowPublicHTTP bool) (serveAddr, error) {
+	addr := addrFlag
+	public := false
+	if !addrFlagChanged {
+		if port := strings.TrimSpace(portEnv); port != "" {
+			addr = "0.0.0.0:" + port
+		}
+	}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return serveAddr{}, fmt.Errorf("invalid listen address %q: %w", addr, err)
+	}
+	public = !isLoopbackBindHost(host)
+	if public && !allowPublicHTTP && portEnv == "" {
+		return serveAddr{}, fmt.Errorf("refusing to bind public address %s over plain HTTP; terminate TLS at a reverse proxy or pass --allow-public-http", addr)
+	}
+	return serveAddr{addr: addr, public: public}, nil
+}
+
+// isLoopbackBindHost reports whether host (as returned by net.SplitHostPort)
+// refers to localhost for the purpose of the public-bind guard. It accepts
+// the wildcard all-interfaces bind ("0.0.0.0", "::", "[::]") as non-loopback.
+func isLoopbackBindHost(host string) bool {
+	if host == "" {
+		return false
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	trimmed := strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+	ip := net.ParseIP(trimmed)
+	return ip != nil && ip.IsLoopback()
 }
 
 func newWorkspaceCommand() *cobra.Command {
