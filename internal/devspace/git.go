@@ -105,7 +105,7 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 }
 
 func runCommand(ctx context.Context, dir, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // name is always the "git" literal from runGit, the only caller
 	cmd.Dir = dir
 	var out bytes.Buffer
 	var stderr bytes.Buffer
@@ -127,7 +127,9 @@ func cloneRepo(remote, dest string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "clone", "--", remote, dest)
+	// remote is validated by validateProjectRemote (called from ValidateManifest)
+	// before any manifest is loaded, and "--" already prevents flag injection.
+	cmd := exec.CommandContext(ctx, "git", "clone", "--", remote, dest) //nolint:gosec // validated upstream, see comment
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

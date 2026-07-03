@@ -4,7 +4,7 @@ BINARY_NAME ?= devspace
 CMD_PATH ?= ./cmd/devspace
 BIN_DIR ?= bin
 DIST_DIR ?= dist
-GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
+GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 GOVULNCHECK ?= go run golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
 .PHONY: all test vet lint vulncheck build verify clean

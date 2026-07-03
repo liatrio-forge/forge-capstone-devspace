@@ -28,8 +28,11 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v7
         with:
-          # v2.1.6, not v2.1.0: older v2.1.x builds are incompatible with Go 1.26.
-          version: v2.1.6
+          # v2.1.x builds (including v2.1.6) were built with a Go toolchain
+          # older than this repo's go 1.26 target and refuse to run
+          # ("Go language version used to build golangci-lint is lower than
+          # the targeted Go version"). v2.12.2 is confirmed built with go1.26.4.
+          version: v2.12.2
           args: --timeout 5m
 
       - name: Vulncheck
