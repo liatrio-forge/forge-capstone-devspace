@@ -23,7 +23,11 @@ team identity, or dependency install behavior.
 - `.github/workflows/release.yml` runs GoReleaser when a `v*` tag is pushed
   (archives, checksums, the ghcr image, attestation), then a **gated
   `deploy-railway` job** waits for manual approval on the `production`
-  environment before deploying the image to Railway (stable tags only).
+  environment before deploying the image to Railway (stable tags only). That
+  job first mirrors the image from `ghcr.io/liatrio-forge/devspace-hosted`
+  (org, permanently private — see prerequisites) to
+  `ghcr.io/hexsleeves/devspace-hosted` (personal, public) and deploys the
+  mirror, since Railway can't pull a private image on our plan.
 
 Each release contains four tar.gz archives (`linux`/`darwin` × `amd64`/`arm64`)
 named `devspace_<version>_<os>_<arch>.tar.gz`, plus a `checksums.txt` file
@@ -61,8 +65,15 @@ or release runs will fail:
 - **Railway** secrets/variable on the `production` environment: `RAILWAY_TOKEN`
   (project token), `RAILWAY_SERVICE_ID`, `RAILWAY_ENVIRONMENT_ID`, and the
   `RAILWAY_PUBLIC_DOMAIN` variable.
-- The **ghcr package** `devspace-hosted` made **public** after its first push,
-  so Railway can pull it without registry credentials.
+- **`PERSONAL_GHCR_TOKEN`** secret on the `production` environment — a classic
+  GitHub PAT for the `hexsleeves` account with `read:packages` (to pull the
+  org image) and `write:packages` (to publish the public mirror) scopes.
+  `liatrio-forge` locks container package visibility to private at the org
+  level with no per-package override, so the org image can never be made
+  public; `deploy-railway` mirrors it to `ghcr.io/hexsleeves/devspace-hosted`
+  instead, which must be made **public** once after its first push (Package
+  settings → Danger Zone → Change visibility) so Railway can pull it without
+  registry credentials.
 
 ### If a release run fails
 

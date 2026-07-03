@@ -62,9 +62,27 @@ jobs:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
       ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
-      IMAGE: ghcr.io/liatrio-forge/devspace-hosted:${{ github.ref_name }}
+      # liatrio-forge locks container package visibility to private at the org
+      # level (not a per-package toggle), and Railway can't pull a private
+      # image on our plan. Mirror the just-published org image to a public
+      # personal namespace Railway can reach, and deploy that mirror.
+      SOURCE_IMAGE: ghcr.io/liatrio-forge/devspace-hosted:${{ github.ref_name }}
+      IMAGE: ghcr.io/hexsleeves/devspace-hosted:${{ github.ref_name }}
       PUBLIC_DOMAIN: ${{ vars.RAILWAY_PUBLIC_DOMAIN }}
     steps:
+      - name: Log in to GitHub Container Registry (personal mirror)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: hexsleeves
+          password: ${{ secrets.PERSONAL_GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Mirror hosted image to public namespace for Railway
+        run: docker buildx imagetools create --tag "$IMAGE" "$SOURCE_IMAGE"
+
       - name: Deploy the new image to Railway
         run: |
           set -euo pipefail
