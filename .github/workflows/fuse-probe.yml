@@ -111,4 +111,5 @@ jobs:
           	fmt.Println("unmounted")
           }
           EOF
+          go mod tidy
           go run .
