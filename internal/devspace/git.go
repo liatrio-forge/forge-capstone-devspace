@@ -131,6 +131,7 @@ func cloneRepo(remote, dest string) error {
 		if msg == "" {
 			msg = err.Error()
 		}
+		//nolint:staticcheck // multi-line message deliberately formatted for direct CLI display, not wrapped
 		return fmt.Errorf("git clone failed for %s into %s: %s\n\nNext steps:\n- Confirm you have access to the repository.\n- Confirm your SSH key or local remote path is configured.\n- Try running `git ls-remote %s`.", remote, dest, msg, remote)
 	}
 	return nil

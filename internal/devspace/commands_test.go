@@ -250,4 +250,3 @@ func TestProfileOrDefaultAndSortedProjectNames(t *testing.T) {
 // Silence prevents unused-import warnings if cobra is only referenced in
 // helpers above; keep the import explicit.
 var _ = cobra.Command{}
-

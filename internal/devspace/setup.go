@@ -287,7 +287,10 @@ func runSetupCommand(dir string, args []string, stdout, stderr io.Writer) error 
 	if len(args) == 0 {
 		return fmt.Errorf("setup command is empty")
 	}
-	cmd := exec.Command(args[0], args[1:]...)
+	// args come from a project's own declared setup config, only reachable via
+	// the explicit `devspace setup` command (never auto-executed), behind
+	// safeWorkspacePath + the --allow-global gate for global commands.
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec // gated, see comment
 	cmd.Dir = dir
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

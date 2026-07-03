@@ -2,7 +2,7 @@ package devspace
 
 import (
 	"bytes"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // naming only, see recipientID and stableNameID
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -443,7 +443,7 @@ func parseAgeRecipient(value string) (*age.X25519Recipient, error) {
 // matching across already-deployed workspaces. SHA-1's known weaknesses
 // (collision, not preimage) are irrelevant for naming a 256-bit age key.
 func recipientID(ageRecipient string) string {
-	sum := sha1.Sum([]byte(ageRecipient))
+	sum := sha1.Sum([]byte(ageRecipient)) //nolint:gosec // naming only, see doc comment
 	return "user_" + hex.EncodeToString(sum[:])[:12]
 }
 
@@ -672,7 +672,7 @@ func removeProfile(profiles []string, profile string) []string {
 // *naming only* and is deliberately not upgraded to SHA-256: these IDs persist
 // in manifests, and a hash change would orphan existing access entries.
 func stableNameID(prefix, name string) string {
-	sum := sha1.Sum([]byte(strings.ToLower(strings.TrimSpace(name))))
+	sum := sha1.Sum([]byte(strings.ToLower(strings.TrimSpace(name)))) //nolint:gosec // naming only, see doc comment
 	return prefix + "_" + hex.EncodeToString(sum[:])[:12]
 }
 

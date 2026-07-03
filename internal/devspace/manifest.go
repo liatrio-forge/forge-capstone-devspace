@@ -1,7 +1,7 @@
 package devspace
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // naming only, see projectID
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -144,8 +144,13 @@ func validAccessRole(role string) bool {
 		role == AccessRoleViewer
 }
 
+// projectID derives a short, stable identifier for a project's relative
+// path. Persisted in manifests, so it is deliberately NOT migrated to
+// SHA-256: changing it would silently invalidate every existing manifest's
+// project IDs. SHA-1's known weaknesses (collision, not preimage) are
+// irrelevant for naming a filesystem path.
 func projectID(rel string) string {
-	h := sha1.Sum([]byte(filepath.ToSlash(rel)))
+	h := sha1.Sum([]byte(filepath.ToSlash(rel))) //nolint:gosec // naming only, see doc comment
 	return "project_" + hex.EncodeToString(h[:])[:12]
 }
 

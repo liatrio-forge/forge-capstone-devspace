@@ -35,12 +35,12 @@ var DefaultIgnores = []string{
 }
 
 type Config struct {
-	MachineID           string `json:"machineId"`
-	MachineName         string `json:"machineName"`
-	WorkspaceRoot       string `json:"workspaceRoot"`
-	AgeIdentityPath     string `json:"ageIdentityPath"`
-	ManifestRemote      string `json:"manifestRemote,omitempty"`
-	ManifestRepoPath    string `json:"manifestRepoPath,omitempty"`
+	MachineID        string `json:"machineId"`
+	MachineName      string `json:"machineName"`
+	WorkspaceRoot    string `json:"workspaceRoot"`
+	AgeIdentityPath  string `json:"ageIdentityPath"`
+	ManifestRemote   string `json:"manifestRemote,omitempty"`
+	ManifestRepoPath string `json:"manifestRepoPath,omitempty"`
 	// ManifestCommitEmail and ManifestCommitName override the identity used
 	// when committing synced manifests to the manifest remote. When empty,
 	// PushWorkspaceManifest falls back to a fixed synthetic identity
