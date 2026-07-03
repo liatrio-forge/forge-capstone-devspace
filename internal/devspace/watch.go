@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -35,40 +36,50 @@ type WatchRefresh struct {
 	HostedHash       string
 	WatchedDirCount  int
 	RefreshStartedAt string
+	FullScan         bool
 }
+
+var (
+	watchFullScanEvery       = 10
+	watchFullScanMaxInterval = 5 * time.Minute
+)
 
 func RefreshWorkspaceForWatch(syncMode string) (WatchRefresh, error) {
 	mode, err := normalizeWatchSyncMode(syncMode)
 	if err != nil {
 		return WatchRefresh{}, err
 	}
-	result := WatchRefresh{SyncMode: mode, RefreshStartedAt: nowRFC3339()}
+	result := WatchRefresh{SyncMode: mode, RefreshStartedAt: nowRFC3339(), FullScan: true}
 	summary, err := ScanWorkspace()
 	if err != nil {
 		return WatchRefresh{}, err
 	}
 	result.Summary = summary
+	return result, syncWatchManifest(&result, mode)
+}
+
+func syncWatchManifest(result *WatchRefresh, mode string) error {
 	switch mode {
 	case WatchSyncOff:
-		return result, nil
+		return nil
 	case WatchSyncGit:
 		changed, err := PushWorkspaceManifest()
 		if err != nil {
-			return WatchRefresh{}, err
+			return err
 		}
 		result.SyncChanged = changed
-		return result, nil
+		return nil
 	case WatchSyncHosted:
 		hosted, err := PushHostedManifest()
 		if err != nil {
-			return WatchRefresh{}, err
+			return err
 		}
 		result.SyncChanged = hosted.Changed
 		result.HostedVersion = hosted.Version
 		result.HostedHash = hosted.ManifestHash
-		return result, nil
+		return nil
 	default:
-		return WatchRefresh{}, fmt.Errorf("unsupported watch sync mode %q", mode)
+		return fmt.Errorf("unsupported watch sync mode %q", mode)
 	}
 }
 
@@ -97,25 +108,44 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 	if err != nil {
 		return err
 	}
+	trackedProjects, _ := watchProjectPaths(cfg.WorkspaceRoot)
 	fmt.Fprintf(out, "Watching %s (%d directories)\n", cfg.WorkspaceRoot, watched)
 	fmt.Fprintf(out, "Debounce: %s\n", opts.Debounce)
 	fmt.Fprintf(out, "Sync: %s\n", watchSyncDescription(mode))
 	fmt.Fprintln(out, "Watch refreshes manifest/state only; it never pulls, applies plans, hydrates repositories, runs setup commands, or uploads secrets.")
 
-	runRefresh := func() error {
-		result, err := RefreshWorkspaceForWatch(mode)
-		if err != nil {
-			return err
-		}
-		result.WatchedDirCount = watched
-		if opts.OnRefresh != nil {
-			opts.OnRefresh(result)
-		}
-		printWatchRefresh(out, result)
-		return nil
+	refreshCount := 0
+	lastFullScan := time.Time{}
+	runRefresh := func(forceFull bool, changed []string) error {
+		return withAppLock(func() error {
+			refreshCount++
+			needsPeriodicCount := watchFullScanEvery > 0 && refreshCount%watchFullScanEvery == 0
+			needsPeriodicTime := !lastFullScan.IsZero() && watchFullScanMaxInterval > 0 && time.Since(lastFullScan) >= watchFullScanMaxInterval
+			full := forceFull || len(changed) == 0 || needsPeriodicCount || needsPeriodicTime
+			var result WatchRefresh
+			var err error
+			if full {
+				result, err = RefreshWorkspaceForWatch(mode)
+				lastFullScan = time.Now()
+			} else {
+				result, err = RefreshProjectsForWatch(mode, changed)
+			}
+			if err != nil {
+				return err
+			}
+			result.WatchedDirCount = watched
+			if paths, err := watchProjectPaths(cfg.WorkspaceRoot); err == nil {
+				trackedProjects = paths
+			}
+			if opts.OnRefresh != nil {
+				opts.OnRefresh(result)
+			}
+			printWatchRefresh(out, result)
+			return nil
+		})
 	}
 	if opts.RunInitial || opts.Once {
-		if err := runRefresh(); err != nil {
+		if err := runRefresh(true, nil); err != nil {
 			return err
 		}
 		if opts.Once {
@@ -130,6 +160,8 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 			timer.Stop()
 		}
 	}()
+	pending := map[string]bool{}
+	fullScan := false
 	schedule := func() {
 		if timer == nil {
 			timer = time.NewTimer(opts.Debounce)
@@ -165,6 +197,11 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 				watched += added
 			}
 			if watchEventRelevant(cfg.WorkspaceRoot, event) {
+				if projectPath, ok := watchProjectPathForEvent(cfg.WorkspaceRoot, event.Name, trackedProjects); ok {
+					pending[projectPath] = true
+				} else {
+					fullScan = true
+				}
 				schedule()
 			}
 		case err, ok := <-watcher.Errors:
@@ -174,11 +211,53 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 			return err
 		case <-timerC:
 			timerC = nil
-			if err := runRefresh(); err != nil {
+			changed := make([]string, 0, len(pending))
+			for projectPath := range pending {
+				changed = append(changed, projectPath)
+			}
+			sort.Strings(changed)
+			for projectPath := range pending {
+				delete(pending, projectPath)
+			}
+			forceFull := fullScan
+			fullScan = false
+			if err := runRefresh(forceFull, changed); err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func watchProjectPaths(workspace string) ([]string, error) {
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		return nil, err
+	}
+	paths := make([]string, 0, len(m.Projects))
+	for _, p := range m.Projects {
+		paths = append(paths, filepath.ToSlash(filepath.Clean(p.Path)))
+	}
+	sort.Slice(paths, func(i, j int) bool {
+		if len(paths[i]) == len(paths[j]) {
+			return paths[i] < paths[j]
+		}
+		return len(paths[i]) > len(paths[j])
+	})
+	return paths, nil
+}
+
+func watchProjectPathForEvent(workspace, path string, projectPaths []string) (string, bool) {
+	components, ok := workspaceRelativeComponents(workspace, path)
+	if !ok || len(components) == 0 {
+		return "", false
+	}
+	rel := filepath.ToSlash(filepath.Join(components...))
+	for _, projectPath := range projectPaths {
+		if rel == projectPath || strings.HasPrefix(rel+"/", projectPath+"/") {
+			return projectPath, true
+		}
+	}
+	return "", false
 }
 
 func addWorkspaceWatches(watcher *fsnotify.Watcher, workspace string) (int, error) {
@@ -316,8 +395,13 @@ func watchSyncDescription(mode string) string {
 }
 
 func printWatchRefresh(out io.Writer, result WatchRefresh) {
-	fmt.Fprintf(out, "Refreshed at %s: found %d projects, %d Git repos, %d untracked folders, %d local-only projects, %d projects with env files.\n",
+	scope := "scoped"
+	if result.FullScan {
+		scope = "full"
+	}
+	fmt.Fprintf(out, "Refreshed at %s (%s): found %d projects, %d Git repos, %d untracked folders, %d local-only projects, %d projects with env files.\n",
 		result.RefreshStartedAt,
+		scope,
 		result.Summary.FoundProjects,
 		result.Summary.GitRepos,
 		result.Summary.UntrackedFolders,

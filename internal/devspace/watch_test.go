@@ -53,6 +53,73 @@ func TestRefreshWorkspaceForWatchDefaultsToLocalOnly(t *testing.T) {
 	if _, err := GetManifestRemote(); err == nil {
 		t.Fatal("local-only watch refresh unexpectedly configured a Git remote")
 	}
+	if !result.FullScan {
+		t.Fatal("RefreshWorkspaceForWatch should report a full scan")
+	}
+}
+
+func TestRefreshProjectsForWatchOnlyTouchesChangedProject(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	api := filepath.Join(workspace, "apps", "api")
+	web := filepath.Join(workspace, "apps", "web")
+	if err := os.MkdirAll(api, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(web, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	hardeningWriteFile(t, filepath.Join(api, "package.json"), `{"scripts":{"dev":"vite"}}`, 0o644)
+	hardeningWriteFile(t, filepath.Join(web, "package.json"), `{"scripts":{"dev":"vite"}}`, 0o644)
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	hardeningWriteFile(t, filepath.Join(api, ".env"), "TOKEN=api\n", 0o600)
+	hardeningWriteFile(t, filepath.Join(web, ".env"), "TOKEN=web\n", 0o600)
+
+	result, err := RefreshProjectsForWatch(WatchSyncOff, []string{"apps/api"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.FullScan {
+		t.Fatal("RefreshProjectsForWatch should report a scoped refresh")
+	}
+	if result.Summary.FoundProjects != 1 || result.Summary.ProjectsWithEnv != 1 {
+		t.Fatalf("unexpected scoped summary: %+v", result.Summary)
+	}
+	st, err := LoadState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	apiProject, ok := findProject(m, "apps/api")
+	if !ok {
+		t.Fatal("api project missing")
+	}
+	webProject, ok := findProject(m, "apps/web")
+	if !ok {
+		t.Fatal("web project missing")
+	}
+	if !st.Projects[apiProject.ID].EnvFilePresent {
+		t.Fatal("changed project state was not refreshed")
+	}
+	if st.Projects[webProject.ID].EnvFilePresent {
+		t.Fatal("unchanged project state should not be refreshed by scoped refresh")
+	}
+}
+
+func TestWatchProjectPathForEventMapsNestedPaths(t *testing.T) {
+	workspace := t.TempDir()
+	paths := []string{"apps/api", "apps/api-tools"}
+	got, ok := watchProjectPathForEvent(workspace, filepath.Join(workspace, "apps", "api", "package.json"), paths)
+	if !ok || got != "apps/api" {
+		t.Fatalf("event mapped to %q/%v, want apps/api/true", got, ok)
+	}
+	if _, ok := watchProjectPathForEvent(workspace, filepath.Join(workspace, "apps", "new", "package.json"), paths); ok {
+		t.Fatal("untracked project event should force a full scan")
+	}
 }
 
 func TestWatchWorkspaceDebouncesFilesystemEvents(t *testing.T) {

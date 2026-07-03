@@ -36,6 +36,7 @@ func ScanWorkspace() (ScanSummary, error) {
 
 	seen := map[string]bool{}
 	summary := ScanSummary{}
+	var localRoot string
 	err = filepath.WalkDir(cfg.WorkspaceRoot, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -59,7 +60,11 @@ func ScanWorkspace() (ScanSummary, error) {
 			return filepath.SkipDir
 		}
 		info := gitInfo(path)
-		hasMarker := info.IsRepo || hasDependencyMarker(path) || exists(filepath.Join(path, ".env"))
+		underLocal := localRoot != "" && strings.HasPrefix(path+string(filepath.Separator), localRoot+string(filepath.Separator))
+		if !underLocal {
+			localRoot = ""
+		}
+		hasMarker := info.IsRepo || (!underLocal && (hasDependencyMarker(path) || exists(filepath.Join(path, ".env"))))
 		if !hasMarker {
 			summary.UntrackedFolders++
 			return nil
@@ -73,6 +78,9 @@ func ScanWorkspace() (ScanSummary, error) {
 			summary.GitRepos++
 		} else {
 			summary.LocalOnlyProjects++
+			if localRoot == "" {
+				localRoot = path
+			}
 		}
 		if exists(filepath.Join(path, ".env")) {
 			summary.ProjectsWithEnv++
@@ -177,6 +185,123 @@ func AddProject(rel string) (Project, error) {
 		st.Projects = map[string]ProjectState{}
 	}
 	st.Projects[p.ID] = stateForProject(full, p, info)
+	return p, SaveState(st)
+}
+
+func RefreshProjectsForWatch(syncMode string, changed []string) (WatchRefresh, error) {
+	mode, err := normalizeWatchSyncMode(syncMode)
+	if err != nil {
+		return WatchRefresh{}, err
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		return WatchRefresh{}, err
+	}
+	m, err := LoadManifest(cfg.WorkspaceRoot)
+	if err != nil {
+		return WatchRefresh{}, err
+	}
+	st, err := LoadState()
+	if err != nil && !missing(err) {
+		return WatchRefresh{}, err
+	}
+	if st.Projects == nil {
+		st.Projects = map[string]ProjectState{}
+	}
+	result := WatchRefresh{SyncMode: mode, RefreshStartedAt: nowRFC3339()}
+	seen := map[string]bool{}
+	for _, rel := range changed {
+		full, clean, err := safeWorkspacePath(cfg.WorkspaceRoot, rel)
+		if err != nil {
+			return WatchRefresh{}, err
+		}
+		if seen[clean] {
+			continue
+		}
+		seen[clean] = true
+		existing, hasExisting := findProject(m, clean)
+		info := gitInfo(full)
+		if stat, err := os.Stat(full); err != nil {
+			if os.IsNotExist(err) && hasExisting {
+				st.Projects[existing.ID] = stateForProject(full, existing, info)
+				continue
+			}
+			return WatchRefresh{}, err
+		} else if !stat.IsDir() {
+			if hasExisting {
+				st.Projects[existing.ID] = stateForProject(full, existing, info)
+			}
+			continue
+		}
+		if !info.IsRepo && !hasDependencyMarker(full) && !exists(filepath.Join(full, ".env")) {
+			if hasExisting {
+				st.Projects[existing.ID] = stateForProject(full, existing, info)
+			}
+			continue
+		}
+		p := projectFromPath(clean, full, info)
+		upsertProject(&m, p)
+		st.Projects[p.ID] = stateForProject(full, p, info)
+		result.Summary.FoundProjects++
+		if info.IsRepo {
+			result.Summary.GitRepos++
+		} else {
+			result.Summary.LocalOnlyProjects++
+		}
+		if exists(filepath.Join(full, ".env")) {
+			result.Summary.ProjectsWithEnv++
+		}
+	}
+	st.LastScanAt = nowRFC3339()
+	if err := SaveManifest(cfg.WorkspaceRoot, m); err != nil {
+		return WatchRefresh{}, err
+	}
+	if err := SaveState(st); err != nil {
+		return WatchRefresh{}, err
+	}
+	return result, syncWatchManifest(&result, mode)
+}
+
+func RemoveProject(ref string) (Project, error) {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return Project{}, err
+	}
+	m, err := LoadManifest(cfg.WorkspaceRoot)
+	if err != nil {
+		return Project{}, err
+	}
+	p, ok := findProject(m, ref)
+	if !ok {
+		return Project{}, fmt.Errorf("project %q not found", ref)
+	}
+	projects := make([]Project, 0, len(m.Projects)-1)
+	for _, project := range m.Projects {
+		if project.ID != p.ID {
+			projects = append(projects, project)
+		}
+	}
+	access := make([]ProjectAccess, 0, len(m.Access))
+	for _, projectAccess := range m.Access {
+		if projectAccess.ProjectID != p.ID {
+			access = append(access, projectAccess)
+		}
+	}
+	m.Projects = projects
+	m.Access = access
+	if err := ValidateManifest(m); err != nil {
+		return Project{}, err
+	}
+	if err := SaveManifest(cfg.WorkspaceRoot, m); err != nil {
+		return Project{}, err
+	}
+	st, err := LoadState()
+	if err != nil && !missing(err) {
+		return Project{}, err
+	}
+	if st.Projects != nil {
+		delete(st.Projects, p.ID)
+	}
 	return p, SaveState(st)
 }
 

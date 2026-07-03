@@ -129,10 +129,10 @@ All source-plan drift checks against `595d158..HEAD` returned no in-scope code d
 | 006 | DONE | Implemented in Task 2 with mergeProject preservation and scan regression tests. |
 | 007 | DONE | Implemented in Task 3 with fixed striped workspace locks. |
 | 008 | DONE | Reworked from branch commit `c890b39`; Dependabot remained out of Plan 008 scope. |
-| 009 | READY | No in-scope drift; branch command/output commits do not implement app-home locking. Execute in Task 4. |
-| 010 | READY | No in-scope drift; depends on Plan 006. Execute in Task 4 after Plan 006 lands. |
-| 011 | BLOCKED | Blocked by explicit source-plan dependencies on Plans 009 and 010. |
-| 012 | READY | No in-scope drift; soft-depends on Plan 009. Execute in Task 4. |
+| 009 | DONE | Implemented in Task 4 with app-home scoped flock locking around mutating CLI entry points and watch refreshes. |
+| 010 | DONE | Implemented in Task 4 with monorepo scan descent that suppresses nested non-git marker projects while preserving nested git repos. |
+| 011 | DONE | Implemented in Task 4 with scoped watch refresh, full-scan safety valve, and watch refresh evidence. |
+| 012 | DONE | Implemented in Task 4 with `devspace project remove`, manifest/access/state cascade, and non-destructive secret retention output. |
 | 013 | DRIFTED | Branch commits `e4f7bd0` and hosted changes touch sync inputs; design spike must reread current sync refusal paths first. |
 | 014 | DRIFTED | Branch commits touch `types.go` and hosted sync surfaces; role-posture spike must account for configurable identity and hosted auth state. |
 | 015 | READY | No mount/doc drift; CI feasibility still requires observed workflow evidence during Task 5. |
@@ -190,7 +190,7 @@ Source-plan STOP conditions remain in force. Task grouping does not relax file s
 - [x] 3.7 Update `plans/README.md`, branch-reconciliation notes, and SDD task statuses with DONE/TODO/BLOCKED/REJECTED reasons.
 - [x] 3.8 Save sanitized branch comparison, test output, CI/lint/vulnerability output, and diff summary to `02-task-03-proofs.md`.
 
-### [ ] 4.0 Implement concurrency, scan, watch, and project lifecycle hardening
+### [x] 4.0 Implement concurrency, scan, watch, and project lifecycle hardening
 
 #### 4.0 Proof Artifact(s)
 
@@ -200,15 +200,19 @@ Source-plan STOP conditions remain in force. Task grouping does not relax file s
 
 #### 4.0 Tasks
 
-- [ ] 4.1 Re-read Plans 009, 010, 011, and 012 fully and run their drift checks before editing source files.
-- [ ] 4.2 Implement Plan 009: add cross-process app-home locking around mutating CLI entry points, using the approved dependency and timeout/error behavior.
-- [ ] 4.3 Implement Plan 010 after Plan 006 is complete: stop nested non-git dependency markers from producing duplicate monorepo projects while preserving nested git repo behavior.
-- [ ] 4.4 Implement Plan 011 only after Plans 009 and 010: add scoped watch refresh with a full-scan safety valve and tests for event scoping.
-- [ ] 4.5 Implement Plan 012: add `devspace project remove`, cascade manifest access/state references, never delete project folders or secret files, and print retained secret location when relevant.
-- [ ] 4.6 Build `bin/devspace` and run sanitized temp-home smoke flows covering `init`, `scan`, `watch --once`, `project add`, and `project remove`.
-- [ ] 4.7 Run the targeted lifecycle test command and `make verify`; save sanitized outputs and `git diff --stat` to `02-task-04-proofs.md`.
-- [ ] 4.8 Update `plans/README.md` and this task file with final status for Plans 009-012.
-- [ ] 4.9 Check proof artifacts and diffs for accidental real `.env`, hosted token, age identity, `.devspace/`, or `.devdrop/` state before committing.
+- [x] 4.1 Re-read Plans 009, 010, 011, and 012 fully and run their drift checks before editing source files.
+- [x] 4.2 Implement Plan 009: add cross-process app-home locking around mutating CLI entry points, using the approved dependency and timeout/error behavior.
+- [x] 4.3 Implement Plan 010 after Plan 006 is complete: stop nested non-git dependency markers from producing duplicate monorepo projects while preserving nested git repo behavior.
+- [x] 4.4 Implement Plan 011 only after Plans 009 and 010: add scoped watch refresh with a full-scan safety valve and tests for event scoping.
+- [x] 4.5 Implement Plan 012: add `devspace project remove`, cascade manifest access/state references, never delete project folders or secret files, and print retained secret location when relevant.
+- [x] 4.6 Build `bin/devspace` and run sanitized temp-home smoke flows covering `init`, `scan`, `watch --once`, `project add`, and `project remove`.
+- [x] 4.7 Run the targeted lifecycle test command and `make verify`; save sanitized outputs and `git diff --stat` to `02-task-04-proofs.md`.
+- [x] 4.8 Update `plans/README.md` and this task file with final status for Plans 009-012.
+- [x] 4.9 Check proof artifacts and diffs for accidental real `.env`, hosted token, age identity, `.devspace/`, or `.devdrop/` state before committing.
+
+#### 4.0 Completion Notes
+
+Plans 009-012 are complete. Task 4 proof evidence is saved in `02-proofs/02-task-04-proofs.md`; remaining SDD work is Task 5 direction spikes and validation handoff.
 
 ### [ ] 5.0 Complete direction spikes and final SDD validation handoff
 

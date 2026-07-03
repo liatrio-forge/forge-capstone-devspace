@@ -21,10 +21,10 @@ your row when done.
 | 006 | Fix mergeProject so rescans preserve user overrides | P1 | S | — | DONE |
 | 007 | Bound hosted server's per-workspace mutex map (striped locks) | P2 | S | — | DONE |
 | 008 | CI/Makefile lint + gofmt + govulncheck gates | P2 | S | — | DONE |
-| 009 | Cross-process app-home locking for mutating commands | P2 | M | — | READY |
-| 010 | Scan: one project per monorepo, not per nested package.json | P2 | M | 006 | READY |
-| 011 | Watch: scoped refresh instead of full rescan per event | P3 | M | 009, 010 | BLOCKED: depends on 009 and 010 |
-| 012 | `devspace project remove` (untrack + cascade) | P2 | M | 009 (soft) | READY |
+| 009 | Cross-process app-home locking for mutating commands | P2 | M | — | DONE |
+| 010 | Scan: one project per monorepo, not per nested package.json | P2 | M | 006 | DONE |
+| 011 | Watch: scoped refresh instead of full rescan per event | P3 | M | 009, 010 | DONE |
+| 012 | `devspace project remove` (untrack + cascade) | P2 | M | 009 (soft) | DONE |
 | 013 | SPIKE: manifest conflict reconciliation design + prototype | P3 | M | — | DRIFTED |
 | 014 | SPIKE: access-role posture decision doc | P3 | M | — | DRIFTED |
 | 015 | SPIKE: FUSE-capable CI go/no-go + mount backlog | P3 | M | — | READY |
@@ -42,7 +42,9 @@ BLOCKED (with one-line reason) | REJECTED (with one-line rationale).
   defer, or reject; do not merge the branch wholesale.
 - Plans 001, 002, 003, and 006 were the first READY implementation group and
   are now DONE.
-- Plan 011 remains BLOCKED until Plans 009 and 010 are complete.
+- Task 4 completed Plans 009, 010, 011, and 012 with app-home locking,
+  monorepo scan descent, scoped watch refresh, project removal, race tests,
+  smoke flows, and `make verify`.
 
 ## SDD execution notes
 

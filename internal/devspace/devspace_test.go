@@ -218,6 +218,326 @@ func TestWorkspaceScanDetectsGitAndSetup(t *testing.T) {
 	}
 }
 
+func TestScanTreatsMonorepoAsOneProject(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+
+	write(t, filepath.Join(workspace, "mono", "package.json"), `{"name":"mono"}`)
+	write(t, filepath.Join(workspace, "mono", "packages", "a", "package.json"), `{"name":"a"}`)
+	write(t, filepath.Join(workspace, "mono", "packages", "b", "package.json"), `{"name":"b"}`)
+	write(t, filepath.Join(workspace, "mono", "packages", "a", ".env"), "TOKEN=a\n")
+
+	vendorTool := filepath.Join(workspace, "mono", "vendor-tool")
+	if err := os.MkdirAll(vendorTool, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, vendorTool, "git", "init", "-b", "main")
+
+	write(t, filepath.Join(workspace, "apps", "x", "package.json"), `{"name":"x"}`)
+	write(t, filepath.Join(workspace, "apps", "y", "package.json"), `{"name":"y"}`)
+
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Projects) != 4 {
+		t.Fatalf("expected mono, nested git repo, and two sibling apps; got %+v", m.Projects)
+	}
+
+	want := map[string]string{
+		"mono":             ProjectTypeLocal,
+		"mono/vendor-tool": ProjectTypeGit,
+		"apps/x":           ProjectTypeLocal,
+		"apps/y":           ProjectTypeLocal,
+	}
+	for path, typ := range want {
+		p, ok := findProject(m, path)
+		if !ok {
+			t.Fatalf("missing project %q in %+v", path, m.Projects)
+		}
+		if p.Type != typ {
+			t.Fatalf("%s type = %q, want %q", path, p.Type, typ)
+		}
+	}
+	for _, path := range []string{"mono/packages/a", "mono/packages/b"} {
+		if _, ok := findProject(m, path); ok {
+			t.Fatalf("nested package %q should not be tracked: %+v", path, m.Projects)
+		}
+	}
+}
+
+func TestRemoveProjectUntracksAndCascades(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	appPath := filepath.Join(workspace, "work", "app")
+	if err := os.MkdirAll(appPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app, err := AddProject("work/app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherPath := filepath.Join(workspace, "work", "other")
+	if err := os.MkdirAll(otherPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	other, err := AddProject("work/other")
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity, err := age.GenerateX25519Identity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := User{
+		ID:           "user_local",
+		Name:         "Local User",
+		AgeRecipient: identity.Recipient().String(),
+		CreatedAt:    nowRFC3339(),
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Users = []User{user}
+	m.Access = []ProjectAccess{
+		{ProjectID: app.ID, UserID: user.ID, Role: AccessRoleOwner, AddedAt: nowRFC3339()},
+		{ProjectID: other.ID, UserID: user.ID, Role: AccessRoleViewer, AddedAt: nowRFC3339()},
+	}
+	if err := SaveManifest(workspace, m); err != nil {
+		t.Fatal(err)
+	}
+
+	removed, err := RemoveProject(app.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed.ID != app.ID {
+		t.Fatalf("removed project = %s, want %s", removed.ID, app.ID)
+	}
+	m, err = LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(m, app.ID); ok {
+		t.Fatal("removed project is still in manifest")
+	}
+	if _, ok := findProject(m, other.ID); !ok {
+		t.Fatal("unrelated project was removed")
+	}
+	if len(m.Users) != 1 || m.Users[0].ID != user.ID {
+		t.Fatalf("users were not preserved: %+v", m.Users)
+	}
+	if len(m.Access) != 1 || m.Access[0].ProjectID != other.ID {
+		t.Fatalf("access cascade = %+v, want only unrelated project access", m.Access)
+	}
+	if err := ValidateManifest(m); err != nil {
+		t.Fatal(err)
+	}
+	st, err := LoadState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := st.Projects[app.ID]; ok {
+		t.Fatal("removed project state remains")
+	}
+	if _, ok := st.Projects[other.ID]; !ok {
+		t.Fatal("unrelated project state was removed")
+	}
+	if !exists(appPath) {
+		t.Fatal("project folder was deleted")
+	}
+}
+
+func TestRemoveProjectByPathAndID(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, "apps", "by-path"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	byPath, err := AddProject("apps/by-path")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, "apps", "by-id"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	byID, err := AddProject("apps/by-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := RemoveProject(byPath.Path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RemoveProject(byID.ID); err != nil {
+		t.Fatal(err)
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(m, byPath.ID); ok {
+		t.Fatal("path ref removal left project in manifest")
+	}
+	if _, ok := findProject(m, byID.ID); ok {
+		t.Fatal("id ref removal left project in manifest")
+	}
+}
+
+func TestRemoveProjectNotFoundLeavesFilesUnchanged(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, "work", "app"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddProject("work/app"); err != nil {
+		t.Fatal(err)
+	}
+	manifestBefore, err := os.ReadFile(manifestPath(workspace))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateFile, err := statePath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateBefore, err := os.ReadFile(stateFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = RemoveProject("missing")
+	if err == nil {
+		t.Fatal("expected missing project error")
+	}
+	if !strings.Contains(err.Error(), `project "missing" not found`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	manifestAfter, err := os.ReadFile(manifestPath(workspace))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateAfter, err := os.ReadFile(stateFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(manifestBefore, manifestAfter) {
+		t.Fatal("manifest changed for missing project")
+	}
+	if !bytes.Equal(stateBefore, stateAfter) {
+		t.Fatal("state changed for missing project")
+	}
+}
+
+func TestRemoveProjectRescanBehavior(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	livePath := filepath.Join(workspace, "work", "live")
+	write(t, filepath.Join(livePath, "package.json"), `{"scripts":{"dev":"vite"}}`)
+	live, err := AddProject("work/live")
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletedPath := filepath.Join(workspace, "work", "deleted")
+	write(t, filepath.Join(deletedPath, "package.json"), `{"scripts":{"dev":"vite"}}`)
+	deleted, err := AddProject("work/deleted")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RemoveProject(live.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RemoveProject(deleted.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(deletedPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(m, live.ID); !ok {
+		t.Fatal("rescan did not re-track live project")
+	}
+	if _, ok := findProject(m, deleted.ID); ok {
+		t.Fatal("rescan re-tracked deleted project")
+	}
+}
+
+func TestProjectRemoveCommandOutputRetainsSecrets(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	projectPath := filepath.Join(workspace, "work", "app")
+	if err := os.MkdirAll(projectPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p, err := AddProject("work/app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secretDir := filepath.Join(workspaceDevdrop(workspace), "secrets", p.ID)
+	secretFile := filepath.Join(secretDir, "dev.age")
+	write(t, secretFile, "ciphertext\n")
+
+	cmd := NewRootCommand("test")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetArgs([]string{"project", "remove", "app"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("command failed: %v\n%s", err, errOut.String())
+	}
+	got := out.String()
+	wantRemoved := "Removed project app (work/app) from the manifest. Files on disk were not touched.\n"
+	if !strings.Contains(got, wantRemoved) {
+		t.Fatalf("missing removal output %q in:\n%s", wantRemoved, got)
+	}
+	wantNote := "Note: encrypted env profiles remain at " + secretDir + "; delete them manually if no longer needed.\n"
+	if !strings.Contains(got, wantNote) {
+		t.Fatalf("missing secret retention note %q in:\n%s", wantNote, got)
+	}
+	if !exists(projectPath) {
+		t.Fatal("project folder was deleted")
+	}
+	if !exists(secretFile) {
+		t.Fatal("secret file was deleted")
+	}
+}
+
 func TestSyncCreatesPlaceholderAndHydrateClonesLocalRemote(t *testing.T) {
 	home := t.TempDir()
 	workspace := filepath.Join(t.TempDir(), "code")
