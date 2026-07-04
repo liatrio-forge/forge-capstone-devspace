@@ -73,6 +73,9 @@ devspace mount /tmp/devspace-mount --preview
 devspace mount /tmp/devspace-mount
 ```
 
+Use `docs/operations/macos-fuse-run-playbook.md` for the step-by-step local
+smoke test, restart note, cleanup path, and evidence checklist.
+
 Expected behavior:
 
 - `--preview` works without FUSE and remains the fallback on Macs without

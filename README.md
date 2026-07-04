@@ -158,6 +158,7 @@ devspace mount ~/devspace-view --preview
 ```
 
 Prototype read-only FUSE workspace view. Manifest project paths appear as mount entries before they are hydrated. See [`docs/architecture/fuse-lazy-mount.md`](docs/architecture/fuse-lazy-mount.md) for platform requirements.
+For macOS smoke testing, use [`docs/operations/macos-fuse-run-playbook.md`](docs/operations/macos-fuse-run-playbook.md).
 
 #### `devspace project add`
 
