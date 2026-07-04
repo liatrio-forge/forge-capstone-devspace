@@ -54,8 +54,8 @@
   <section class="card">
     <h2>Executive Summary</h2>
     <p><span class="badge status-pass" data-role="overall-status">PASS</span></p>
-    <p>Gates tripped: CI rerun pending after fixing the first Linux integration test failure.</p>
-    <p>Implementation Ready: Yes after the pushed CI rerun is green. The feature is implemented as a macOS-first product plan with Linux hosted CI as repeatable automation coverage.</p>
+    <p>Gates tripped: None - all gates passed.</p>
+    <p>Implementation Ready: Yes. The feature is implemented as a macOS-first product plan with Linux hosted CI as repeatable automation coverage.</p>
     <ul class="metric-list">
       <li>Requirements Verified: 100%</li>
       <li>Proof Artifacts Working: 100%</li>
@@ -68,7 +68,7 @@
       <thead><tr><th>Functional Requirement</th><th>Status</th><th>Evidence</th></tr></thead>
       <tbody>
         <tr><td>macOS-first readiness documented</td><td><span class="badge status-verified">Verified</span></td><td><code>docs/architecture/fuse-lazy-mount.md</code>, task 01 proof.</td></tr>
-        <tr><td>Linux hosted CI safety net proven and wired</td><td><span class="badge status-verified">Verified</span></td><td>Probe run <code>28685409454</code>, <code>mount-integration</code>, and <code>mount_fuse_test.go</code>; final CI rerun pending.</td></tr>
+        <tr><td>Linux hosted CI safety net proven and wired</td><td><span class="badge status-verified">Verified</span></td><td>Probe run <code>28685409454</code>, green CI run <code>28690640269</code>, <code>mount-integration</code>, and <code>mount_fuse_test.go</code>.</td></tr>
         <tr><td>Default verification remains FUSE-free</td><td><span class="badge status-verified">Verified</span></td><td><code>make verify</code> passes without <code>-tags fusetest</code>.</td></tr>
       </tbody>
     </table>
@@ -94,7 +94,7 @@
     <table>
       <thead><tr><th>Severity</th><th>Issue</th><th>Impact</th><th>Recommendation</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge status-flag">MEDIUM</span></td><td>First <code>mount-integration</code> run failed due an over-strict test assertion.</td><td>CI was red on run <code>28690580475</code>.</td><td>Split listing and hydration into separate mounts, push, and require a green rerun before merge.</td></tr>
+        <tr><td><span class="badge status-pass">PASS</span></td><td>No blocking issues.</td><td>None.</td><td>Run CodeRabbit review before merge.</td></tr>
       </tbody>
     </table>
   </section>
@@ -102,6 +102,7 @@
     <h2>Evidence Appendix</h2>
     <pre><code>Linux probe run: 28685409454
 Failed integration run before fix: 28690580475
+Green final CI run after fix: 28690640269
 Local tests after fix: go test ./...
 Tagged compile: GOOS=linux go test ./internal/devspace -run Fuse -tags fusetest -c -o /tmp/devspace-fuse.test
 Default gate: make verify</code></pre>
