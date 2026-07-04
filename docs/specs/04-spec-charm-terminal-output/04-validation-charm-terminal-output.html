@@ -25,9 +25,11 @@
   .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
   .status-fail, .status-failed { background:var(--fail); color:#fff; }
   .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
-  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
-  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; table-layout: fixed; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; word-break: break-word; overflow-wrap: anywhere; }
   th { background:var(--card); }
+  td code, th code { word-break: break-all; overflow-wrap: anywhere; }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
   .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
   code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
@@ -74,7 +76,7 @@
     <h2>2) Coverage Matrix</h2>
 
     <h3>Functional Requirements</h3>
-    <table>
+    <div class="table-scroll"><table>
       <thead>
         <tr><th>Requirement</th><th>Status</th><th>Evidence (file:lines, commit, or artifact)</th></tr>
       </thead>
@@ -95,10 +97,10 @@
         <tr><td>FR14 — bubbles spinner for hydrate/scan on TTY, plain otherwise</td><td><span class="badge status-verified">Verified</span></td><td><code>runWithSpinner</code> called at <code>commands.go:512</code> (scan) and <code>:642</code> (hydrate). vhs screenshots <code>04-hydrate-spinner.png</code> (spinner mid-flight) and <code>04-hydrate-done.png</code> (completion) from a real pty; <code>TestScanCommandPrintsPlainProgressLineWhenPiped</code>/<code>TestHydrateCommandPrintsPlainProgressLineWhenPiped</code> cover the non-TTY path.</td></tr>
         <tr><td>FR15 — secretInput unchanged</td><td><span class="badge status-verified">Verified</span></td><td><code>git diff e75b79f..429859d -- internal/devspace/commands.go</code> shows zero line changes within the <code>secretInput</code> function body (the only diff hunk touching its region is context around the following function).</td></tr>
       </tbody>
-    </table>
+    </table></div>
 
     <h3>Repository Standards</h3>
-    <table>
+    <div class="table-scroll"><table>
       <thead>
         <tr><th>Standard Area</th><th>Status</th><th>Evidence &amp; Compliance Notes</th></tr>
       </thead>
@@ -109,10 +111,10 @@
         <tr><td>Commit conventions</td><td><span class="badge status-verified">Verified</span></td><td>All 6 spec-04 commits use the <code>feat:</code> prefix with imperative, scoped subjects, matching AGENTS.md's Conventional Commit convention.</td></tr>
         <tr><td>Output helpers stay io.Writer-based</td><td><span class="badge status-verified">Verified</span></td><td>Every restyled helper in <code>output.go</code>/<code>doctor.go</code>/<code>mount.go</code> keeps its original <code>io.Writer</code> parameter signature; new helpers (<code>printOK</code>, <code>printCaution</code>, <code>printLine</code>, <code>printRecipientTable</code>) follow the same pattern.</td></tr>
       </tbody>
-    </table>
+    </table></div>
 
     <h3>Proof Artifacts</h3>
-    <table>
+    <div class="table-scroll"><table>
       <thead>
         <tr><th>Unit/Task</th><th>Proof Artifact</th><th>Status</th><th>Verification Result</th></tr>
       </thead>
@@ -136,13 +138,13 @@
         <tr><td>Task 5.0</td><td>Non-TTY setup apply transcript</td><td><span class="badge status-verified">Verified</span></td><td>Re-ran live this session (FR13 evidence).</td></tr>
         <tr><td>Task 5.0</td><td>7 new interactive tests (fallback + accessible-mode)</td><td><span class="badge status-verified">Verified</span></td><td>Included in full-suite pass.</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </section>
 
   <section id="validation-issues">
     <h2>3) Validation Issues</h2>
     <p>No CRITICAL, HIGH, or blocking issues found. One traceability note is recorded for completeness.</p>
-    <table>
+    <div class="table-scroll"><table>
       <thead>
         <tr><th>Severity</th><th>Issue</th><th>Impact</th><th>Recommendation</th></tr>
       </thead>
@@ -154,7 +156,7 @@
           <td>Optional: update the tasks doc's Relevant Files table to list these files for future readers. Not required before merge.</td>
         </tr>
       </tbody>
-    </table>
+    </table></div>
   </section>
 
   <section id="evidence-appendix">
