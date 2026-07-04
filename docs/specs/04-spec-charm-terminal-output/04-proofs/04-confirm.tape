@@ -5,7 +5,13 @@ Set FontSize 16
 Set Shell bash
 Set TypingSpeed 40ms
 
-Type "export DEVSPACE_HOME=/var/folders/cn/2ck5t0pd23gc7324cjxtc76m0000gn/T/tmp.Cdf6R4Hhcv/home"
+# Prerequisite (run before this tape, not captured here): a devspace binary
+# on PATH as ./devspace, and DEVSPACE_HOME already initialized with a
+# workspace containing an apps/web project with a package.json (npm scripts),
+# e.g. via `devspace init --workspace ...` + `devspace scan`. This tape only
+# replays the demo portion for a portable path; substitute your own
+# initialized DEVSPACE_HOME below.
+Type "export DEVSPACE_HOME=$(mktemp -d)"
 Enter
 Type "clear"
 Enter

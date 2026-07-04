@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 )
 
@@ -119,5 +123,54 @@ func TestHuhInputAccessibleValidatesExactPhraseWithRetry(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "confirmation did not match") {
 		t.Fatalf("expected the validator's rejection message to be shown before the retry, got %q", out.String())
+	}
+}
+
+// TestRunSpinnerProgramWaitsForWorkWhenProgramQuitsEarly proves the fix for a
+// real regression: before this test, if the bubbletea program exited before
+// work() finished (which happens on SIGINT/SIGTERM, since bubbletea
+// intercepts those as a graceful InterruptMsg rather than letting the OS
+// kill the process the way it did before this interactive layer existed),
+// runWithSpinner returned while work() kept mutating files unsupervised
+// under withAppLock's now-released cross-process lock. runSpinnerProgram
+// must wait for work to actually finish regardless of why the program
+// quit.
+func TestRunSpinnerProgramWaitsForWorkWhenProgramQuitsEarly(t *testing.T) {
+	var out bytes.Buffer
+	m := spinnerModel{spinner: spinner.New(spinner.WithSpinner(spinner.Dot))}
+	program := tea.NewProgram(m, tea.WithInput(new(bytes.Buffer)), tea.WithOutput(&out))
+
+	var workFinished atomic.Bool
+	go func() {
+		time.Sleep(30 * time.Millisecond)
+		program.Quit() // simulates the program exiting before work() is done
+	}()
+
+	err := runSpinnerProgram(program, func() error {
+		time.Sleep(150 * time.Millisecond)
+		workFinished.Store(true)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("runSpinnerProgram error = %v, want nil", err)
+	}
+	if !workFinished.Load() {
+		t.Fatal("runSpinnerProgram returned before work() finished; the cross-process app lock would be released while work is still mutating files")
+	}
+}
+
+// TestRunSpinnerProgramRecoversWorkPanic proves work panicking is turned
+// into an error instead of crashing the whole process (which would skip
+// bubbletea's terminal-restore cleanup on the program.Run goroutine).
+func TestRunSpinnerProgramRecoversWorkPanic(t *testing.T) {
+	var out bytes.Buffer
+	m := spinnerModel{spinner: spinner.New(spinner.WithSpinner(spinner.Dot))}
+	program := tea.NewProgram(m, tea.WithInput(new(bytes.Buffer)), tea.WithOutput(&out))
+
+	err := runSpinnerProgram(program, func() error {
+		panic("boom")
+	})
+	if err == nil || !strings.Contains(err.Error(), "panic: boom") {
+		t.Fatalf("runSpinnerProgram error = %v, want a wrapped panic error", err)
 	}
 }

@@ -61,7 +61,10 @@ func confirmSetupRun(in io.Reader, out io.Writer, project, command, path string)
 			Value(&confirmed),
 	)).WithShowHelp(false).WithInput(in).WithOutput(out)
 	if err := form.Run(); err != nil {
-		return err
+		// Keep the "nothing was run" message consistent with the
+		// non-interactive path (e.g. the user pressing Esc/Ctrl-C to abort
+		// the form) rather than surfacing huh's library-internal error text.
+		return errors.New("confirmation did not match; no setup commands were run")
 	}
 	if !confirmed {
 		return errors.New("confirmation did not match; no setup commands were run")
@@ -92,17 +95,22 @@ func confirmSetupApply(in io.Reader, out io.Writer, prompt, expected string) err
 			}),
 	)).WithShowHelp(false).WithInput(in).WithOutput(out)
 	if err := form.Run(); err != nil {
-		return err
+		// See confirmSetupRun: keep the abort message consistent with the
+		// non-interactive path instead of surfacing huh's raw error.
+		return errors.New("confirmation did not match; no setup commands were run")
 	}
 	return nil
 }
 
 // spinnerModel is a minimal bubbletea program that shows a spinner next to a
-// label until an external workDoneMsg arrives.
+// label until an external workDoneMsg arrives. The work result itself is
+// reported to runSpinnerProgram's caller via a channel, not through this
+// model, since the model's final state after program.Run() is only reliable
+// when the program quit normally (via workDoneMsg), not when it exits early
+// through an intercepted SIGINT/SIGTERM.
 type spinnerModel struct {
 	spinner  spinner.Model
 	label    string
-	err      error
 	quitting bool
 }
 
@@ -115,7 +123,6 @@ func (m spinnerModel) Init() tea.Cmd {
 func (m spinnerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case workDoneMsg:
-		m.err = msg.err
 		m.quitting = true
 		return m, tea.Quit
 	case spinner.TickMsg:
@@ -139,8 +146,16 @@ func (m spinnerModel) View() tea.View {
 // non-interactive case. It only manages the in-progress indicator; the
 // caller is responsible for printing its own completion message once
 // runWithSpinner returns successfully.
+//
+// The gate checks stdin as well as out: since this call never passes
+// tea.WithInput, bubbletea defaults to os.Stdin and, if that isn't a
+// terminal, falls back to opening /dev/tty directly -- which hard-errors in
+// an environment with no controlling terminal at all (some headless CI
+// runners, certain container configurations). Checking stdin here avoids
+// that failure mode by taking the plain path instead, the same symmetric
+// check confirmSetupRun/confirmSetupApply already use.
 func runWithSpinner(out io.Writer, label string, work func() error) error {
-	if !isTerminalWriter(out) {
+	if !isTerminalWriter(out) || !isTerminalReader(os.Stdin) {
 		printLine(out, "%s...", label)
 		return work()
 	}
@@ -149,17 +164,47 @@ func runWithSpinner(out io.Writer, label string, work func() error) error {
 	// passed directly rather than through styledWriter.
 	m := spinnerModel{spinner: spinner.New(spinner.WithSpinner(spinner.Dot)), label: label}
 	program := tea.NewProgram(m, tea.WithOutput(out))
+	return runSpinnerProgram(program, work)
+}
 
+// runSpinnerProgram drives program while work runs in the background, and
+// always waits for work to actually finish before returning -- even if the
+// program itself exits early.
+//
+// bubbletea installs its own SIGINT/SIGTERM handler and turns those signals
+// into a graceful InterruptMsg (program.Run returning ErrInterrupted)
+// instead of letting the OS terminate the process outright, which is what
+// happened before this interactive layer existed. Callers of runWithSpinner
+// (project hydrate, scan) run inside withAppLock, whose cross-process file
+// lock must stay held for the entire mutating operation; work has no
+// cancellation path of its own (HydrateProject/ScanWorkspace run to
+// completion once started), so returning as soon as the TUI quits would
+// release the lock while work is still writing manifest/state files. Always
+// waiting for the done channel here, regardless of why program.Run
+// returned, keeps the lock held for work's true duration.
+//
+// The goroutine also recovers from a panic in work so an arbitrary caller
+// closure (git clone, manifest hydration) can't crash the process before
+// bubbletea's own terminal-restore deferred calls (which live on the
+// program.Run goroutine, not this one) get a chance to run.
+func runSpinnerProgram(program *tea.Program, work func() error) error {
+	done := make(chan error, 1)
 	go func() {
-		program.Send(workDoneMsg{err: work()})
+		err := func() (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("panic: %v", r)
+				}
+			}()
+			return work()
+		}()
+		done <- err
+		program.Send(workDoneMsg{err: err})
 	}()
 
-	finalModel, err := program.Run()
-	if err != nil {
-		return err
+	_, runErr := program.Run()
+	if workErr := <-done; workErr != nil {
+		return workErr
 	}
-	if fm, ok := finalModel.(spinnerModel); ok && fm.err != nil {
-		return fm.err
-	}
-	return nil
+	return runErr
 }
