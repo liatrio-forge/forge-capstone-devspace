@@ -60,6 +60,10 @@ ok  	github.com/liatrio-forge/devdrop-capstone/internal/devspace	19.436s
 
 $ GOOS=linux go test ./internal/devspace -run Fuse -tags fusetest -c -o /tmp/devspace-fuse.test
 
+$ go test ./...
+?   	github.com/liatrio-forge/devdrop-capstone/cmd/devspace	[no test files]
+ok  	github.com/liatrio-forge/devdrop-capstone/internal/devspace	18.547s
+
 $ make verify
 go test ./...
 go vet ./...

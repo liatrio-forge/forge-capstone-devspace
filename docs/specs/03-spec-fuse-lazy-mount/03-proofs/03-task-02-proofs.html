@@ -70,6 +70,7 @@ unmounted</code></pre>
   <section>
     <h2>Permanent Coverage</h2>
     <p>The temporary probe workflow is deleted from the final branch state. Permanent automation is the Linux-only <code>mount-integration</code> job in <code>.github/workflows/ci.yml</code>, running <code>go test ./internal/devspace -run Fuse -tags fusetest -v</code>.</p>
+    <p>Initial integration run <code>28690580475</code> failed because the test asserted that listing child entries could not trigger FUSE child lookups. The test was corrected by splitting path-listing and hydrate-on-lookup coverage into separate mounts.</p>
   </section>
 </div>
 </body>

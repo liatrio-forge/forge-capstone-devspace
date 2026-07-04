@@ -12,6 +12,37 @@ import (
 	"time"
 )
 
+func TestFuseMountListsManifestPathsWithoutHydration(t *testing.T) {
+	if _, err := os.Stat("/dev/fuse"); err != nil {
+		t.Skipf("FUSE device unavailable: %v", err)
+	}
+	workspace := hardeningInitWorkspace(t, "code")
+	goodRemote := hardeningBareRepo(t)
+	badRemote := filepath.Join(t.TempDir(), "missing.git")
+	projects := []Project{
+		hardeningProject("apps/lazy", ProjectTypeGit, goodRemote),
+		hardeningProject("apps/broken", ProjectTypeGit, badRemote),
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      projects,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	mountpoint, unmount, _ := startFuseMount(t, false)
+	defer unmount()
+	waitForMountEntry(t, mountpoint, "apps")
+	apps := mountNames(t, filepath.Join(mountpoint, "apps"))
+	if !containsMountName(apps, "lazy") || !containsMountName(apps, "broken") {
+		t.Fatalf("apps entries = %v, want lazy and broken", apps)
+	}
+	if exists(filepath.Join(workspace, "apps", "lazy")) {
+		t.Fatal("lazy project hydrated while hydrate-on-lookup was disabled")
+	}
+}
+
 func TestFuseMountHydratesOnLookupAndPropagatesFailure(t *testing.T) {
 	if _, err := os.Stat("/dev/fuse"); err != nil {
 		t.Skipf("FUSE device unavailable: %v", err)
@@ -31,27 +62,9 @@ func TestFuseMountHydratesOnLookupAndPropagatesFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mountpoint := filepath.Join(t.TempDir(), "mnt")
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-	done := make(chan error, 1)
-	go func() {
-		done <- MountWorkspace(ctx, mountpoint, WorkspaceMountOptions{
-			HydrateOnLookup: true,
-			ErrOut:          &errOut,
-		}, &out)
-	}()
-
+	mountpoint, unmount, errOut := startFuseMount(t, true)
+	defer unmount()
 	waitForMountEntry(t, mountpoint, "apps")
-	apps := mountNames(t, filepath.Join(mountpoint, "apps"))
-	if !containsMountName(apps, "lazy") || !containsMountName(apps, "broken") {
-		t.Fatalf("apps entries = %v, want lazy and broken", apps)
-	}
-	if exists(filepath.Join(workspace, "apps", "lazy")) {
-		t.Fatal("lazy project hydrated before project lookup")
-	}
 
 	readme, err := os.ReadFile(filepath.Join(mountpoint, "apps", "lazy", "README.md"))
 	if err != nil {
@@ -70,16 +83,34 @@ func TestFuseMountHydratesOnLookupAndPropagatesFailure(t *testing.T) {
 	if !strings.Contains(errOut.String(), "hydrate apps/broken failed") {
 		t.Fatalf("stderr missing hydration failure:\n%s", errOut.String())
 	}
+}
 
-	cancel()
-	select {
-	case err := <-done:
-		if err != nil {
-			t.Fatalf("mount returned error: %v", err)
+func startFuseMount(t *testing.T, hydrateOnLookup bool) (string, func(), *bytes.Buffer) {
+	t.Helper()
+	mountpoint := filepath.Join(t.TempDir(), "mnt")
+	ctx, cancel := context.WithCancel(context.Background())
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	done := make(chan error, 1)
+	go func() {
+		done <- MountWorkspace(ctx, mountpoint, WorkspaceMountOptions{
+			HydrateOnLookup: hydrateOnLookup,
+			ErrOut:          &errOut,
+		}, &out)
+	}()
+
+	cleanup := func() {
+		cancel()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatalf("mount returned error: %v", err)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatal("mount did not unmount after cancellation")
 		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("mount did not unmount after cancellation")
 	}
+	return mountpoint, cleanup, &errOut
 }
 
 func waitForMountEntry(t *testing.T, dir, name string) {
