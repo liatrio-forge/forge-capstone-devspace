@@ -1,8 +1,10 @@
 # FUSE Lazy Workspace Mount Prototype
 
-`devspace mount <mountpoint>` is a prototype for a read-only workspace view backed
-by the DevDrop manifest. It is intentionally outside normal sync, plan, apply,
-and hydrate workflows so the CLI still works on machines without FUSE.
+`devspace mount <mountpoint>` is a prototype for a FUSE-backed, read-only
+workspace view backed by the DevDrop manifest. A real mount requires FUSE support;
+`--preview` is the FUSE-free fallback for machines that cannot mount. The feature
+is intentionally outside normal sync, plan, apply, and hydrate workflows so the
+rest of the CLI still works on machines without FUSE.
 
 ## Library Selection
 

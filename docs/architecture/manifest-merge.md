@@ -45,7 +45,7 @@ The prototype merges Projects and Access only. It leaves Users, Teams, Machines,
 | Entity | Added on both sides | Modified ours only | Modified theirs only | Modified both | Deleted vs modified |
 | --- | --- | --- | --- | --- | --- |
 | Project | Different IDs: union if manifest validation passes. Same ID and identical content: keep one. Same ID with different content: conflict. Same path with different IDs: open question. | Take ours. | Take theirs. | Conflict unless the records are identical. Future field-level merge can preserve Plan-006 `mergeProject` user overrides for `ignore`, `hydrateMode`, and `envProfiles`. | Keep the modified/present project. Do not delete automatically. |
-| Access | Different composite keys: union if references remain valid. Same key and identical content: keep one. Same key with different role/profile/revocation data: conflict. | Take ours. | Take theirs. | Conflict for role, env profile, or revocation differences. | Keep the modified/present access rule. Do not delete automatically. |
+| Access | Different composite keys: union if references remain valid. Same key and identical content: keep one. Same key with different role/profile/revocation data: conflict. | Take ours. | Take theirs. | Conflict for role, env profile, or revocation differences. | Conflict. Access delete-vs-modify is security-sensitive and must block for explicit operator review. |
 | User | Follow-up. | Follow-up. | Follow-up. | Follow-up. | Follow-up. |
 | Team | Follow-up. | Follow-up. | Follow-up. | Follow-up. | Follow-up. |
 | Machine | Prefer local machine localization after sync. | Follow-up. | Follow-up. | Follow-up. | Follow-up. |
