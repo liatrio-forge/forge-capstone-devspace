@@ -273,6 +273,8 @@ manifest_remote="$tmp/manifest-sync.git"
 
 mkdir -p "$remote_src"
 git -C "$remote_src" init -b main
+git -C "$remote_src" config user.name "DevSpace Demo"
+git -C "$remote_src" config user.email "devspace@example.com"
 git -C "$remote_src" commit --allow-empty -m "initial"
 git clone --bare "$remote_src" "$remote_bare"
 

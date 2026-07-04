@@ -1234,10 +1234,14 @@
         const pct = total ? Math.round((state.done.size / total) * 100) : 0;
         progressText.textContent = `${pct}%`;
         progressBar.style.width = `${pct}%`;
-        localStorage.setItem(
-          "devdrop-playbook-done",
-          JSON.stringify([...state.done]),
-        );
+        try {
+          localStorage.setItem(
+            "devdrop-playbook-done",
+            JSON.stringify([...state.done]),
+          );
+        } catch (err) {
+          // Keep the in-memory state authoritative when persistence is blocked.
+        }
       }
 
       function refreshCommands() {
@@ -1258,9 +1262,17 @@
         area.style.left = "-9999px";
         document.body.appendChild(area);
         area.select();
-        document.execCommand("copy");
-        area.remove();
-        return Promise.resolve();
+        try {
+          const copied = document.execCommand("copy");
+          if (!copied) {
+            return Promise.reject(new Error("copy command failed"));
+          }
+          return Promise.resolve();
+        } catch (err) {
+          return Promise.reject(err);
+        } finally {
+          area.remove();
+        }
       }
 
       const prepared = new Map();
@@ -1361,10 +1373,11 @@
       document
         .querySelector("[data-copy-all]")
         .addEventListener("click", (event) => {
+          const button = event.currentTarget;
           copyText(stageCommands()).then(() => {
-            event.currentTarget.textContent = "Copied stage";
+            button.textContent = "Copied stage";
             setTimeout(() => {
-              event.currentTarget.textContent = "Copy current stage";
+              button.textContent = "Copy current stage";
             }, 1000);
           });
         });

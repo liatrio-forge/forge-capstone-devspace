@@ -8,9 +8,27 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
+
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
 
 func TestFuseMountListsManifestPathsWithoutHydration(t *testing.T) {
 	if _, err := os.Stat("/dev/fuse"); err != nil {
@@ -87,12 +105,12 @@ func TestFuseMountHydratesOnLookupAndPropagatesFailure(t *testing.T) {
 	}
 }
 
-func startFuseMount(t *testing.T, hydrateOnLookup bool) (string, func(), *bytes.Buffer) {
+func startFuseMount(t *testing.T, hydrateOnLookup bool) (string, func(), *syncBuffer) {
 	t.Helper()
 	mountpoint := filepath.Join(t.TempDir(), "mnt")
 	ctx, cancel := context.WithCancel(context.Background())
-	var out bytes.Buffer
-	var errOut bytes.Buffer
+	var out syncBuffer
+	var errOut syncBuffer
 	done := make(chan error, 1)
 	go func() {
 		done <- MountWorkspace(ctx, mountpoint, WorkspaceMountOptions{
