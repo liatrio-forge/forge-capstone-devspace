@@ -34,6 +34,8 @@ func TestFuseMountListsManifestPathsWithoutHydration(t *testing.T) {
 	mountpoint, unmount, _ := startFuseMount(t, false)
 	defer unmount()
 	waitForMountEntry(t, mountpoint, "apps")
+	waitForMountEntry(t, filepath.Join(mountpoint, "apps"), "lazy")
+	waitForMountEntry(t, filepath.Join(mountpoint, "apps"), "broken")
 	apps := mountNames(t, filepath.Join(mountpoint, "apps"))
 	if !containsMountName(apps, "lazy") || !containsMountName(apps, "broken") {
 		t.Fatalf("apps entries = %v, want lazy and broken", apps)

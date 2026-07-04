@@ -61,4 +61,4 @@ jobs:
           sudo chmod a+rw /dev/fuse
 
       - name: Test FUSE mount
-        run: go test ./internal/devspace -run Fuse -tags fusetest -v
+        run: go test ./internal/devspace -tags fusetest -v
