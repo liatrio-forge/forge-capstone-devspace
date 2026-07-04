@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>04-task-01-proofs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  article.artifact { margin: 2rem 0; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .proves, .matters, .result-summary { margin: .5rem 0; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">PROOFS</span>
+    <h1>Task 01 Proofs - Charm foundation: dependencies, Liatrio theme, and color-profile plumbing</h1>
+    <p class="meta">Sequence 04 · Feature: charm-terminal-output · Task 01 · Phase 3</p>
+  </header>
+
+  <h2>Task Summary</h2>
+  <p>This task added the Charm v2 dependency set (<code>charm.land/lipgloss/v2</code>, <code>log/v2</code>, <code>fang/v2</code>, <code>huh/v2</code>, <code>bubbles/v2</code>, <code>bubbletea/v2</code>, plus <code>github.com/charmbracelet/colorprofile</code>) and created <code>internal/devspace/styles.go</code>: a shared Liatrio-brand terminal theme and the color-capability detection layer every later restyling task builds on. The theme always renders full-color styles; plain output is produced by wrapping every writer with <code>styledWriter</code>, which downsamples or strips ANSI according to the detected color profile. This means piped output, <code>NO_COLOR</code>, and <code>--no-color</code> all converge on the same code path (the writer), rather than needing parallel plain/colored branches in every future helper.</p>
+
+  <h2>What This Task Proves</h2>
+  <ul>
+    <li>Only <code>charm.land/.../v2</code> import paths were added for the Charm libraries (no v1 <code>github.com/charmbracelet/{lipgloss,bubbletea,bubbles,log,huh,fang}</code> paths anywhere in <code>go.mod</code>), satisfying the spec's v2-only import discipline requirement.</li>
+    <li>The color-profile detection layer resolves once per invocation via <code>colorprofile.Detect</code>, honors <code>NO_COLOR</code>/<code>CLICOLOR</code>/<code>CLICOLOR_FORCE</code>, and the new root <code>--no-color</code> flag forces plain output even when color would otherwise be forced on.</li>
+    <li>Existing commands are unaffected: <code>devspace status</code> still runs correctly with the new <code>PersistentPreRunE</code> wiring in place, and produces zero ANSI bytes today (expected, since no command output has been restyled yet — that is task 3.0's scope).</li>
+  </ul>
+
+  <h2>Evidence Summary</h2>
+  <ul>
+    <li>Dependency diff: <code>go.mod</code> gains only <code>charm.land/.../v2</code> and <code>colorprofile</code> entries.</li>
+    <li>Unit tests: four <code>styles_test.go</code> cases covering default-plain, forced-color, <code>--no-color</code> override, and ASCII-profile downgrade all pass.</li>
+    <li>CLI transcripts: piped, <code>NO_COLOR=1</code>, and forced-color runs of <code>devspace status</code> in a sandboxed temp workspace all show zero ANSI escape bytes (unchanged from before this task, confirming no regression).</li>
+  </ul>
+
+  <article class="artifact">
+    <h2>Artifact: go.mod dependency diff</h2>
+    <p class="proves"><strong>What it proves:</strong> Only <code>charm.land/.../v2</code> vanity-import paths were added for the Charm ecosystem, plus the non-namespaced <code>colorprofile</code> helper package the spec explicitly calls out as an exception.</p>
+    <p class="matters"><strong>Why it matters:</strong> Mixing v1 (<code>github.com/charmbracelet/...</code>) and v2 (<code>charm.land/.../v2</code>) import paths for the same library would compile as distinct modules whose types don't interoperate — a subtle, hard-to-debug mistake the spec explicitly warns against.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>git diff --cached go.mod</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> The direct-requires block gains exactly <code>charm.land/lipgloss/v2 v2.0.5</code> and <code>github.com/charmbracelet/colorprofile v0.4.3</code>; the indirect block gains <code>charm.land/{bubbles,bubbletea,fang,huh,log}/v2</code> (not yet imported by name, so still indirect) plus their transitive dependencies. No <code>github.com/charmbracelet/{lipgloss,bubbletea,bubbles,log,huh,fang}</code> (v1) entries exist anywhere.</p>
+    <pre><code>+	charm.land/lipgloss/v2 v2.0.5
++	github.com/charmbracelet/colorprofile v0.4.3
+...
++	charm.land/bubbles/v2 v2.1.0 // indirect
++	charm.land/bubbletea/v2 v2.0.8 // indirect
++	charm.land/fang/v2 v2.0.1 // indirect
++	charm.land/huh/v2 v2.0.3 // indirect
++	charm.land/log/v2 v2.0.0 // indirect</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: styles_test.go passing</h2>
+    <p class="proves"><strong>What it proves:</strong> The color-detection layer correctly resolves to plain output by default, to styled output when color is forced, back to plain when <code>--no-color</code> overrides a forced profile, and downgrades cleanly at the ASCII profile.</p>
+    <p class="matters"><strong>Why it matters:</strong> This is the load-bearing guarantee for every later restyling task — if this layer is wrong, every subsequently restyled command risks leaking ANSI into piped/CI output or scripts.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>go test ./internal/devspace/... -run TestStyledWriter -v</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> All four cases pass: default non-TTY writer strips to plain text, <code>CLICOLOR_FORCE=1</code> preserves ANSI, <code>--no-color</code> strips regardless of forcing, and the ASCII profile never emits a truecolor SGR sequence.</p>
+    <pre><code>=== RUN   TestStyledWriterStripsAnsiForNonTTYByDefault
+--- PASS: TestStyledWriterStripsAnsiForNonTTYByDefault (0.00s)
+=== RUN   TestStyledWriterPreservesAnsiWhenCliColorForced
+--- PASS: TestStyledWriterPreservesAnsiWhenCliColorForced (0.00s)
+=== RUN   TestStyledWriterNoColorFlagOverridesForcing
+--- PASS: TestStyledWriterNoColorFlagOverridesForcing (0.00s)
+=== RUN   TestStyledWriterHonorsNoColorEnvOnRealTTYProfile
+--- PASS: TestStyledWriterHonorsNoColorEnvOnRealTTYProfile (0.00s)
+PASS
+ok  	github.com/liatrio-forge/devdrop-capstone/internal/devspace	0.008s</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: piped and NO_COLOR CLI transcripts (sandboxed workspace)</h2>
+    <p class="proves"><strong>What it proves:</strong> The new <code>PersistentPreRunE</code> wiring (<code>configureStyles</code> + <code>--no-color</code> flag) does not break existing commands, and produces zero ANSI bytes in every non-TTY scenario tested — the expected state before task 3.0 introduces any actual themed rendering.</p>
+    <p class="matters"><strong>Why it matters:</strong> Confirms the plumbing change is safe to land on its own before any visible restyling happens, keeping this commit's blast radius limited to infrastructure.</p>
+    <p><strong>Command</strong> (run against a temp <code>DEVSPACE_HOME</code> and temp workspace, never the real <code>~/.devspace</code>):</p>
+    <pre><code>export DEVSPACE_HOME="$TMP/home"
+devspace init --workspace "$TMP/ws"
+devspace status | grep -c $'\x1b'                 # piped, no forcing
+NO_COLOR=1 devspace status | grep -c $'\x1b'       # NO_COLOR
+CLICOLOR_FORCE=1 devspace status | grep -c $'\x1b' # forced, still piped through grep
+devspace --no-color status                          # --no-color flag</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> All three ANSI-byte counts are <code>0</code>. The <code>--no-color status</code> run prints the normal workspace summary unchanged, confirming the flag is accepted and does not alter existing behavior.</p>
+    <pre><code>=== piped (no forcing) ===
+0
+=== NO_COLOR=1 ===
+0
+=== CLICOLOR_FORCE=1 (piped through grep, still non-tty) ===
+0
+=== --no-color flag ===
+Machine: [REDACTED-HOSTNAME]
+Workspace: [TEMP_WORKSPACE_PATH]/ws
+
+Projects tracked: 0
+Hydrated: 0
+Placeholders: 0
+Dirty repos: 0
+Missing env files: 0
+Outdated repos: 0</code></pre>
+  </article>
+
+  <h2>Reviewer Conclusion</h2>
+  <p>The Charm v2 dependency set is in place with no v1/v2 import mixing, the color-detection layer is unit-tested end-to-end (default, forced, overridden, and downgraded), and the wiring into the root command is confirmed non-disruptive to existing commands via sandboxed CLI transcripts. This task is infrastructure-only by design — no command output looks different yet — which is the correct scope boundary for task 3.0 to build on next.</p>
+</div>
+</body>
+</html>

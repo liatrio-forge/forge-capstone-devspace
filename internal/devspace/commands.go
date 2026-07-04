@@ -20,17 +20,20 @@ import (
 )
 
 func NewRootCommand(version string) *cobra.Command {
+	var noColor bool
 	cmd := &cobra.Command{
 		Use:          "devspace",
 		Short:        "Synchronize local developer workspace metadata",
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			configureStyles(cmd.OutOrStdout(), noColor)
 			if err := migrateLegacyHome(); err != nil {
 				return fmt.Errorf("legacy home migration failed: %w", err)
 			}
 			return nil
 		},
 	}
+	cmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable styled output regardless of terminal capability")
 	cmd.AddCommand(newVersionCommand(version))
 	cmd.AddCommand(newInitCommand())
 	cmd.AddCommand(newScanCommand())
