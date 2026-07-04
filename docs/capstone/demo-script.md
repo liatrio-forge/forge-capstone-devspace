@@ -65,7 +65,7 @@ Narration:
 Show the release-readiness file and proof checklist:
 
 ```bash
-sed -n '1,120p' docs/release-readiness.md
+sed -n '1,120p' docs/operations/release-readiness.md
 sed -n '1,160p' docs/capstone/proof-artifacts.md
 ```
 

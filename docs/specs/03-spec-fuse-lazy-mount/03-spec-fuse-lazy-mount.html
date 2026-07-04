@@ -52,15 +52,16 @@
 
   <section id="introduction">
     <h2>Introduction/Overview</h2>
-    <p>This feature resolves the remaining Plan 015 blocker by proving whether GitHub-hosted Linux runners can execute real FUSE mounts for the existing DevSpace lazy mount prototype. If hosted Linux is viable, the feature adds an opt-in integration job and FUSE-tagged test coverage for mount traversal, hydration-on-lookup, failure propagation, and clean unmounting.</p>
+    <p>This feature pivots Plan 015 to match the team's macOS-first development reality. The primary product plan is to make the existing <code>devspace mount</code> prototype understandable, diagnosable, and testable on developer Macs with macFUSE; Linux hosted CI remains a follow-up automation safety net for repeatable regression coverage.</p>
   </section>
 
   <section id="goals">
     <h2>Goals</h2>
     <ul>
       <li>Produce observed GitHub Actions evidence for Linux FUSE GO or NO-GO status.</li>
+      <li>Make macOS the first-class user path for FUSE lazy mount readiness, setup, and troubleshooting.</li>
       <li>Keep normal local and CI verification FUSE-free.</li>
-      <li>On GO, add an opt-in Linux FUSE integration job with real mount behavior coverage.</li>
+      <li>Use Linux hosted CI as opt-in automated coverage after macOS product guidance is explicit.</li>
       <li>Update plan, design, proof, and validation artifacts so Plan 015 is no longer blocked.</li>
     </ul>
   </section>
@@ -68,60 +69,61 @@
   <section id="user-stories">
     <h2>User Stories</h2>
     <ul>
-      <li><strong>As a</strong> DevSpace maintainer, <strong>I want to</strong> know whether hosted CI supports the FUSE prototype <strong>so that</strong> I can decide whether to automate real mount testing.</li>
+      <li><strong>As a</strong> macOS DevSpace developer, <strong>I want to</strong> understand whether my Mac can run the lazy mount prototype <strong>so that</strong> I can try the feature without guessing at FUSE setup.</li>
+      <li><strong>As a</strong> DevSpace maintainer, <strong>I want to</strong> document macOS readiness before CI automation <strong>so that</strong> the plan follows the team's real development platform.</li>
       <li><strong>As a</strong> CLI contributor, <strong>I want to</strong> run FUSE tests only on capable Linux hosts <strong>so that</strong> normal development remains portable.</li>
-      <li><strong>As a</strong> reviewer, <strong>I want to</strong> see the workflow run, commands, and proof artifacts <strong>so that</strong> the Plan 015 outcome is evidence-based.</li>
+      <li><strong>As a</strong> reviewer, <strong>I want to</strong> see macOS readiness evidence and Linux CI evidence separately <strong>so that</strong> product fit and automation fit are not conflated.</li>
     </ul>
   </section>
 
   <section id="demoable-units">
     <h2>Demoable Units of Work</h2>
-    <p>Each unit is a thin, verifiable slice of the Plan 015 decision path.</p>
+    <p>Each unit is a thin, verifiable slice of the macOS-first Plan 015 decision path.</p>
 
     <div class="card unit" id="unit-1">
-      <h3>Unit 1: Hosted Linux FUSE Probe</h3>
-      <p><strong>Purpose:</strong> Determine whether GitHub-hosted Linux can run the real FUSE path.</p>
+      <h3>Unit 1: macOS Local FUSE Readiness</h3>
+      <p><strong>Purpose:</strong> Put the developer Mac path first by documenting requirements, diagnostics, and the safe fallback when macFUSE is unavailable.</p>
       <p><strong>Functional Requirements:</strong></p>
       <ul>
-        <li>The system shall create a temporary probe workflow that checks <code>/dev/fuse</code>, <code>fusermount3</code>, a minimal <code>go-fuse/v2</code> mount, directory listing, file read, and unmount.</li>
-        <li>The system shall capture the probe run URL, runner image details, and pass/fail output in proof artifacts.</li>
-        <li>The system shall remove the temporary probe workflow before final branch state.</li>
+        <li>The system shall document macOS as the primary developer target for the lazy mount prototype.</li>
+        <li>The system shall record local macOS readiness evidence without installing macFUSE or changing system security settings automatically.</li>
+        <li>The user shall have explicit setup, verification, fallback, and next-proof commands for macFUSE-based local testing.</li>
       </ul>
       <p><strong>Proof Artifacts:</strong></p>
       <ul>
-        <li>GitHub Actions run URL and log excerpt demonstrate observed hosted-runner behavior.</li>
-        <li>Git status evidence demonstrates no temporary probe workflow remains.</li>
+        <li>CLI output from <code>sw_vers</code> and macFUSE presence checks demonstrates the current local readiness state.</li>
+        <li>Documentation diff demonstrates macOS-first setup and fallback guidance.</li>
       </ul>
     </div>
 
     <div class="card unit" id="unit-2">
-      <h3>Unit 2: GO or NO-GO Documentation</h3>
-      <p><strong>Purpose:</strong> Convert the probe result into durable project guidance.</p>
+      <h3>Unit 2: Linux Hosted CI Safety Net</h3>
+      <p><strong>Purpose:</strong> Preserve the successful Linux probe as automated regression coverage, but position it as a follow-up safety net rather than the product-first plan.</p>
       <p><strong>Functional Requirements:</strong></p>
       <ul>
-        <li>The system shall update <code>docs/fuse-lazy-mount.md</code> with a verified CI feasibility section.</li>
-        <li>The system shall update <code>plans/README.md</code> with a final Plan 015 status and one-line rationale.</li>
-        <li>The system shall update SDD-HTML proofs and validation with the final evidence.</li>
-      </ul>
-      <p><strong>Proof Artifacts:</strong></p>
-      <ul>
-        <li>Documentation diff demonstrates the GO or NO-GO decision and supporting evidence.</li>
-        <li>Plan table excerpt demonstrates the Plan 015 status is reconciled.</li>
-      </ul>
-    </div>
-
-    <div class="card unit" id="unit-3">
-      <h3>Unit 3: Linux FUSE Integration Job On GO</h3>
-      <p><strong>Purpose:</strong> Add real mount test coverage only when hosted Linux has proven FUSE support.</p>
-      <p><strong>Functional Requirements:</strong></p>
-      <ul>
-        <li>The system shall add a Linux-only <code>mount-integration</code> job only if the probe is GO.</li>
-        <li>The system shall add a build-tagged <code>mount_fuse_test.go</code> that verifies traversal before hydration, hydration-on-lookup from a local bare Git remote, failed hydration propagation, and clean unmount.</li>
+        <li>The system shall capture the Linux probe run URL, runner image details, and pass output in proof artifacts.</li>
+        <li>The system shall add a Linux-only <code>mount-integration</code> job after hosted Linux FUSE is proven GO.</li>
         <li>The system shall keep <code>make verify</code> and the default CI verify job FUSE-free.</li>
       </ul>
       <p><strong>Proof Artifacts:</strong></p>
       <ul>
-        <li>CI job output demonstrates <code>go test ./internal/devspace -run Fuse -tags fusetest -v</code> passed on a FUSE-capable runner.</li>
+        <li>GitHub Actions run URL and log excerpt demonstrate observed hosted Linux FUSE behavior.</li>
+        <li>CI workflow diff demonstrates the opt-in Linux integration job.</li>
+      </ul>
+    </div>
+
+    <div class="card unit" id="unit-3">
+      <h3>Unit 3: Plan Reconciliation and Follow-Up Boundaries</h3>
+      <p><strong>Purpose:</strong> Update Plan 015 and SDD artifacts so the final direction is macOS-first with Linux automation follow-up.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall update <code>docs/architecture/fuse-lazy-mount.md</code> with separate macOS local readiness and Linux CI feasibility sections.</li>
+        <li>The system shall update <code>plans/README.md</code> with a final Plan 015 status and one-line rationale.</li>
+        <li>The system shall identify hosted macOS CI, macOS 26 FSKit exploration, richer status cards, and path-vs-name decisions as follow-up work.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Documentation diff demonstrates the macOS-first pivot and Plan 015 reconciliation.</li>
         <li><code>make verify</code> output demonstrates the normal gate remains FUSE-free.</li>
       </ul>
     </div>
@@ -130,7 +132,8 @@
   <section id="non-goals">
     <h2>Non-Goals (Out of Scope)</h2>
     <ol>
-      <li><strong>macOS FUSE CI:</strong> macOS runner FUSE support remains a future evaluation.</li>
+      <li><strong>Automatic macFUSE installation:</strong> This workflow will not install macFUSE or alter macOS security settings automatically.</li>
+      <li><strong>Hosted macOS FUSE CI:</strong> Hosted macOS runner support remains a future evaluation because macFUSE approval and kernel/system extension loading are not reliable assumptions on ephemeral hosted runners.</li>
       <li><strong>Product behavior changes:</strong> The existing <code>devspace mount</code> behavior should not change except for testability fixes required to validate documented behavior.</li>
       <li><strong>Richer status cards:</strong> dirty repo, missing <code>.env</code>, and setup hint display remain follow-up work.</li>
       <li><strong>Path-vs-name mount design:</strong> Long-term virtual directory decisions remain out of scope.</li>
@@ -155,13 +158,14 @@
 
   <section id="technical-considerations">
     <h2>Technical Considerations</h2>
-    <p>The existing prototype uses <code>github.com/hanwen/go-fuse/v2/fs</code>. GitHub-hosted runner software changes over time, so the implementation must rely on observed workflow evidence rather than local inference. Build tags such as <code>linux &amp;&amp; fusetest</code> keep FUSE tests opt-in and portable.</p>
+    <p>The existing prototype uses <code>github.com/hanwen/go-fuse/v2/fs</code>. macOS support depends on macFUSE or a compatible implementation installed and approved by the user. GitHub-hosted runner software changes over time, so Linux automation must rely on observed workflow evidence rather than local inference. Build tags such as <code>linux &amp;&amp; fusetest</code> keep FUSE tests opt-in and portable.</p>
   </section>
 
   <section id="security-considerations">
     <h2>Security Considerations</h2>
     <ul>
       <li>Proof artifacts must not include GitHub tokens, hosted tokens, age identities, or real environment values.</li>
+      <li>The implementation must not install macFUSE, request elevated macOS permissions, or change system extension settings automatically.</li>
       <li>The probe workflow must not require repository secrets.</li>
       <li>FUSE tests must use temporary directories and local bare Git remotes only.</li>
     </ul>
@@ -170,7 +174,8 @@
   <section id="success-metrics">
     <h2>Success Metrics</h2>
     <ol>
-      <li><strong>Probe outcome:</strong> Linux hosted runner status is documented as GO or NO-GO with an observed run.</li>
+      <li><strong>macOS readiness:</strong> local macOS state is documented with next-proof commands and fallback behavior.</li>
+      <li><strong>Linux automation:</strong> Linux hosted runner status is documented as GO or NO-GO with an observed run.</li>
       <li><strong>Default verification:</strong> <code>make verify</code> exits 0 without FUSE.</li>
       <li><strong>Plan reconciliation:</strong> Plan 015 is no longer BLOCKED without evidence.</li>
       <li><strong>Review gate:</strong> <code>coderabbit review --agent</code> is run after implementation and still-valid findings are addressed.</li>

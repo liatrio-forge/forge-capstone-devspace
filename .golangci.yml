@@ -15,8 +15,8 @@ linters:
         - fmt.Fprint
     gosec:
       excludes:
-        - G104  # unhandled errors are covered by errcheck with the exclusions above
-        - G304  # file inclusion via variable is intentional throughout (config/state/manifest paths)
+        - G104 # unhandled errors are covered by errcheck with the exclusions above
+        - G304 # file inclusion via variable is intentional throughout (config/state/manifest paths)
   exclusions:
     rules:
       # Best-effort cleanup paths; keep errcheck active for operational writes.

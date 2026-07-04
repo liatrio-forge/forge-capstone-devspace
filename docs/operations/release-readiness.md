@@ -56,10 +56,10 @@
 
 ## Known Limitations
 
-- Manifest exchange between machines uses user-owned Git remotes only.
-- There is no hosted sync, daemon, FUSE layer, partial clone, or sparse checkout.
+- Hosted sync, daemon/watch mode, FUSE lazy mounting, managed team identity, and explicit dependency install are shipped as prototypes (capstone frontier work), not part of the completed local-first MVP baseline.
+- No source-code syncing (manifest exchange between machines in the MVP uses user-owned Git remotes only). There is no partial clone or sparse checkout.
 - Secret profile sharing uses explicit age recipients only; there is no OS keychain integration, remote backup, managed identity provider, or guaranteed clawback after a recipient has copied or decrypted material.
-- Dependency/setup commands are detected only as hints and are never executed.
+- Dependency/setup commands are detected only as hints and are never executed automatically.
 
 ## Remaining Risks
 

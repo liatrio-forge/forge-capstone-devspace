@@ -40,3 +40,25 @@ jobs:
 
       - name: Build
         run: go build -trimpath -o bin/devspace ./cmd/devspace
+
+  mount-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install FUSE
+        run: |
+          if ! command -v fusermount3 >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y fuse3
+          fi
+          test -e /dev/fuse
+          fusermount3 --version
+          sudo chmod a+rw /dev/fuse
+
+      - name: Test FUSE mount
+        run: go test ./internal/devspace -run Fuse -tags fusetest -v

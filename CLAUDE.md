@@ -119,4 +119,4 @@ that pattern for any new test that reads or writes config/state/manifest.
 
 This repo is a Liatrio Forge Module 5 capstone. Supporting docs (spec, proof
 checklist, case study, demo script) live in `docs/capstone/`; `docs/` also holds
-`release.md` and design notes like `fuse-lazy-mount.md`.
+`docs/operations/release.md` and design notes like `docs/architecture/fuse-lazy-mount.md`.

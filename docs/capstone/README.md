@@ -22,7 +22,7 @@ encrypted locally.
 | --- | --- |
 | Capstone product | Go CLI built as `devspace`, with local manifest sync, plan/apply, hydration, and encrypted env profiles |
 | Case study write-up | [case-study.md](case-study.md) |
-| Proof artifacts | [proof-artifacts.md](proof-artifacts.md), `docs/release-readiness.md`, tests under `internal/devspace/` |
+| Proof artifacts | [proof-artifacts.md](proof-artifacts.md), `docs/operations/release-readiness.md`, tests under `internal/devspace/` |
 | Final demo recording | [demo-script.md](demo-script.md) and `../../scripts/demo-check.sh` |
 | Playbook contribution | [playbook-contribution.md](playbook-contribution.md), `docs/playbook.html`, and the enablement notes in [case-study.md](case-study.md) |
 | Remote-agent delivery case study | [remote-agent-case-study.md](remote-agent-case-study.md), `.claude/workflows/wave-ship.js`, and `.claude/workflows/ship-card.js` |

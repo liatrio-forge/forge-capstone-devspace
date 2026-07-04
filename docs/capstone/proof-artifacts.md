@@ -9,7 +9,7 @@ links as releases, PRs, and recordings are created.
 | --- | --- | --- |
 | CLI implementation | Done | `cmd/devspace/main.go`, `internal/devspace/` |
 | Manifest example | Done | `examples/manifest.json` |
-| Release readiness notes | Done | `docs/release-readiness.md` |
+| Release readiness notes | Done | `docs/operations/release-readiness.md` |
 | Capstone spec | Done | `docs/capstone/spec.md` |
 | Case study | Drafted | `docs/capstone/case-study.md` |
 | Demo script | Done | `scripts/demo-check.sh`, `docs/capstone/demo-script.md` |

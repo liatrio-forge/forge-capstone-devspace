@@ -1,1022 +1,1149 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DevDrop Interactive Playbook</title>
-  <meta name="description" content="Interactive walkthrough for using DevDrop's devspace CLI across two machines.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      color-scheme: light;
-      --ink: #17201a;
-      --muted: #5d6b62;
-      --line: #d9e1da;
-      --line-strong: #b8c6bd;
-      --paper: #f8faf7;
-      --panel: #ffffff;
-      --soft: #eef4f0;
-      --mint: #0f766e;
-      --mint-dark: #0b4f4a;
-      --amber: #b7791f;
-      --red: #b42318;
-      --green: #16803b;
-      --blue: #1d4f8f;
-      --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --radius: 8px;
-      --shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 12px 32px rgba(15, 23, 42, 0.06);
-      --focus: 0 0 0 3px rgba(15, 118, 110, 0.22);
-    }
-
-    @media (prefers-color-scheme: dark) {
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevDrop Interactive Playbook</title>
+    <meta
+      name="description"
+      content="Interactive walkthrough for using DevDrop's devspace CLI across two machines."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
       :root {
-        color-scheme: dark;
-        --ink: #eff7f1;
-        --muted: #b7c7bd;
-        --line: #2a3a31;
-        --line-strong: #496257;
-        --paper: #101612;
-        --panel: #161f19;
-        --soft: #1d2a22;
-        --mint: #5ee0d0;
-        --mint-dark: #8df1e4;
-        --amber: #f4bf62;
-        --red: #ff8a7d;
-        --green: #67d391;
-        --blue: #8fb8ff;
-        --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.28);
+        color-scheme: light;
+        --ink: #17201a;
+        --muted: #5d6b62;
+        --line: #d9e1da;
+        --line-strong: #b8c6bd;
+        --paper: #f8faf7;
+        --panel: #ffffff;
+        --soft: #eef4f0;
+        --mint: #0f766e;
+        --mint-dark: #0b4f4a;
+        --amber: #b7791f;
+        --red: #b42318;
+        --green: #16803b;
+        --blue: #1d4f8f;
+        --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        --sans:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        --radius: 8px;
+        --shadow:
+          0 1px 2px rgba(15, 23, 42, 0.08), 0 12px 32px rgba(15, 23, 42, 0.06);
+        --focus: 0 0 0 3px rgba(15, 118, 110, 0.22);
       }
-    }
 
-    * {
-      box-sizing: border-box;
-    }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --ink: #eff7f1;
+          --muted: #b7c7bd;
+          --line: #2a3a31;
+          --line-strong: #496257;
+          --paper: #101612;
+          --panel: #161f19;
+          --soft: #1d2a22;
+          --mint: #5ee0d0;
+          --mint-dark: #8df1e4;
+          --amber: #f4bf62;
+          --red: #ff8a7d;
+          --green: #67d391;
+          --blue: #8fb8ff;
+          --shadow:
+            0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.28);
+        }
+      }
 
-    html {
-      scroll-behavior: smooth;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    @media (prefers-reduced-motion: reduce) {
       html {
-        scroll-behavior: auto;
+        scroll-behavior: smooth;
       }
 
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
       }
-    }
 
-    body {
-      margin: 0;
-      min-width: 320px;
-      background: var(--paper);
-      color: var(--ink);
-      font-family: var(--sans);
-      line-height: 1.45;
-      letter-spacing: 0;
-    }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        line-height: 1.45;
+        letter-spacing: 0;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button,
+      a {
+        touch-action: manipulation;
+      }
+
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      [contenteditable="true"]:focus-visible {
+        outline: none;
+        box-shadow: var(--focus);
+      }
 
-    button,
-    input,
-    select {
-      font: inherit;
-    }
-
-    button,
-    a {
-      touch-action: manipulation;
-    }
-
-    button:focus-visible,
-    a:focus-visible,
-    input:focus-visible,
-    select:focus-visible,
-    [contenteditable="true"]:focus-visible {
-      outline: none;
-      box-shadow: var(--focus);
-    }
-
-    .app {
-      display: grid;
-      grid-template-columns: minmax(248px, 292px) minmax(0, 1fr);
-      min-height: 100vh;
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 0;
-      align-self: start;
-      height: 100vh;
-      overflow: auto;
-      border-right: 1px solid var(--line);
-      background: color-mix(in srgb, var(--panel) 92%, var(--soft));
-      padding: 20px;
-    }
-
-    .brand {
-      display: grid;
-      gap: 10px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .brand-mark {
-      display: inline-grid;
-      place-items: center;
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--line-strong);
-      border-radius: 8px;
-      background: var(--ink);
-      color: var(--paper);
-      font-weight: 800;
-      letter-spacing: 0;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 1.05rem;
-      line-height: 1.1;
-    }
-
-    .brand p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .nav {
-      display: grid;
-      gap: 6px;
-      margin: 18px 0;
-    }
-
-    .nav button {
-      min-height: 44px;
-      width: 100%;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      padding: 10px 12px;
-      background: transparent;
-      color: var(--muted);
-      text-align: left;
-      cursor: pointer;
-      display: grid;
-      grid-template-columns: 26px minmax(0, 1fr);
-      gap: 9px;
-      align-items: center;
-    }
-
-    .nav button[aria-selected="true"] {
-      background: var(--soft);
-      border-color: var(--line);
-      color: var(--ink);
-      font-weight: 700;
-    }
-
-    .nav .num {
-      display: inline-grid;
-      place-items: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 999px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      color: var(--muted);
-    }
-
-    .progress-wrap {
-      display: grid;
-      gap: 10px;
-      padding-top: 14px;
-      border-top: 1px solid var(--line);
-    }
-
-    .progress-label {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 0.84rem;
-    }
-
-    .progress-bar {
-      height: 10px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--panel);
-    }
-
-    .progress-bar span {
-      display: block;
-      width: 0%;
-      height: 100%;
-      background: var(--mint);
-      transition: width 180ms ease;
-    }
-
-    .content {
-      min-width: 0;
-      padding: 24px;
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(300px, 460px);
-      gap: 20px;
-      align-items: stretch;
-      margin: 0 auto 22px;
-      max-width: 1220px;
-    }
-
-    .hero-copy {
-      min-width: 0;
-      padding: 30px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    .eyebrow {
-      margin: 0 0 12px;
-      color: var(--mint-dark);
-      font-weight: 800;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .hero h2 {
-      margin: 0;
-      max-width: 760px;
-      font-size: clamp(2rem, 5vw, 4.8rem);
-      line-height: 0.96;
-      letter-spacing: 0;
-    }
-
-    .hero p {
-      margin: 18px 0 0;
-      max-width: 68ch;
-      color: var(--muted);
-      font-size: 1.02rem;
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 24px;
-    }
-
-    .button {
-      min-height: 44px;
-      border: 1px solid var(--line-strong);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--ink);
-      background: var(--panel);
-      text-decoration: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .button.primary {
-      color: #ffffff;
-      background: var(--mint-dark);
-      border-color: var(--mint-dark);
-    }
-
-    .terminal {
-      min-width: 0;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #0f1712;
-      color: #d9f6e7;
-      box-shadow: var(--shadow);
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      overflow: hidden;
-    }
-
-    .terminal-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-      color: #a8bdb1;
-      font-family: var(--mono);
-      font-size: 0.76rem;
-    }
-
-    .lights {
-      display: flex;
-      gap: 6px;
-    }
-
-    .lights span {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: #d96d5d;
-    }
-
-    .lights span:nth-child(2) {
-      background: #d6a84d;
-    }
-
-    .lights span:nth-child(3) {
-      background: #5aa968;
-    }
-
-    .terminal pre {
-      margin: 0;
-      padding: 18px;
-      overflow: auto;
-      min-height: 300px;
-      font-family: var(--mono);
-      font-size: 0.84rem;
-      line-height: 1.7;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .controls {
-      max-width: 1220px;
-      margin: 0 auto 22px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
-      gap: 12px;
-    }
-
-    .field {
-      min-width: 0;
-      display: grid;
-      gap: 6px;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-    }
-
-    .field label {
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .field input,
-    .field select {
-      min-width: 0;
-      min-height: 38px;
-      border: 1px solid var(--line-strong);
-      border-radius: 7px;
-      background: var(--paper);
-      color: var(--ink);
-      padding: 8px 10px;
-      width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .stage {
-      max-width: 1220px;
-      margin: 0 auto 22px;
-      display: none;
-      min-width: 0;
-    }
-
-    .stage.active {
-      display: block;
-    }
-
-    .stage-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(290px, 380px);
-      gap: 16px;
-      align-items: start;
-      min-width: 0;
-    }
-
-    .panel {
-      min-width: 0;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .panel-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 16px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .panel-head h3 {
-      margin: 0;
-      font-size: 1.08rem;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      min-height: 28px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 4px 9px;
-      color: var(--muted);
-      background: var(--soft);
-      font-size: 0.76rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .panel-body {
-      padding: 16px;
-      min-width: 0;
-    }
-
-    .copy-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-      align-items: stretch;
-      margin: 10px 0;
-    }
-
-    code,
-    .cmd {
-      font-family: var(--mono);
-    }
-
-    .cmd {
-      min-width: 0;
-      border: 1px solid var(--line);
-      border-radius: 7px;
-      background: var(--soft);
-      padding: 11px 12px;
-      overflow: auto;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      font-size: 0.85rem;
-      line-height: 1.5;
-    }
-
-    .copy {
-      min-width: 72px;
-      border: 1px solid var(--line-strong);
-      border-radius: 7px;
-      background: var(--panel);
-      color: var(--ink);
-      cursor: pointer;
-      font-weight: 800;
-    }
-
-    .checklist {
-      display: grid;
-      gap: 9px;
-    }
-
-    .check {
-      display: grid;
-      grid-template-columns: 24px minmax(0, 1fr);
-      gap: 10px;
-      align-items: start;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 7px;
-      background: var(--paper);
-    }
-
-    .check input {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--mint);
-      margin-top: 1px;
-    }
-
-    .check span {
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
-    .notes {
-      display: grid;
-      gap: 10px;
-    }
-
-    .note {
-      border-left: 4px solid var(--mint);
-      padding: 10px 12px;
-      background: var(--soft);
-      border-radius: 0 7px 7px 0;
-      color: var(--muted);
-    }
-
-    .note strong {
-      color: var(--ink);
-    }
-
-    .diagram {
-      max-width: 1220px;
-      margin: 0 auto 22px;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 10px;
-      align-items: stretch;
-    }
-
-    .node {
-      min-width: 0;
-      min-height: 112px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      padding: 12px;
-      display: grid;
-      align-content: center;
-      gap: 7px;
-    }
-
-    .node strong {
-      overflow-wrap: anywhere;
-    }
-
-    .node span {
-      color: var(--muted);
-      font-size: 0.84rem;
-      overflow-wrap: anywhere;
-    }
-
-    .node.active-node {
-      border-color: var(--mint);
-      box-shadow: inset 0 0 0 1px var(--mint);
-    }
-
-    .matrix {
-      max-width: 1220px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .fact {
-      min-width: 0;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      padding: 14px;
-    }
-
-    .fact h4 {
-      margin: 0 0 8px;
-      font-size: 0.98rem;
-    }
-
-    .fact p {
-      margin: 0;
-      color: var(--muted);
-      overflow-wrap: anywhere;
-    }
-
-    .status-ok {
-      color: var(--green);
-    }
-
-    .status-warn {
-      color: var(--amber);
-    }
-
-    .status-stop {
-      color: var(--red);
-    }
-
-    [contenteditable="true"] {
-      border-radius: 5px;
-    }
-
-    [contenteditable="true"]:focus {
-      background: color-mix(in srgb, var(--mint) 12%, transparent);
-    }
-
-    @media (max-width: 1024px) {
       .app {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: minmax(248px, 292px) minmax(0, 1fr);
+        min-height: 100vh;
       }
 
       .sidebar {
-        position: relative;
-        height: auto;
-        border-right: 0;
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        overflow: auto;
+        border-right: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 92%, var(--soft));
+        padding: 20px;
+      }
+
+      .brand {
+        display: grid;
+        gap: 10px;
+        padding-bottom: 18px;
         border-bottom: 1px solid var(--line);
       }
 
+      .brand-mark {
+        display: inline-grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--ink);
+        color: var(--paper);
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.05rem;
+        line-height: 1.1;
+      }
+
+      .brand p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
       .nav {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        display: grid;
+        gap: 6px;
+        margin: 18px 0;
       }
 
-      .hero,
-      .stage-grid {
-        grid-template-columns: 1fr;
+      .nav button {
+        min-height: 44px;
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: transparent;
+        color: var(--muted);
+        text-align: left;
+        cursor: pointer;
+        display: grid;
+        grid-template-columns: 26px minmax(0, 1fr);
+        gap: 9px;
+        align-items: center;
       }
 
-      .controls,
-      .matrix {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .nav button[aria-selected="true"] {
+        background: var(--soft);
+        border-color: var(--line);
+        color: var(--ink);
+        font-weight: 700;
       }
 
-      .diagram {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+      .nav .num {
+        display: inline-grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--muted);
       }
-    }
 
-    @media (max-width: 768px) {
-      .content,
-      .sidebar {
-        padding: 16px;
+      .progress-wrap {
+        display: grid;
+        gap: 10px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .progress-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .progress-bar {
+        height: 10px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+      }
+
+      .progress-bar span {
+        display: block;
+        width: 0%;
+        height: 100%;
+        background: var(--mint);
+        transition: width 180ms ease;
+      }
+
+      .content {
+        min-width: 0;
+        padding: 24px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 460px);
+        gap: 20px;
+        align-items: stretch;
+        margin: 0 auto 22px;
+        max-width: 1220px;
       }
 
       .hero-copy {
-        padding: 22px;
+        min-width: 0;
+        padding: 30px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
       }
 
-      .nav {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .controls,
-      .matrix,
-      .diagram {
-        grid-template-columns: 1fr;
-      }
-
-      .copy-row {
-        grid-template-columns: 1fr;
-      }
-
-      .copy {
-        min-height: 44px;
-      }
-    }
-
-    @media (max-width: 375px) {
-      .content,
-      .sidebar {
-        padding: 12px;
-      }
-
-      .hero-copy,
-      .panel-body,
-      .panel-head {
-        padding: 14px;
-      }
-
-      .nav {
-        grid-template-columns: 1fr;
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--mint-dark);
+        font-weight: 800;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
       .hero h2 {
-        font-size: 2rem;
+        margin: 0;
+        max-width: 760px;
+        font-size: clamp(2rem, 5vw, 4.8rem);
+        line-height: 0.96;
+        letter-spacing: 0;
       }
-    }
-  </style>
-</head>
-<body>
-  <div class="app">
-    <aside class="sidebar" aria-label="Playbook navigation">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">DD</div>
-        <div>
-          <h1>DevDrop Playbook</h1>
-          <p data-pretext contenteditable="true">A hands-on route through the local-first devspace workflow.</p>
-        </div>
-      </div>
-      <nav class="nav" id="stageNav" aria-label="Workflow stages"></nav>
-      <div class="progress-wrap" aria-label="Completion progress">
-        <div class="progress-label">
-          <span>Complete</span>
-          <strong id="progressText">0%</strong>
-        </div>
-        <div class="progress-bar"><span id="progressBar"></span></div>
-      </div>
-    </aside>
 
-    <main class="content">
-      <section class="hero" aria-labelledby="pageTitle">
-        <div class="hero-copy">
-          <p class="eyebrow">Interactive CLI walkthrough</p>
-          <h2 id="pageTitle" data-pretext contenteditable="true">Move a workspace manifest between machines without touching project files.</h2>
-          <p data-pretext contenteditable="true">Set your paths once, copy the commands you need, and use the checklist to keep the safe model intact: scan, push the manifest, pull it elsewhere, plan, apply, then hydrate only the project you choose.</p>
-          <div class="hero-actions">
-            <button class="button primary" type="button" data-jump="0">Start at setup</button>
-            <button class="button" type="button" data-copy-all>Copy current stage</button>
+      .hero p {
+        margin: 18px 0 0;
+        max-width: 68ch;
+        color: var(--muted);
+        font-size: 1.02rem;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .button {
+        min-height: 44px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: var(--ink);
+        background: var(--panel);
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .button.primary {
+        color: #ffffff;
+        background: var(--mint-dark);
+        border-color: var(--mint-dark);
+      }
+
+      .terminal {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0f1712;
+        color: #d9f6e7;
+        box-shadow: var(--shadow);
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        overflow: hidden;
+      }
+
+      .terminal-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        color: #a8bdb1;
+        font-family: var(--mono);
+        font-size: 0.76rem;
+      }
+
+      .lights {
+        display: flex;
+        gap: 6px;
+      }
+
+      .lights span {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #d96d5d;
+      }
+
+      .lights span:nth-child(2) {
+        background: #d6a84d;
+      }
+
+      .lights span:nth-child(3) {
+        background: #5aa968;
+      }
+
+      .terminal pre {
+        margin: 0;
+        padding: 18px;
+        overflow: auto;
+        min-height: 300px;
+        font-family: var(--mono);
+        font-size: 0.84rem;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .controls {
+        max-width: 1220px;
+        margin: 0 auto 22px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        min-width: 0;
+        display: grid;
+        gap: 6px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .field input,
+      .field select {
+        min-width: 0;
+        min-height: 38px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        background: var(--paper);
+        color: var(--ink);
+        padding: 8px 10px;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .stage {
+        max-width: 1220px;
+        margin: 0 auto 22px;
+        display: none;
+        min-width: 0;
+      }
+
+      .stage.active {
+        display: block;
+      }
+
+      .stage-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(290px, 380px);
+        gap: 16px;
+        align-items: start;
+        min-width: 0;
+      }
+
+      .panel {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-head h3 {
+        margin: 0;
+        font-size: 1.08rem;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 9px;
+        color: var(--muted);
+        background: var(--soft);
+        font-size: 0.76rem;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .panel-body {
+        padding: 16px;
+        min-width: 0;
+      }
+
+      .copy-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: stretch;
+        margin: 10px 0;
+      }
+
+      code,
+      .cmd {
+        font-family: var(--mono);
+      }
+
+      .cmd {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--soft);
+        padding: 11px 12px;
+        overflow: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+
+      .copy {
+        min-width: 72px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .checklist {
+        display: grid;
+        gap: 9px;
+      }
+
+      .check {
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--paper);
+      }
+
+      .check input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--mint);
+        margin-top: 1px;
+      }
+
+      .check span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .notes {
+        display: grid;
+        gap: 10px;
+      }
+
+      .note {
+        border-left: 4px solid var(--mint);
+        padding: 10px 12px;
+        background: var(--soft);
+        border-radius: 0 7px 7px 0;
+        color: var(--muted);
+      }
+
+      .note strong {
+        color: var(--ink);
+      }
+
+      .diagram {
+        max-width: 1220px;
+        margin: 0 auto 22px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .node {
+        min-width: 0;
+        min-height: 112px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 12px;
+        display: grid;
+        align-content: center;
+        gap: 7px;
+      }
+
+      .node strong {
+        overflow-wrap: anywhere;
+      }
+
+      .node span {
+        color: var(--muted);
+        font-size: 0.84rem;
+        overflow-wrap: anywhere;
+      }
+
+      .node.active-node {
+        border-color: var(--mint);
+        box-shadow: inset 0 0 0 1px var(--mint);
+      }
+
+      .matrix {
+        max-width: 1220px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .fact {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .fact h4 {
+        margin: 0 0 8px;
+        font-size: 0.98rem;
+      }
+
+      .fact p {
+        margin: 0;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+
+      .status-ok {
+        color: var(--green);
+      }
+
+      .status-warn {
+        color: var(--amber);
+      }
+
+      .status-stop {
+        color: var(--red);
+      }
+
+      [contenteditable="true"] {
+        border-radius: 5px;
+      }
+
+      [contenteditable="true"]:focus {
+        background: color-mix(in srgb, var(--mint) 12%, transparent);
+      }
+
+      @media (max-width: 1024px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: relative;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .nav {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .hero,
+        .stage-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .controls,
+        .matrix {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .diagram {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 768px) {
+        .content,
+        .sidebar {
+          padding: 16px;
+        }
+
+        .hero-copy {
+          padding: 22px;
+        }
+
+        .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .controls,
+        .matrix,
+        .diagram {
+          grid-template-columns: 1fr;
+        }
+
+        .copy-row {
+          grid-template-columns: 1fr;
+        }
+
+        .copy {
+          min-height: 44px;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .content,
+        .sidebar {
+          padding: 12px;
+        }
+
+        .hero-copy,
+        .panel-body,
+        .panel-head {
+          padding: 14px;
+        }
+
+        .nav {
+          grid-template-columns: 1fr;
+        }
+
+        .hero h2 {
+          font-size: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Playbook navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">DD</div>
+          <div>
+            <h1>DevDrop Playbook</h1>
+            <p data-pretext contenteditable="true">
+              A hands-on route through the local-first devspace workflow.
+            </p>
           </div>
         </div>
-        <div class="terminal" aria-label="Command preview">
-          <div class="terminal-bar">
-            <div class="lights" aria-hidden="true"><span></span><span></span><span></span></div>
-            <span id="terminalTitle">devspace runbook</span>
+        <nav class="nav" id="stageNav" aria-label="Workflow stages"></nav>
+        <div class="progress-wrap" aria-label="Completion progress">
+          <div class="progress-label">
+            <span>Complete</span>
+            <strong id="progressText">0%</strong>
           </div>
-          <pre id="terminalPreview" aria-live="polite"></pre>
+          <div class="progress-bar"><span id="progressBar"></span></div>
         </div>
-      </section>
+      </aside>
 
-      <section class="controls" aria-label="Command inputs">
-        <div class="field">
-          <label for="binPath">Binary</label>
-          <input id="binPath" value="bin/devspace" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="workspacePath">Workspace</label>
-          <input id="workspacePath" value="$HOME/Projects" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="remotePath">Manifest remote</label>
-          <input id="remotePath" value="$HOME/Projects/devspace-manifest.git" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="projectName">Project</label>
-          <input id="projectName" value="inkwell" autocomplete="off">
-        </div>
-      </section>
+      <main class="content">
+        <section class="hero" aria-labelledby="pageTitle">
+          <div class="hero-copy">
+            <p class="eyebrow">Interactive CLI walkthrough</p>
+            <h2 id="pageTitle" data-pretext contenteditable="true">
+              Move a workspace manifest between machines without touching
+              project files.
+            </h2>
+            <p data-pretext contenteditable="true">
+              Set your paths once, copy the commands you need, and use the
+              checklist to keep the safe model intact: scan, push the manifest,
+              pull it elsewhere, plan, apply, then hydrate only the project you
+              choose.
+            </p>
+            <div class="hero-actions">
+              <button class="button primary" type="button" data-jump="0">
+                Start at setup
+              </button>
+              <button class="button" type="button" data-copy-all>
+                Copy current stage
+              </button>
+            </div>
+          </div>
+          <div class="terminal" aria-label="Command preview">
+            <div class="terminal-bar">
+              <div class="lights" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <span id="terminalTitle">devspace runbook</span>
+            </div>
+            <pre id="terminalPreview" aria-live="polite"></pre>
+          </div>
+        </section>
 
-      <section class="diagram" aria-label="Workflow map">
-        <div class="node" data-node="0"><strong>Prep</strong><span>Build or choose the devspace binary.</span></div>
-        <div class="node" data-node="1"><strong>Primary</strong><span>Initialize, scan, and inspect local metadata.</span></div>
-        <div class="node" data-node="2"><strong>Manifest repo</strong><span>Push only manifest.json to Git.</span></div>
-        <div class="node" data-node="3"><strong>Second machine</strong><span>Pull, plan, apply placeholders.</span></div>
-        <div class="node" data-node="4"><strong>Hydrate</strong><span>Clone the chosen project on demand.</span></div>
-      </section>
+        <section class="controls" aria-label="Command inputs">
+          <div class="field">
+            <label for="binPath">Binary</label>
+            <input id="binPath" value="bin/devspace" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="workspacePath">Workspace</label>
+            <input
+              id="workspacePath"
+              value="$HOME/Projects"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field">
+            <label for="remotePath">Manifest remote</label>
+            <input
+              id="remotePath"
+              value="$HOME/Projects/devspace-manifest.git"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field">
+            <label for="projectName">Project</label>
+            <input id="projectName" value="inkwell" autocomplete="off" />
+          </div>
+        </section>
 
-      <div id="stages"></div>
+        <section class="diagram" aria-label="Workflow map">
+          <div class="node" data-node="0">
+            <strong>Prep</strong
+            ><span>Build or choose the devspace binary.</span>
+          </div>
+          <div class="node" data-node="1">
+            <strong>Primary</strong
+            ><span>Initialize, scan, and inspect local metadata.</span>
+          </div>
+          <div class="node" data-node="2">
+            <strong>Manifest repo</strong
+            ><span>Push only manifest.json to Git.</span>
+          </div>
+          <div class="node" data-node="3">
+            <strong>Second machine</strong
+            ><span>Pull, plan, apply placeholders.</span>
+          </div>
+          <div class="node" data-node="4">
+            <strong>Hydrate</strong
+            ><span>Clone the chosen project on demand.</span>
+          </div>
+        </section>
 
-      <section class="matrix" aria-label="Safety reminders">
-        <article class="fact">
-          <h4 class="status-ok">Safe by default</h4>
-          <p data-pretext contenteditable="true">DevDrop creates missing folders and placeholders. It does not delete local files, overwrite non-empty folders, or pull project repos during apply.</p>
-        </article>
-        <article class="fact">
-          <h4 class="status-warn">Stop on drift</h4>
-          <p data-pretext contenteditable="true">If the manifest changed since planning, apply refuses to run. Re-run plan so the saved hash matches reality.</p>
-        </article>
-        <article class="fact">
-          <h4 class="status-stop">No secret sync</h4>
-          <p data-pretext contenteditable="true">Git-backed sync stores only manifest.json. Local state, .env files, encrypted profiles, and workspace contents stay out of the manifest repo.</p>
-        </article>
-      </section>
-    </main>
-  </div>
+        <div id="stages"></div>
 
-  <script>
-    const fallbackPretext = {
-      prepare(text, font) {
-        return { text, font };
-      },
-      layout(handle, maxWidth, lineHeight) {
-        const width = Math.max(1, maxWidth || 1);
-        const fontSizeMatch = String(handle.font || "").match(/\b(\d+(?:\.\d+)?)px(?:\s*\/|\s|$)/);
-        const fontSize = fontSizeMatch ? Number(fontSizeMatch[1]) : 16;
-        const average = Math.max(6, fontSize * 0.52);
-        const chars = Math.max(1, Math.floor(width / average));
-        const lines = Math.max(1, Math.ceil(String(handle.text || "").length / chars));
-        return { height: Math.ceil(lines * (lineHeight || 20)), lineCount: lines };
-      },
-      prepareWithSegments(text, font) {
-        return { text, font };
-      },
-      walkLineRanges() {},
-      layoutNextLine() {
-        return null;
-      },
-      layoutWithLines(handle, maxWidth, lineHeight) {
-        return { lines: [{ text: handle.text || "", width: maxWidth, x: 0, y: 0 }], height: lineHeight || 20 };
+        <section class="matrix" aria-label="Safety reminders">
+          <article class="fact">
+            <h4 class="status-ok">Safe by default</h4>
+            <p data-pretext contenteditable="true">
+              DevDrop creates missing folders and placeholders. It does not
+              delete local files, overwrite non-empty folders, or pull project
+              repos during apply.
+            </p>
+          </article>
+          <article class="fact">
+            <h4 class="status-warn">Stop on drift</h4>
+            <p data-pretext contenteditable="true">
+              If the manifest changed since planning, apply refuses to run.
+              Re-run plan so the saved hash matches reality.
+            </p>
+          </article>
+          <article class="fact">
+            <h4 class="status-stop">No secret sync</h4>
+            <p data-pretext contenteditable="true">
+              Git-backed sync stores only manifest.json. Local state, .env
+              files, encrypted profiles, and workspace contents stay out of the
+              manifest repo.
+            </p>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const fallbackPretext = {
+        prepare(text, font) {
+          return { text, font };
+        },
+        layout(handle, maxWidth, lineHeight) {
+          const width = Math.max(1, maxWidth || 1);
+          const fontSizeMatch = String(handle.font || "").match(
+            /\b(\d+(?:\.\d+)?)px(?:\s*\/|\s|$)/,
+          );
+          const fontSize = fontSizeMatch ? Number(fontSizeMatch[1]) : 16;
+          const average = Math.max(6, fontSize * 0.52);
+          const chars = Math.max(1, Math.floor(width / average));
+          const lines = Math.max(
+            1,
+            Math.ceil(String(handle.text || "").length / chars),
+          );
+          return {
+            height: Math.ceil(lines * (lineHeight || 20)),
+            lineCount: lines,
+          };
+        },
+        prepareWithSegments(text, font) {
+          return { text, font };
+        },
+        walkLineRanges() {},
+        layoutNextLine() {
+          return null;
+        },
+        layoutWithLines(handle, maxWidth, lineHeight) {
+          return {
+            lines: [{ text: handle.text || "", width: maxWidth, x: 0, y: 0 }],
+            height: lineHeight || 20,
+          };
+        },
+      };
+
+      window.PretextRuntime = fallbackPretext;
+      window.dispatchEvent(new Event("pretext-ready"));
+    </script>
+    <script>
+      const stages = [
+        {
+          title: "Prep",
+          badge: "one time",
+          summary: "Build the CLI and choose where the workspace should live.",
+          commands: ["go build -o {bin} ./cmd/devdrop", "{bin} --help"],
+          checks: [
+            "The binary prints the devspace command list.",
+            "The workspace path is empty or safe to use.",
+            "Git is installed and available on PATH.",
+          ],
+          notes: [
+            [
+              "Name mismatch",
+              "The repository is DevDrop, but the intended command name is devspace.",
+            ],
+            [
+              "No daemon",
+              "This playbook uses explicit commands only. Nothing watches the filesystem.",
+            ],
+          ],
+        },
+        {
+          title: "Primary machine",
+          badge: "discover",
+          summary:
+            "Initialize local config, scan your real workspace, then inspect the result.",
+          commands: [
+            "{bin} init --workspace {workspace}",
+            "{bin} scan",
+            "{bin} status",
+          ],
+          checks: [
+            "Existing Git repos are detected from the workspace root.",
+            "Dirty repos are reported but not modified.",
+            "The manifest exists at {workspace}/.devdrop/manifest.json.",
+          ],
+          notes: [
+            [
+              "Machine-local config",
+              "The remote URL is stored in local config, not in the shared manifest.",
+            ],
+            [
+              "Path guard",
+              "Absolute project paths and parent-directory escapes are rejected.",
+            ],
+          ],
+        },
+        {
+          title: "Push manifest",
+          badge: "Git-backed",
+          summary: "Send only manifest.json to a user-owned Git repository.",
+          commands: [
+            "{bin} workspace remote create local {remote}",
+            "{bin} workspace remote get",
+            "{bin} workspace push",
+          ],
+          checks: [
+            "The manifest repo receives manifest.json only.",
+            "For GitHub, create the shared repo with {bin} workspace remote create github OWNER/REPO --private.",
+            "Push is idempotent when the manifest did not change.",
+            "Push stops if the manifest repo is dirty or the remote is newer.",
+          ],
+          notes: [
+            [
+              "No workspace files",
+              "Project contents, .env files, local state, and secrets are not copied.",
+            ],
+            [
+              "Divergence rule",
+              "If the remote changed, pull and reconcile before pushing again.",
+            ],
+          ],
+        },
+        {
+          title: "Second machine",
+          badge: "restore shape",
+          summary:
+            "Pull the manifest, build a saved plan, and apply only safe filesystem changes.",
+          commands: [
+            "{bin} init --workspace {workspace}",
+            "{bin} workspace remote set {remote}",
+            "{bin} workspace pull",
+            "{bin} plan",
+            "{bin} apply",
+          ],
+          checks: [
+            "Pull validates remote JSON before replacing the local manifest.",
+            "The previous local manifest is backed up as manifest.json.bak.",
+            "Apply creates missing folders or placeholders only.",
+          ],
+          notes: [
+            [
+              "Apply is separate",
+              "Pull does not run apply automatically. Review the plan first.",
+            ],
+            [
+              "No overwrite",
+              "Non-empty destinations are skipped, not replaced.",
+            ],
+          ],
+        },
+        {
+          title: "Hydrate project",
+          badge: "on demand",
+          summary:
+            "Clone a placeholder Git project only when you explicitly ask for it.",
+          commands: [
+            "{bin} project hydrate {project}",
+            "{bin} project status {project}",
+            "{bin} status",
+          ],
+          checks: [
+            "Hydrate refuses missing remotes.",
+            "Hydrate refuses non-empty destination folders.",
+            "Suggested setup commands are printed, never executed.",
+          ],
+          notes: [
+            [
+              "Normal Git clone",
+              "Hydration uses Git clone. It does not change project remotes, branches, or pull existing repos.",
+            ],
+            [
+              "Manual setup",
+              "Install commands stay suggestions so local machines stay under user control.",
+            ],
+          ],
+        },
+        {
+          title: "When DevDrop stops",
+          badge: "recover",
+          summary:
+            "Read the stop reason, fix the outside state, then rerun the narrow command.",
+          commands: [
+            "# no remote configured",
+            "{bin} workspace remote set {remote}",
+            "",
+            "# manifest repo cache points at an old remote",
+            "git -C $HOME/.devdrop/remotes/default remote set-url origin {remote}",
+            "{bin} workspace push",
+            "",
+            "# manifest changed since planning",
+            "{bin} plan && {bin} apply",
+            "",
+            "# remote manifest is newer",
+            "{bin} workspace pull",
+          ],
+          checks: [
+            "Never force a pull over local manifest edits.",
+            "Never clone into a non-empty project directory.",
+            "Never use sync as a conflict resolver.",
+          ],
+          notes: [
+            [
+              "Principle",
+              "Stop, explain, require explicit user action. DevDrop should not guess.",
+            ],
+            [
+              "Remote cache",
+              "If you change manifest remotes, the local cache at $HOME/.devdrop/remotes/default may still point at the old Git repo. Update its origin or move the cache aside.",
+            ],
+            [
+              "Current sync command",
+              "workspace sync remains a compatibility alias for plan/apply, not a magic cloud sync.",
+            ],
+          ],
+        },
+      ];
+
+      function loadDone() {
+        let raw;
+        try {
+          raw = JSON.parse(
+            localStorage.getItem("devdrop-playbook-done") || "[]",
+          );
+        } catch (err) {
+          raw = [];
+        }
+        if (!Array.isArray(raw)) return new Set();
+        const valid = new Set();
+        stages.forEach((stage, i) =>
+          stage.checks.forEach((_, j) => valid.add(`${i}:${j}`)),
+        );
+        return new Set(raw.filter((key) => valid.has(key)));
       }
-    };
 
-    window.PretextRuntime = fallbackPretext;
-    window.dispatchEvent(new Event("pretext-ready"));
-  </script>
-  <script>
-    const stages = [
-      {
-        title: "Prep",
-        badge: "one time",
-        summary: "Build the CLI and choose where the workspace should live.",
-        commands: [
-          "go build -o {bin} ./cmd/devdrop",
-          "{bin} --help"
-        ],
-        checks: [
-          "The binary prints the devspace command list.",
-          "The workspace path is empty or safe to use.",
-          "Git is installed and available on PATH."
-        ],
-        notes: [
-          ["Name mismatch", "The repository is DevDrop, but the intended command name is devspace."],
-          ["No daemon", "This playbook uses explicit commands only. Nothing watches the filesystem."]
-        ]
-      },
-      {
-        title: "Primary machine",
-        badge: "discover",
-        summary: "Initialize local config, scan your real workspace, then inspect the result.",
-        commands: [
-          "{bin} init --workspace {workspace}",
-          "{bin} scan",
-          "{bin} status"
-        ],
-        checks: [
-          "Existing Git repos are detected from the workspace root.",
-          "Dirty repos are reported but not modified.",
-          "The manifest exists at {workspace}/.devdrop/manifest.json."
-        ],
-        notes: [
-          ["Machine-local config", "The remote URL is stored in local config, not in the shared manifest."],
-          ["Path guard", "Absolute project paths and parent-directory escapes are rejected."]
-        ]
-      },
-      {
-        title: "Push manifest",
-        badge: "Git-backed",
-        summary: "Send only manifest.json to a user-owned Git repository.",
-        commands: [
-          "{bin} workspace remote create local {remote}",
-          "{bin} workspace remote get",
-          "{bin} workspace push"
-        ],
-        checks: [
-          "The manifest repo receives manifest.json only.",
-          "For GitHub, create the shared repo with {bin} workspace remote create github OWNER/REPO --private.",
-          "Push is idempotent when the manifest did not change.",
-          "Push stops if the manifest repo is dirty or the remote is newer."
-        ],
-        notes: [
-          ["No workspace files", "Project contents, .env files, local state, and secrets are not copied."],
-          ["Divergence rule", "If the remote changed, pull and reconcile before pushing again."]
-        ]
-      },
-      {
-        title: "Second machine",
-        badge: "restore shape",
-        summary: "Pull the manifest, build a saved plan, and apply only safe filesystem changes.",
-        commands: [
-          "{bin} init --workspace {workspace}",
-          "{bin} workspace remote set {remote}",
-          "{bin} workspace pull",
-          "{bin} plan",
-          "{bin} apply"
-        ],
-        checks: [
-          "Pull validates remote JSON before replacing the local manifest.",
-          "The previous local manifest is backed up as manifest.json.bak.",
-          "Apply creates missing folders or placeholders only."
-        ],
-        notes: [
-          ["Apply is separate", "Pull does not run apply automatically. Review the plan first."],
-          ["No overwrite", "Non-empty destinations are skipped, not replaced."]
-        ]
-      },
-      {
-        title: "Hydrate project",
-        badge: "on demand",
-        summary: "Clone a placeholder Git project only when you explicitly ask for it.",
-        commands: [
-          "{bin} project hydrate {project}",
-          "{bin} project status {project}",
-          "{bin} status"
-        ],
-        checks: [
-          "Hydrate refuses missing remotes.",
-          "Hydrate refuses non-empty destination folders.",
-          "Suggested setup commands are printed, never executed."
-        ],
-        notes: [
-          ["Normal Git clone", "Hydration uses Git clone. It does not change project remotes, branches, or pull existing repos."],
-          ["Manual setup", "Install commands stay suggestions so local machines stay under user control."]
-        ]
-      },
-      {
-        title: "When DevDrop stops",
-        badge: "recover",
-        summary: "Read the stop reason, fix the outside state, then rerun the narrow command.",
-        commands: [
-          "# no remote configured",
-          "{bin} workspace remote set {remote}",
-          "",
-          "# manifest repo cache points at an old remote",
-          "git -C $HOME/.devdrop/remotes/default remote set-url origin {remote}",
-          "{bin} workspace push",
-          "",
-          "# manifest changed since planning",
-          "{bin} plan && {bin} apply",
-          "",
-          "# remote manifest is newer",
-          "{bin} workspace pull"
-        ],
-        checks: [
-          "Never force a pull over local manifest edits.",
-          "Never clone into a non-empty project directory.",
-          "Never use sync as a conflict resolver."
-        ],
-        notes: [
-          ["Principle", "Stop, explain, require explicit user action. DevDrop should not guess."],
-          ["Remote cache", "If you change manifest remotes, the local cache at $HOME/.devdrop/remotes/default may still point at the old Git repo. Update its origin or move the cache aside."],
-          ["Current sync command", "workspace sync remains a compatibility alias for plan/apply, not a magic cloud sync."]
-        ]
+      const state = {
+        active: 0,
+        done: loadDone(),
+      };
+
+      const nav = document.getElementById("stageNav");
+      const stageMount = document.getElementById("stages");
+      const terminal = document.getElementById("terminalPreview");
+      const terminalTitle = document.getElementById("terminalTitle");
+      const progressText = document.getElementById("progressText");
+      const progressBar = document.getElementById("progressBar");
+      const controls = {
+        bin: document.getElementById("binPath"),
+        workspace: document.getElementById("workspacePath"),
+        remote: document.getElementById("remotePath"),
+        project: document.getElementById("projectName"),
+      };
+
+      function value(name) {
+        const raw = controls[name].value.trim();
+        return raw || controls[name].defaultValue;
       }
-    ];
 
-    function loadDone() {
-      let raw;
-      try {
-        raw = JSON.parse(localStorage.getItem("devdrop-playbook-done") || "[]");
-      } catch (err) {
-        raw = [];
+      function renderCommand(command) {
+        return command
+          .replaceAll("{bin}", value("bin"))
+          .replaceAll("{workspace}", value("workspace"))
+          .replaceAll("{remote}", value("remote"))
+          .replaceAll("{project}", value("project"));
       }
-      if (!Array.isArray(raw)) return new Set();
-      const valid = new Set();
-      stages.forEach((stage, i) => stage.checks.forEach((_, j) => valid.add(`${i}:${j}`)));
-      return new Set(raw.filter((key) => valid.has(key)));
-    }
 
-    const state = {
-      active: 0,
-      done: loadDone()
-    };
+      function stageCommands(index = state.active) {
+        return stages[index].commands.map(renderCommand).join("\n");
+      }
 
-    const nav = document.getElementById("stageNav");
-    const stageMount = document.getElementById("stages");
-    const terminal = document.getElementById("terminalPreview");
-    const terminalTitle = document.getElementById("terminalTitle");
-    const progressText = document.getElementById("progressText");
-    const progressBar = document.getElementById("progressBar");
-    const controls = {
-      bin: document.getElementById("binPath"),
-      workspace: document.getElementById("workspacePath"),
-      remote: document.getElementById("remotePath"),
-      project: document.getElementById("projectName")
-    };
-
-    function value(name) {
-      const raw = controls[name].value.trim();
-      return raw || controls[name].defaultValue;
-    }
-
-    function renderCommand(command) {
-      return command
-        .replaceAll("{bin}", value("bin"))
-        .replaceAll("{workspace}", value("workspace"))
-        .replaceAll("{remote}", value("remote"))
-        .replaceAll("{project}", value("project"));
-    }
-
-    function stageCommands(index = state.active) {
-      return stages[index].commands.map(renderCommand).join("\n");
-    }
-
-    function buildNav() {
-      nav.innerHTML = stages.map((stage, index) => `
+      function buildNav() {
+        nav.innerHTML = stages
+          .map(
+            (stage, index) => `
         <button type="button" role="tab" aria-selected="${index === state.active}" data-stage="${index}">
           <span class="num">${index + 1}</span>
           <span>${stage.title}</span>
         </button>
-      `).join("");
-    }
+      `,
+          )
+          .join("");
+      }
 
-    function escapeHTML(value) {
-      return String(value).replace(/[&<>"']/g, (char) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      }[char]));
-    }
+      function escapeHTML(value) {
+        return String(value).replace(
+          /[&<>"']/g,
+          (char) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[char],
+        );
+      }
 
-    function buildStages() {
-      stageMount.innerHTML = stages.map((stage, index) => `
+      function buildStages() {
+        stageMount.innerHTML = stages
+          .map(
+            (stage, index) => `
         <section class="stage ${index === state.active ? "active" : ""}" data-stage-panel="${index}" aria-labelledby="stage-title-${index}">
           <div class="stage-grid">
             <article class="panel">
@@ -1026,12 +1153,16 @@
               </div>
               <div class="panel-body">
                 <p data-pretext contenteditable="true">${escapeHTML(stage.summary)}</p>
-                ${stage.commands.map((cmd) => `
+                ${stage.commands
+                  .map(
+                    (cmd) => `
                   <div class="copy-row">
                     <pre class="cmd">${escapeHTML(renderCommand(cmd))}</pre>
                     <button class="copy" type="button" data-copy="${encodeURIComponent(cmd)}">Copy</button>
                   </div>
-                `).join("")}
+                `,
+                  )
+                  .join("")}
               </div>
             </article>
             <aside class="panel">
@@ -1041,160 +1172,209 @@
               </div>
               <div class="panel-body">
                 <div class="checklist">
-                  ${stage.checks.map((check, item) => `
+                  ${stage.checks
+                    .map(
+                      (check, item) => `
                     <label class="check">
                       <input type="checkbox" data-check="${index}:${item}" ${state.done.has(`${index}:${item}`) ? "checked" : ""}>
                       <span>${escapeHTML(renderCommand(check))}</span>
                     </label>
-                  `).join("")}
+                  `,
+                    )
+                    .join("")}
                 </div>
                 <div class="notes" style="margin-top: 14px;">
-                  ${stage.notes.map(([label, text]) => `
+                  ${stage.notes
+                    .map(
+                      ([label, text]) => `
                     <div class="note"><strong>${escapeHTML(label)}:</strong> <span data-pretext contenteditable="true">${escapeHTML(text)}</span></div>
-                  `).join("")}
+                  `,
+                    )
+                    .join("")}
                 </div>
               </div>
             </aside>
           </div>
         </section>
-      `).join("");
-    }
-
-    function updateActive(index) {
-      state.active = Math.max(0, Math.min(stages.length - 1, index));
-      document.querySelectorAll("[data-stage]").forEach((button) => {
-        button.setAttribute("aria-selected", String(Number(button.dataset.stage) === state.active));
-      });
-      document.querySelectorAll("[data-stage-panel]").forEach((panel) => {
-        panel.classList.toggle("active", Number(panel.dataset.stagePanel) === state.active);
-      });
-      document.querySelectorAll("[data-node]").forEach((node) => {
-        node.classList.toggle("active-node", Number(node.dataset.node) === Math.min(state.active, 4));
-      });
-      terminal.textContent = stageCommands();
-      terminalTitle.textContent = `${state.active + 1}. ${stages[state.active].title}`;
-      relayoutText();
-    }
-
-    function updateProgress() {
-      const total = stages.reduce((sum, stage) => sum + stage.checks.length, 0);
-      const pct = total ? Math.round((state.done.size / total) * 100) : 0;
-      progressText.textContent = `${pct}%`;
-      progressBar.style.width = `${pct}%`;
-      localStorage.setItem("devdrop-playbook-done", JSON.stringify([...state.done]));
-    }
-
-    function refreshCommands() {
-      buildStages();
-      updateActive(state.active);
-      updateProgress();
-      bindDynamicEvents();
-    }
-
-    function copyText(text) {
-      if (navigator.clipboard && window.isSecureContext) {
-        return navigator.clipboard.writeText(text);
+      `,
+          )
+          .join("");
       }
-      const area = document.createElement("textarea");
-      area.value = text;
-      area.setAttribute("readonly", "");
-      area.style.position = "fixed";
-      area.style.left = "-9999px";
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand("copy");
-      area.remove();
-      return Promise.resolve();
-    }
 
-    const prepared = new Map();
-
-    async function prepareText() {
-      await (document.fonts ? document.fonts.ready : Promise.resolve());
-      prepared.clear();
-      document.querySelectorAll("[data-pretext]").forEach((el) => {
-        const text = el.textContent || "";
-        const font = getComputedStyle(el).font;
-        prepared.set(el, window.PretextRuntime.prepare(text, font));
-      });
-      relayoutText();
-    }
-
-    function relayoutText() {
-      prepared.forEach((handle, el) => {
-        if (!el.isConnected || !el.clientWidth) return;
-        const style = getComputedStyle(el);
-        const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.45 || 20;
-        const result = window.PretextRuntime.layout(handle, el.clientWidth, lineHeight);
-        if (result && result.height) {
-          el.style.minHeight = `${Math.ceil(result.height)}px`;
-        }
-      });
-    }
-
-    const observedEditable = new WeakSet();
-
-    function observeEditableText() {
-      document.querySelectorAll('[contenteditable="true"]').forEach((el) => {
-        if (observedEditable.has(el)) return;
-        observedEditable.add(el);
-        const observer = new MutationObserver(() => {
-          const font = getComputedStyle(el).font;
-          prepared.set(el, window.PretextRuntime.prepare(el.textContent || "", font));
-          relayoutText();
+      function updateActive(index) {
+        state.active = Math.max(0, Math.min(stages.length - 1, index));
+        document.querySelectorAll("[data-stage]").forEach((button) => {
+          button.setAttribute(
+            "aria-selected",
+            String(Number(button.dataset.stage) === state.active),
+          );
         });
-        observer.observe(el, { characterData: true, subtree: true, childList: true });
-      });
-    }
+        document.querySelectorAll("[data-stage-panel]").forEach((panel) => {
+          panel.classList.toggle(
+            "active",
+            Number(panel.dataset.stagePanel) === state.active,
+          );
+        });
+        document.querySelectorAll("[data-node]").forEach((node) => {
+          node.classList.toggle(
+            "active-node",
+            Number(node.dataset.node) === Math.min(state.active, 4),
+          );
+        });
+        terminal.textContent = stageCommands();
+        terminalTitle.textContent = `${state.active + 1}. ${stages[state.active].title}`;
+        relayoutText();
+      }
 
-    function bindDynamicEvents() {
-      document.querySelectorAll("[data-copy]").forEach((button) => {
-        button.addEventListener("click", () => {
-          copyText(renderCommand(decodeURIComponent(button.dataset.copy))).then(() => {
-            button.textContent = "Copied";
-            setTimeout(() => { button.textContent = "Copy"; }, 900);
+      function updateProgress() {
+        const total = stages.reduce(
+          (sum, stage) => sum + stage.checks.length,
+          0,
+        );
+        const pct = total ? Math.round((state.done.size / total) * 100) : 0;
+        progressText.textContent = `${pct}%`;
+        progressBar.style.width = `${pct}%`;
+        localStorage.setItem(
+          "devdrop-playbook-done",
+          JSON.stringify([...state.done]),
+        );
+      }
+
+      function refreshCommands() {
+        buildStages();
+        updateActive(state.active);
+        updateProgress();
+        bindDynamicEvents();
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          return navigator.clipboard.writeText(text);
+        }
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.left = "-9999px";
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+        return Promise.resolve();
+      }
+
+      const prepared = new Map();
+
+      async function prepareText() {
+        await (document.fonts ? document.fonts.ready : Promise.resolve());
+        prepared.clear();
+        document.querySelectorAll("[data-pretext]").forEach((el) => {
+          const text = el.textContent || "";
+          const font = getComputedStyle(el).font;
+          prepared.set(el, window.PretextRuntime.prepare(text, font));
+        });
+        relayoutText();
+      }
+
+      function relayoutText() {
+        prepared.forEach((handle, el) => {
+          if (!el.isConnected || !el.clientWidth) return;
+          const style = getComputedStyle(el);
+          const lineHeight =
+            parseFloat(style.lineHeight) ||
+            parseFloat(style.fontSize) * 1.45 ||
+            20;
+          const result = window.PretextRuntime.layout(
+            handle,
+            el.clientWidth,
+            lineHeight,
+          );
+          if (result && result.height) {
+            el.style.minHeight = `${Math.ceil(result.height)}px`;
+          }
+        });
+      }
+
+      const observedEditable = new WeakSet();
+
+      function observeEditableText() {
+        document.querySelectorAll('[contenteditable="true"]').forEach((el) => {
+          if (observedEditable.has(el)) return;
+          observedEditable.add(el);
+          const observer = new MutationObserver(() => {
+            const font = getComputedStyle(el).font;
+            prepared.set(
+              el,
+              window.PretextRuntime.prepare(el.textContent || "", font),
+            );
+            relayoutText();
+          });
+          observer.observe(el, {
+            characterData: true,
+            subtree: true,
+            childList: true,
           });
         });
-      });
-      document.querySelectorAll("[data-check]").forEach((box) => {
-        box.addEventListener("change", () => {
-          if (box.checked) state.done.add(box.dataset.check);
-          else state.done.delete(box.dataset.check);
-          updateProgress();
+      }
+
+      function bindDynamicEvents() {
+        document.querySelectorAll("[data-copy]").forEach((button) => {
+          button.addEventListener("click", () => {
+            copyText(
+              renderCommand(decodeURIComponent(button.dataset.copy)),
+            ).then(() => {
+              button.textContent = "Copied";
+              setTimeout(() => {
+                button.textContent = "Copy";
+              }, 900);
+            });
+          });
         });
+        document.querySelectorAll("[data-check]").forEach((box) => {
+          box.addEventListener("change", () => {
+            if (box.checked) state.done.add(box.dataset.check);
+            else state.done.delete(box.dataset.check);
+            updateProgress();
+          });
+        });
+        prepareText().then(observeEditableText);
+      }
+
+      buildNav();
+      buildStages();
+      updateActive(0);
+      updateProgress();
+      bindDynamicEvents();
+
+      nav.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-stage]");
+        if (!button) return;
+        updateActive(Number(button.dataset.stage));
       });
-      prepareText().then(observeEditableText);
-    }
 
-    buildNav();
-    buildStages();
-    updateActive(0);
-    updateProgress();
-    bindDynamicEvents();
-
-    nav.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-stage]");
-      if (!button) return;
-      updateActive(Number(button.dataset.stage));
-    });
-
-    document.querySelectorAll("[data-jump]").forEach((button) => {
-      button.addEventListener("click", () => updateActive(Number(button.dataset.jump)));
-    });
-
-    document.querySelector("[data-copy-all]").addEventListener("click", (event) => {
-      copyText(stageCommands()).then(() => {
-        event.currentTarget.textContent = "Copied stage";
-        setTimeout(() => { event.currentTarget.textContent = "Copy current stage"; }, 1000);
+      document.querySelectorAll("[data-jump]").forEach((button) => {
+        button.addEventListener("click", () =>
+          updateActive(Number(button.dataset.jump)),
+        );
       });
-    });
 
-    Object.values(controls).forEach((input) => {
-      input.addEventListener("input", refreshCommands);
-    });
+      document
+        .querySelector("[data-copy-all]")
+        .addEventListener("click", (event) => {
+          copyText(stageCommands()).then(() => {
+            event.currentTarget.textContent = "Copied stage";
+            setTimeout(() => {
+              event.currentTarget.textContent = "Copy current stage";
+            }, 1000);
+          });
+        });
 
-    new ResizeObserver(() => relayoutText()).observe(document.body);
-    window.addEventListener("pretext-ready", prepareText);
-  </script>
-</body>
+      Object.values(controls).forEach((input) => {
+        input.addEventListener("input", refreshCommands);
+      });
+
+      new ResizeObserver(() => relayoutText()).observe(document.body);
+      window.addEventListener("pretext-ready", prepareText);
+    </script>
+  </body>
 </html>
