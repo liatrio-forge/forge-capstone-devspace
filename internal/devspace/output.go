@@ -181,24 +181,83 @@ func confirmSetup(in io.Reader, out io.Writer, prompt, expected string) error {
 	return nil
 }
 
-func printStatus(out io.Writer, args []string) error {
-	out = styledWriter(out)
+// WorkspaceStatusReport is the --json shape for the aggregate `status`
+// command (no project argument).
+type WorkspaceStatusReport struct {
+	Machine         string `json:"machine"`
+	Workspace       string `json:"workspace"`
+	ProjectsTracked int    `json:"projectsTracked"`
+	Hydrated        int    `json:"hydrated"`
+	Placeholders    int    `json:"placeholders"`
+	Dirty           int    `json:"dirty"`
+	MissingEnv      int    `json:"missingEnv"`
+	Outdated        int    `json:"outdated"`
+	LastSyncAt      string `json:"lastSyncAt,omitempty"`
+	LastScanAt      string `json:"lastScanAt,omitempty"`
+}
+
+// buildWorkspaceStatusReport loads config/manifest/state and aggregates
+// per-project counts. It is the single source of truth for both the
+// aggregate text view (printStatus) and `status --json`.
+func buildWorkspaceStatusReport() (WorkspaceStatusReport, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
-		return err
+		return WorkspaceStatusReport{}, err
 	}
 	m, err := LoadManifest(cfg.WorkspaceRoot)
 	if err != nil {
-		return err
+		return WorkspaceStatusReport{}, err
 	}
 	st, err := LoadState()
 	if err != nil && !missing(err) {
-		return err
+		return WorkspaceStatusReport{}, err
 	}
-	if st.Projects == nil {
-		st.Projects = map[string]ProjectState{}
+	report := WorkspaceStatusReport{
+		Machine:         cfg.MachineName,
+		Workspace:       cfg.WorkspaceRoot,
+		ProjectsTracked: len(m.Projects),
+		LastSyncAt:      st.LastSyncAt,
+		LastScanAt:      st.LastScanAt,
 	}
+	for _, p := range m.Projects {
+		ps := st.Projects[p.ID]
+		if ps.Hydrated {
+			report.Hydrated++
+		}
+		if ps.Placeholder {
+			report.Placeholders++
+		}
+		if ps.Dirty {
+			report.Dirty++
+		}
+		if !ps.EnvFilePresent {
+			report.MissingEnv++
+		}
+		if ps.Stale || ps.Missing {
+			report.Outdated++
+		}
+	}
+	return report, nil
+}
+
+func printStatus(out io.Writer, args []string) error {
+	out = styledWriter(out)
 	if len(args) == 1 {
+		cfg, err := LoadConfig()
+		if err != nil {
+			return err
+		}
+		m, err := LoadManifest(cfg.WorkspaceRoot)
+		if err != nil {
+			return err
+		}
+		st, err := LoadState()
+		if err != nil && !missing(err) {
+			return err
+		}
+		if st.Projects == nil {
+			st.Projects = map[string]ProjectState{}
+		}
 		p, ok := findProject(m, args[0])
 		if !ok {
 			return fmt.Errorf("project %q not found", args[0])
@@ -212,39 +271,24 @@ func printStatus(out io.Writer, args []string) error {
 		)
 		return nil
 	}
-	var hydrated, placeholders, dirty, missingEnv, stale int
-	for _, p := range m.Projects {
-		ps := st.Projects[p.ID]
-		if ps.Hydrated {
-			hydrated++
-		}
-		if ps.Placeholder {
-			placeholders++
-		}
-		if ps.Dirty {
-			dirty++
-		}
-		if !ps.EnvFilePresent {
-			missingEnv++
-		}
-		if ps.Stale || ps.Missing {
-			stale++
-		}
+	report, err := buildWorkspaceStatusReport()
+	if err != nil {
+		return err
 	}
 	fmt.Fprintln(out, currentTheme.Header.Render("Workspace Status"))
-	fmt.Fprintf(out, "Machine: %s\n", cfg.MachineName)
-	fmt.Fprintf(out, "Workspace: %s\n\n", cfg.WorkspaceRoot)
-	fmt.Fprintf(out, "Projects tracked: %d\n", len(m.Projects))
-	fmt.Fprintf(out, "Hydrated: %d\n", hydrated)
-	fmt.Fprintf(out, "Placeholders: %d\n", placeholders)
-	fmt.Fprintf(out, "Dirty repos: %s\n", countStyle(dirty)(fmt.Sprint(dirty)))
-	fmt.Fprintf(out, "Missing env files: %s\n", countStyle(missingEnv)(fmt.Sprint(missingEnv)))
-	fmt.Fprintf(out, "Outdated repos: %s\n", countStyle(stale)(fmt.Sprint(stale)))
-	if st.LastSyncAt != "" {
-		fmt.Fprintf(out, "Last sync: %s\n", st.LastSyncAt)
+	fmt.Fprintf(out, "Machine: %s\n", report.Machine)
+	fmt.Fprintf(out, "Workspace: %s\n\n", report.Workspace)
+	fmt.Fprintf(out, "Projects tracked: %d\n", report.ProjectsTracked)
+	fmt.Fprintf(out, "Hydrated: %d\n", report.Hydrated)
+	fmt.Fprintf(out, "Placeholders: %d\n", report.Placeholders)
+	fmt.Fprintf(out, "Dirty repos: %s\n", countStyle(report.Dirty)(fmt.Sprint(report.Dirty)))
+	fmt.Fprintf(out, "Missing env files: %s\n", countStyle(report.MissingEnv)(fmt.Sprint(report.MissingEnv)))
+	fmt.Fprintf(out, "Outdated repos: %s\n", countStyle(report.Outdated)(fmt.Sprint(report.Outdated)))
+	if report.LastSyncAt != "" {
+		fmt.Fprintf(out, "Last sync: %s\n", report.LastSyncAt)
 	}
-	if st.LastScanAt != "" {
-		fmt.Fprintf(out, "Last scan: %s\n", st.LastScanAt)
+	if report.LastScanAt != "" {
+		fmt.Fprintf(out, "Last scan: %s\n", report.LastScanAt)
 	}
 	return nil
 }

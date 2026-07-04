@@ -387,7 +387,8 @@ func newWorkspaceCommand() *cobra.Command {
 			})
 		},
 	})
-	cmd.AddCommand(&cobra.Command{
+	var diffJSON bool
+	diffCmd := &cobra.Command{
 		Use:   "diff",
 		Short: "Preview differences from the configured workspace manifest remote",
 		Args:  cobra.NoArgs,
@@ -396,10 +397,15 @@ func newWorkspaceCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if diffJSON {
+				return writePrettyJSON(cmd.OutOrStdout(), diff)
+			}
 			printManifestDiff(cmd.OutOrStdout(), diff)
 			return nil
 		},
-	})
+	}
+	diffCmd.Flags().BoolVar(&diffJSON, "json", false, "print machine-readable manifest diff")
+	cmd.AddCommand(diffCmd)
 	return cmd
 }
 
@@ -563,6 +569,7 @@ func newApplyCommand() *cobra.Command {
 
 func newMountCommand() *cobra.Command {
 	var preview bool
+	var previewJSON bool
 	var hydrateOnLookup bool
 	var debug bool
 	cmd := &cobra.Command{
@@ -581,6 +588,9 @@ func newMountCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				if previewJSON {
+					return writePrettyJSON(cmd.OutOrStdout(), entries)
+				}
 				PrintMountPreview(cmd.OutOrStdout(), entries)
 				return nil
 			}
@@ -594,6 +604,7 @@ func newMountCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&preview, "preview", false, "print manifest-backed mount entries without mounting FUSE")
+	cmd.Flags().BoolVar(&previewJSON, "json", false, "with --preview, print machine-readable mount entries")
 	cmd.Flags().BoolVar(&hydrateOnLookup, "hydrate-on-lookup", true, "hydrate on-demand Git projects when their mount entry is accessed")
 	cmd.Flags().BoolVar(&debug, "debug", false, "enable go-fuse debug logging")
 	return cmd
@@ -852,23 +863,46 @@ func secretInput(errOut io.Writer, key string) (string, error) {
 }
 
 func newStatusCommand() *cobra.Command {
-	return &cobra.Command{
+	var jsonOut bool
+	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show workspace health",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if jsonOut {
+				report, err := buildWorkspaceStatusReport()
+				if err != nil {
+					return err
+				}
+				return writePrettyJSON(cmd.OutOrStdout(), report)
+			}
 			return printStatus(cmd.OutOrStdout(), nil)
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "print machine-readable workspace status")
+	return cmd
 }
 
 func newDoctorCommand() *cobra.Command {
-	return &cobra.Command{
+	var jsonOut bool
+	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Diagnose local DevSpace readiness",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if jsonOut {
+				report := buildDoctorReport()
+				if err := writePrettyJSON(cmd.OutOrStdout(), report); err != nil {
+					return err
+				}
+				if report.HardFailures > 0 {
+					return fmt.Errorf("doctor found %d hard failure(s)", report.HardFailures)
+				}
+				return nil
+			}
 			return RunDoctor(cmd.OutOrStdout())
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOut, "json", false, "print machine-readable doctor report")
+	return cmd
 }
 
 func newSetupCommand() *cobra.Command {

@@ -2,6 +2,7 @@ package devspace
 
 import (
 	"bytes"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -229,6 +230,91 @@ func TestSetupPlanCommandReportsNoSetupCommands(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "Setup commands:") || !strings.Contains(stdout, "(none)") {
 		t.Fatalf("setup plan output = %q", stdout)
+	}
+}
+
+func TestStatusJSONHasStableFieldNames(t *testing.T) {
+	initCommandWorkspace(t)
+	stdout, _, err := executeCommand(t, "test", "status", "--json")
+	if err != nil {
+		t.Fatalf("status --json error: %v", err)
+	}
+	var report WorkspaceStatusReport
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatalf("status --json did not parse: %v\n%s", err, stdout)
+	}
+	if report.ProjectsTracked != 0 {
+		t.Fatalf("projectsTracked = %d, want 0", report.ProjectsTracked)
+	}
+	if !strings.Contains(stdout, `"machine"`) || !strings.Contains(stdout, `"projectsTracked"`) {
+		t.Fatalf("status --json missing expected field names:\n%s", stdout)
+	}
+}
+
+func TestDoctorJSONHasStableFieldNames(t *testing.T) {
+	initCommandWorkspace(t)
+	stdout, _, err := executeCommand(t, "test", "doctor", "--json")
+	if err != nil {
+		t.Fatalf("doctor --json error: %v", err)
+	}
+	var report doctorReport
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatalf("doctor --json did not parse: %v\n%s", err, stdout)
+	}
+	if len(report.Checks) == 0 {
+		t.Fatal("doctor --json reported zero checks")
+	}
+	if !strings.Contains(stdout, `"severity"`) || !strings.Contains(stdout, `"hardFailures"`) {
+		t.Fatalf("doctor --json missing expected field names:\n%s", stdout)
+	}
+}
+
+func TestWorkspaceDiffJSONHasStableFieldNames(t *testing.T) {
+	initCommandWorkspace(t)
+	stdout, _, err := executeCommand(t, "test", "workspace", "diff", "--json")
+	// No manifest remote is configured in this isolated workspace, so the
+	// command is expected to fail; the point of this test is only that a
+	// configured remote's diff would serialize with these exact field names,
+	// verified against the zero-value struct's JSON shape.
+	if err == nil {
+		var diff ManifestDiff
+		if unmarshalErr := json.Unmarshal([]byte(stdout), &diff); unmarshalErr != nil {
+			t.Fatalf("workspace diff --json did not parse: %v\n%s", unmarshalErr, stdout)
+		}
+	}
+	data, marshalErr := json.Marshal(ManifestDiff{})
+	if marshalErr != nil {
+		t.Fatalf("ManifestDiff failed to marshal: %v", marshalErr)
+	}
+	for _, want := range []string{`"added"`, `"removed"`, `"changed"`} {
+		if !strings.Contains(string(data), want) {
+			t.Fatalf("ManifestDiff JSON missing field %q:\n%s", want, data)
+		}
+	}
+}
+
+func TestMountPreviewJSONHasStableFieldNames(t *testing.T) {
+	workspace := initCommandWorkspace(t)
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/lazy", ProjectTypeGit, "https://example.invalid/lazy.git")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stdout, _, err := executeCommand(t, "test", "mount", filepath.Join(t.TempDir(), "mnt"), "--preview", "--json")
+	if err != nil {
+		t.Fatalf("mount --preview --json error: %v", err)
+	}
+	var entries []MountEntry
+	if err := json.Unmarshal([]byte(stdout), &entries); err != nil {
+		t.Fatalf("mount --preview --json did not parse: %v\n%s", err, stdout)
+	}
+	if len(entries) != 1 || entries[0].Path != "apps/lazy" {
+		t.Fatalf("entries = %+v, want one entry for apps/lazy", entries)
+	}
+	if !strings.Contains(stdout, `"hydrateMode"`) {
+		t.Fatalf("mount --preview --json missing expected field name:\n%s", stdout)
 	}
 }
 

@@ -173,7 +173,7 @@
       </div>
     </section>
 
-    <section class="parent-task" data-task-id="4.0" data-status="pending">
+    <section class="parent-task" data-task-id="4.0" data-status="done">
       <h3>4.0 Expanded <code>--json</code> scripting interface</h3>
       <p>Add <code>--json</code> to <code>status</code>, <code>doctor</code>, <code>workspace diff</code>, and <code>mount --preview</code> via small dedicated report structs emitted through the existing <code>writePrettyJSON</code> (<code>jsonio.go</code>), with stable documented field names and no ANSI content; update the README command reference for the new flags (and <code>--no-color</code>).</p>
       <div class="proof-artifacts">
@@ -187,11 +187,11 @@
       <div class="subtasks">
         <h4>4.0 Tasks</h4>
         <ul class="task-list">
-          <li class="task" data-task-id="4.1" data-status="pending"><span class="task-label">4.1 Define dedicated report structs with stable lowercase snake/camel JSON tags (match existing <code>Plan</code>/<code>SetupPlan</code> tag style): <code>statusReport</code>, <code>doctorReport</code> (checks + severities + hard-failure count), <code>diffReport</code>, <code>mountPreviewReport</code>.</span></li>
-          <li class="task" data-task-id="4.2" data-status="pending"><span class="task-label">4.2 Add a <code>--json</code> flag to <code>status</code>, <code>doctor</code>, <code>workspace diff</code>, and <code>mount --preview</code> in <code>commands.go</code>; when set, emit via <code>writePrettyJSON</code> and bypass all styling.</span></li>
-          <li class="task" data-task-id="4.3" data-status="pending"><span class="task-label">4.3 Add unit tests per report asserting exact field names and representative values (schema-stability contract), following the existing <code>plan --json</code> test pattern.</span></li>
-          <li class="task" data-task-id="4.4" data-status="pending"><span class="task-label">4.4 Update README "Supported Commands" for the four new <code>--json</code> flags and the root <code>--no-color</code> flag.</span></li>
-          <li class="task" data-task-id="4.5" data-status="pending"><span class="task-label">4.5 Capture CLI proofs in a temp workspace: each <code>--json</code> output piped through <code>python3 -m json.tool</code> into <code>04-proofs/</code>.</span></li>
+          <li class="task" data-task-id="4.1" data-status="done"><span class="task-label">4.1 Define dedicated report structs with stable lowercase snake/camel JSON tags (match existing <code>Plan</code>/<code>SetupPlan</code> tag style): <code>statusReport</code>, <code>doctorReport</code> (checks + severities + hard-failure count), <code>diffReport</code>, <code>mountPreviewReport</code>.</span></li>
+          <li class="task" data-task-id="4.2" data-status="done"><span class="task-label">4.2 Add a <code>--json</code> flag to <code>status</code>, <code>doctor</code>, <code>workspace diff</code>, and <code>mount --preview</code> in <code>commands.go</code>; when set, emit via <code>writePrettyJSON</code> and bypass all styling.</span></li>
+          <li class="task" data-task-id="4.3" data-status="done"><span class="task-label">4.3 Add unit tests per report asserting exact field names and representative values (schema-stability contract), following the existing <code>plan --json</code> test pattern.</span></li>
+          <li class="task" data-task-id="4.4" data-status="done"><span class="task-label">4.4 Update README "Supported Commands" for the four new <code>--json</code> flags and the root <code>--no-color</code> flag.</span></li>
+          <li class="task" data-task-id="4.5" data-status="done"><span class="task-label">4.5 Capture CLI proofs in a temp workspace: each <code>--json</code> output piped through <code>python3 -m json.tool</code> into <code>04-proofs/</code>.</span></li>
         </ul>
       </div>
     </section>

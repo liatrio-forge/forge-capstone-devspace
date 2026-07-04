@@ -23,15 +23,15 @@ const (
 )
 
 type doctorCheck struct {
-	Severity doctorSeverity
-	Subject  string
-	Detail   string
-	Hard     bool
+	Severity doctorSeverity `json:"severity"`
+	Subject  string         `json:"subject"`
+	Detail   string         `json:"detail"`
+	Hard     bool           `json:"hard"`
 }
 
 type doctorReport struct {
-	Checks       []doctorCheck
-	HardFailures int
+	Checks       []doctorCheck `json:"checks"`
+	HardFailures int           `json:"hardFailures"`
 }
 
 type projectDoctorState struct {

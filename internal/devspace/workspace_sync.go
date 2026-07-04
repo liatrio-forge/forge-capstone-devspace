@@ -19,21 +19,21 @@ import (
 const syncedManifestName = "manifest.json"
 
 type ManifestDiff struct {
-	Added   []Project
-	Removed []Project
-	Changed []ProjectDiff
+	Added   []Project     `json:"added"`
+	Removed []Project     `json:"removed"`
+	Changed []ProjectDiff `json:"changed"`
 }
 
 type ProjectDiff struct {
-	Local   Project
-	Remote  Project
-	Changes []FieldChange
+	Local   Project       `json:"local"`
+	Remote  Project       `json:"remote"`
+	Changes []FieldChange `json:"changes"`
 }
 
 type FieldChange struct {
-	Field  string
-	Local  string
-	Remote string
+	Field  string `json:"field"`
+	Local  string `json:"local"`
+	Remote string `json:"remote"`
 }
 
 func SetManifestRemote(remote string) (Config, error) {

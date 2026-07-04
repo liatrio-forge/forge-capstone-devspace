@@ -101,6 +101,8 @@ This repository is being prepared as a Liatrio Forge Module 5 capstone. See [`do
 
 ## 🛠️ Supported Commands
 
+Output is styled (color, headers, tables) when stdout is a terminal, and automatically falls back to plain text when piped, redirected, or when `NO_COLOR`/`CLICOLOR_FORCE=0` is set. Pass the persistent `--no-color` flag to force plain output on any command regardless of terminal capability. Commands that support `--json` (`status`, `doctor`, `workspace diff`, `mount --preview`, `plan`, `setup plan`) always emit clean JSON with no ANSI content.
+
 ### Core Workflow
 
 #### `devspace init`
@@ -137,24 +139,27 @@ Default behavior is local-only. `--sync git` and `--sync hosted` explicitly push
 
 ```bash
 devspace status
+devspace status --json
 devspace project status client-a-api
 ```
 
-Shows tracked projects, hydrated projects, placeholders, dirty repos, missing env files, stale/missing projects, and last scan/sync timestamps.
+Shows tracked projects, hydrated projects, placeholders, dirty repos, missing env files, stale/missing projects, and last scan/sync timestamps. `--json` prints the same counts as a stable, machine-readable `WorkspaceStatusReport`.
 
 #### `devspace doctor`
 
 ```bash
 devspace doctor
+devspace doctor --json
 ```
 
-Checks local readiness without changing files or contacting hosted services. Reports config, workspace, manifest, Git, manifest remote/cache, saved plan, and tracked project path status.
+Checks local readiness without changing files or contacting hosted services. Reports config, workspace, manifest, Git, manifest remote/cache, saved plan, and tracked project path status. `--json` prints the full check list and hard-failure count.
 
 #### `devspace mount`
 
 ```bash
 devspace mount ~/devspace-view
 devspace mount ~/devspace-view --preview
+devspace mount ~/devspace-view --preview --json
 ```
 
 Prototype read-only FUSE workspace view. Manifest project paths appear as mount entries before they are hydrated. See [`docs/architecture/fuse-lazy-mount.md`](docs/architecture/fuse-lazy-mount.md) for platform requirements.
@@ -212,9 +217,10 @@ Validates, caches, and pushes/pulls the `manifest.json` from the configured Git 
 
 ```bash
 devspace workspace diff
+devspace workspace diff --json
 ```
 
-Localizes the remote manifest and reports projects that would be added, removed, or changed by a future pull.
+Localizes the remote manifest and reports projects that would be added, removed, or changed by a future pull. `--json` prints the same diff as a stable `ManifestDiff` document.
 
 ### Hosted Workspace Sync
 
