@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -258,37 +257,14 @@ func newHostedServeCommand() *cobra.Command {
 				"storage", store,
 				"api", "GET/PUT /v1/workspaces/{workspace}/manifest",
 			)
-			server := &http.Server{
-				Addr:              resolved.addr,
-				Handler:           handler,
-				ReadTimeout:       10 * time.Second,
-				WriteTimeout:      10 * time.Second,
-				IdleTimeout:       120 * time.Second,
-				ReadHeaderTimeout: 5 * time.Second,
-			}
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-
-			errCh := make(chan error, 1)
-			go func() {
-				errCh <- server.ListenAndServe()
-			}()
-
-			select {
-			case err := <-errCh:
-				if errors.Is(err, http.ErrServerClosed) {
-					return nil
-				}
-				return err
-			case <-ctx.Done():
-				shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				if err := server.Shutdown(shutdownCtx); err != nil {
-					return err
-				}
-				return nil
-			}
+			return RunHostedSyncServer(ctx, HostedSyncServeOptions{
+				Addr:              resolved.addr,
+				Handler:           handler,
+				DiagnosticsWriter: cmd.ErrOrStderr(),
+			})
 		},
 	}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:8787", "listen address")

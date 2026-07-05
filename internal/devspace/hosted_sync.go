@@ -7,9 +7,11 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -460,6 +462,60 @@ type HostedSyncServerOptions struct {
 	// Empty (the default) means no proxy is trusted and the peer IP is always
 	// used — the safe choice when the server is reached directly.
 	TrustedProxies []*net.IPNet
+}
+
+type HostedSyncServeOptions struct {
+	Addr              string
+	Handler           http.Handler
+	DiagnosticsWriter io.Writer
+	ready             chan<- string
+}
+
+func RunHostedSyncServer(ctx context.Context, opts HostedSyncServeOptions) error {
+	addr := opts.Addr
+	if addr == "" {
+		addr = ":http"
+	}
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	if opts.ready != nil {
+		opts.ready <- listener.Addr().String()
+	}
+	var errorLog *log.Logger
+	if opts.DiagnosticsWriter != nil {
+		errorLog = log.New(opts.DiagnosticsWriter, "", 0)
+	}
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           opts.Handler,
+		ErrorLog:          errorLog,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.Serve(listener)
+	}()
+
+	select {
+	case err := <-errCh:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func NewHostedSyncServer(opts HostedSyncServerOptions) (http.Handler, error) {

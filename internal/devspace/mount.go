@@ -34,6 +34,9 @@ type MountEntry struct {
 	Remote      string `json:"remote,omitempty"`
 	Status      string `json:"status"`
 	Reason      string `json:"reason,omitempty"`
+	Dirty       bool   `json:"dirty"`
+	EnvPresent  bool   `json:"envPresent"`
+	SetupHint   string `json:"setupHint"`
 }
 
 func BuildMountEntries() ([]MountEntry, error) {
@@ -99,7 +102,7 @@ func MountWorkspace(ctx context.Context, mountpoint string, opts WorkspaceMountO
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("FUSE mount failed at %s: %w\n\nFallback: run `devspace mount %s --preview` to inspect tracked mount entries without requiring FUSE", mountpoint, err, mountpoint)
+		return fmt.Errorf("FUSE mount failed at %s: %w\n\nFallback: run `devspace mount %s --preview` to inspect tracked mount entries without requiring FUSE\n\n%s", mountpoint, err, mountpoint, staleMountGuidance(mountpoint))
 	}
 	logger := newDiagnosticsLogger(opts.ErrOut)
 	logger.Info("mounted workspace", "mountpoint", mountpoint)
@@ -114,7 +117,7 @@ func MountWorkspace(ctx context.Context, mountpoint string, opts WorkspaceMountO
 	select {
 	case <-ctx.Done():
 		if err := server.Unmount(); err != nil {
-			logger.Warn("unmount failed", "error", err)
+			logger.Warn("unmount failed", "error", err, "guidance", staleMountGuidance(mountpoint))
 		}
 		<-done
 		return nil
@@ -134,10 +137,10 @@ func PrintMountPreview(out io.Writer, entries []MountEntry) {
 	}
 	rows := make([][]string, 0, len(entries))
 	for _, entry := range entries {
-		rows = append(rows, []string{entry.Path, entry.Type, entry.HydrateMode, entry.Status, entry.Reason})
+		rows = append(rows, []string{entry.Path, entry.Type, entry.HydrateMode, entry.Status, fmt.Sprint(entry.Dirty), fmt.Sprint(entry.EnvPresent), entry.Reason})
 	}
 	tbl := table.New().
-		Headers("PATH", "TYPE", "HYDRATE MODE", "STATUS", "REASON").
+		Headers("PATH", "TYPE", "HYDRATE MODE", "STATUS", "DIRTY", "ENV", "REASON").
 		Rows(rows...).
 		BorderStyle(currentTheme.Muted).
 		StyleFunc(func(row, col int) lipgloss.Style {
@@ -190,23 +193,27 @@ func mountEntryForProject(workspace string, p Project) (MountEntry, error) {
 	if err != nil {
 		return MountEntry{}, err
 	}
+	info := gitInfo(full)
+	state := stateForProject(full, p, info)
 	entry := MountEntry{
 		Name:        p.Name,
 		Path:        p.Path,
 		Type:        p.Type,
 		HydrateMode: p.HydrateMode,
 		Remote:      p.Remote,
+		Dirty:       state.Dirty,
+		EnvPresent:  state.EnvFilePresent,
+		SetupHint:   setupHint(p.Setup),
 	}
-	info := gitInfo(full)
 	switch {
 	case info.IsRepo:
 		entry.Status = "hydrated"
-	case exists(full) && p.Type == ProjectTypeGit && isEmptyDir(full):
+	case state.Placeholder:
 		entry.Status = "placeholder"
 		if p.Remote != "" && p.HydrateMode == HydrateOnDemand {
 			entry.Reason = "will hydrate on project lookup"
 		}
-	case exists(full):
+	case state.Exists:
 		entry.Status = "local"
 	case p.Type == ProjectTypeGit && p.Remote != "" && p.HydrateMode == HydrateOnDemand:
 		entry.Status = "lazy"
@@ -216,6 +223,21 @@ func mountEntryForProject(workspace string, p Project) (MountEntry, error) {
 		entry.Reason = "no automatic mount hydration is configured"
 	}
 	return entry, nil
+}
+
+func setupHint(setup Setup) string {
+	var parts []string
+	if setup.InstallCommand != "" {
+		parts = append(parts, "install: "+setup.InstallCommand)
+	}
+	if setup.DevCommand != "" {
+		parts = append(parts, "dev: "+setup.DevCommand)
+	}
+	return strings.Join(parts, "; ")
+}
+
+func staleMountGuidance(mountpoint string) string {
+	return fmt.Sprintf("Stale mount cleanup: check for a previous devspace mount holding %s, then run `umount %s` or on Linux `fusermount3 -u %s`.", mountpoint, mountpoint, mountpoint)
 }
 
 type workspaceMountNode struct {
@@ -358,11 +380,17 @@ func (n *projectStatusNode) Lookup(ctx context.Context, name string, out *fuse.E
 		return nil, syscall.ENOENT
 	}
 	data := []byte(n.statusText())
+	attr := statusFileAttr(data)
+	out.Attr = attr
 	file := &fs.MemRegularFile{
 		Data: data,
-		Attr: fuse.Attr{Mode: syscall.S_IFREG | 0o444, Size: uint64(len(data))},
+		Attr: attr,
 	}
 	return n.NewInode(ctx, file, fs.StableAttr{Mode: syscall.S_IFREG}), fs.OK
+}
+
+func statusFileAttr(data []byte) fuse.Attr {
+	return fuse.Attr{Mode: syscall.S_IFREG | 0o444, Size: uint64(len(data))}
 }
 
 func (n *projectStatusNode) statusText() string {
@@ -372,6 +400,9 @@ func (n *projectStatusNode) statusText() string {
 	fmt.Fprintf(&b, "type: %s\n", n.project.Type)
 	fmt.Fprintf(&b, "hydrateMode: %s\n", n.project.HydrateMode)
 	fmt.Fprintf(&b, "status: %s\n", n.entry.Status)
+	fmt.Fprintf(&b, "dirty: %t\n", n.entry.Dirty)
+	fmt.Fprintf(&b, "envPresent: %t\n", n.entry.EnvPresent)
+	fmt.Fprintf(&b, "setupHint: %s\n", n.entry.SetupHint)
 	if n.project.Remote != "" {
 		fmt.Fprintf(&b, "remote: %s\n", n.project.Remote)
 	}

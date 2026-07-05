@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestHostedConfigSetGetStoresEndpointTokenAndWorkspace(t *testing.T) {
@@ -679,6 +680,82 @@ func TestHostedServerRateLimitReturns429ButExemptsHealthz(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("healthz status = %d, want 200 (must never be rate limited)", resp.StatusCode)
 		}
+	}
+}
+
+func TestRunHostedSyncServerShutsDownCleanlyWhenContextIsCanceled(t *testing.T) {
+	handler, err := NewHostedSyncServer(HostedSyncServerOptions{StoreDir: t.TempDir(), Token: "test-token"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error, 1)
+	ready := make(chan string, 1)
+	go func() {
+		errCh <- RunHostedSyncServer(ctx, HostedSyncServeOptions{
+			Addr:              "127.0.0.1:0",
+			Handler:           handler,
+			DiagnosticsWriter: io.Discard,
+			ready:             ready,
+		})
+	}()
+
+	var addr string
+	select {
+	case addr = <-ready:
+	case err := <-errCh:
+		t.Fatalf("server exited before listening: %v", err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not start listening")
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	probeCtx, cancelProbe := context.WithDeadline(context.Background(), deadline)
+	defer cancelProbe()
+	for {
+		attemptCtx, cancelAttempt := context.WithTimeout(probeCtx, 100*time.Millisecond)
+		req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet, "http://"+addr+"/healthz", nil)
+		if err != nil {
+			cancelAttempt()
+			t.Fatal(err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		cancelAttempt()
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("server did not become ready: %v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	timer := time.AfterFunc(100*time.Millisecond, cancel)
+	defer timer.Stop()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not shut down")
+	}
+
+	deadline = time.Now().Add(2 * time.Second)
+	for {
+		conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
+		if err != nil {
+			return
+		}
+		_ = conn.Close()
+		if time.Now().After(deadline) {
+			t.Fatal("server port remained open after shutdown")
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

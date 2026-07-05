@@ -11,12 +11,22 @@ import (
 func TestMountEntriesRepresentTrackedProjectsFromManifest(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	hardeningGitRepo(t, filepath.Join(workspace, "apps", "hydrated"))
+	hardeningWriteFile(t, filepath.Join(workspace, "apps", "hydrated", ".env"), "TOKEN=local\n", 0o600)
+	hardeningWriteFile(t, filepath.Join(workspace, "apps", "hydrated", "local.txt"), "dirty\n", 0o644)
+	hydrated := hardeningProject("apps/hydrated", ProjectTypeGit, "https://example.invalid/hydrated.git")
+	hydrated.Setup = Setup{
+		PackageManager: "npm",
+		InstallCommand: "npm install",
+		DevCommand:     "npm run dev",
+	}
+	lazy := hardeningProject("apps/lazy", ProjectTypeGit, "https://example.invalid/lazy.git")
+	lazy.Setup = Setup{InstallCommand: "go mod download"}
 	if err := SaveManifest(workspace, Manifest{
 		Version:       ManifestVersion,
 		WorkspaceRoot: workspace,
 		Projects: []Project{
-			hardeningProject("apps/hydrated", ProjectTypeGit, "https://example.invalid/hydrated.git"),
-			hardeningProject("apps/lazy", ProjectTypeGit, "https://example.invalid/lazy.git"),
+			hydrated,
+			lazy,
 			hardeningProject("notes/local", ProjectTypeLocal, ""),
 		},
 	}); err != nil {
@@ -31,7 +41,15 @@ func TestMountEntriesRepresentTrackedProjectsFromManifest(t *testing.T) {
 		t.Fatalf("entries = %+v", entries)
 	}
 	assertMountEntry(t, entries, "apps/hydrated", "hydrated", "")
+	hydratedEntry := mountEntryByPath(t, entries, "apps/hydrated")
+	if !hydratedEntry.Dirty || !hydratedEntry.EnvPresent || hydratedEntry.SetupHint != "install: npm install; dev: npm run dev" {
+		t.Fatalf("hydrated diagnostics = %+v", hydratedEntry)
+	}
 	assertMountEntry(t, entries, "apps/lazy", "lazy", "will hydrate on project lookup")
+	lazyEntry := mountEntryByPath(t, entries, "apps/lazy")
+	if lazyEntry.Dirty || lazyEntry.EnvPresent || lazyEntry.SetupHint != "install: go mod download" {
+		t.Fatalf("lazy diagnostics = %+v", lazyEntry)
+	}
 	assertMountEntry(t, entries, "notes/local", "missing", "no automatic mount hydration is configured")
 }
 
@@ -59,7 +77,7 @@ func TestMountPreviewCommandDoesNotRequireFUSE(t *testing.T) {
 	for _, want := range []string{
 		"DevSpace lazy mount preview",
 		"github.com/hanwen/go-fuse/v2/fs",
-		"PATH", "TYPE", "HYDRATE MODE", "STATUS", "REASON",
+		"PATH", "TYPE", "HYDRATE MODE", "STATUS", "DIRTY", "ENV", "REASON",
 		"apps/lazy",
 		"git",
 		"on-demand",
@@ -90,16 +108,59 @@ func TestMountWorkspaceRefusesNonEmptyMountpointBeforeFUSE(t *testing.T) {
 	}
 }
 
+func TestStatusFileAttrReportsGeneratedContentSize(t *testing.T) {
+	p := hardeningProject("apps/missing", ProjectTypeLocal, "")
+	p.Setup = Setup{
+		InstallCommand: "npm install",
+		DevCommand:     "npm run dev",
+	}
+	node := &projectStatusNode{
+		project: p,
+		entry: MountEntry{
+			Status:     "missing",
+			Dirty:      false,
+			EnvPresent: false,
+			SetupHint:  setupHint(p.Setup),
+		},
+	}
+	data := []byte(node.statusText())
+	attr := statusFileAttr(data)
+	if attr.Size != uint64(len(data)) {
+		t.Fatalf("status file size = %d, want %d", attr.Size, len(data))
+	}
+	if attr.Size == 0 {
+		t.Fatal("status file size must be non-zero")
+	}
+}
+
+func TestStaleMountGuidanceIncludesPlatformCleanupCommands(t *testing.T) {
+	guidance := staleMountGuidance("/tmp/devspace-mount")
+	for _, want := range []string{
+		"previous devspace mount",
+		"umount /tmp/devspace-mount",
+		"fusermount3 -u /tmp/devspace-mount",
+	} {
+		if !strings.Contains(guidance, want) {
+			t.Fatalf("guidance missing %q: %s", want, guidance)
+		}
+	}
+}
+
 func assertMountEntry(t *testing.T, entries []MountEntry, path, status, reason string) {
 	t.Helper()
+	entry := mountEntryByPath(t, entries, path)
+	if entry.Status != status || entry.Reason != reason {
+		t.Fatalf("%s entry = %+v, want status=%q reason=%q", path, entry, status, reason)
+	}
+}
+
+func mountEntryByPath(t *testing.T, entries []MountEntry, path string) MountEntry {
+	t.Helper()
 	for _, entry := range entries {
-		if entry.Path != path {
-			continue
+		if entry.Path == path {
+			return entry
 		}
-		if entry.Status != status || entry.Reason != reason {
-			t.Fatalf("%s entry = %+v, want status=%q reason=%q", path, entry, status, reason)
-		}
-		return
 	}
 	t.Fatalf("entry %s not found in %+v", path, entries)
+	return MountEntry{}
 }
