@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/fsnotify/fsnotify"
@@ -269,6 +270,24 @@ func TestDashboardWatcherEmitsRefreshOnFileChange(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("watcher did not emit refresh")
+	}
+}
+
+func TestDashboardTruncateCellRuneSafe(t *testing.T) {
+	// Multibyte project names must not be sliced mid-rune (would fail with the
+	// old byte-based value[:max] implementation).
+	got := truncateCell("日本語プロジェクト名", 5)
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncateCell produced invalid UTF-8: %q", got)
+	}
+	if n := utf8.RuneCountInString(got); n != 5 {
+		t.Fatalf("rune count = %d, want 5 (got %q)", n, got)
+	}
+	if !strings.HasSuffix(got, "...") {
+		t.Fatalf("expected ellipsis suffix, got %q", got)
+	}
+	if truncateCell("api", 32) != "api" {
+		t.Fatal("value shorter than max should be unchanged")
 	}
 }
 

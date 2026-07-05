@@ -345,16 +345,14 @@ func valueOrDash(value string) string {
 }
 
 func truncateCell(value string, max int) string {
-	if max <= 0 || len(value) <= max {
+	runes := []rune(value)
+	if max <= 0 || len(runes) <= max {
 		return value
 	}
-	if max <= 1 {
-		return value[:max]
-	}
 	if max <= 3 {
-		return value[:max]
+		return string(runes[:max])
 	}
-	return value[:max-3] + "..."
+	return string(runes[:max-3]) + "..."
 }
 
 func dashboardRowsFromState() ([]dashboardRow, error) {

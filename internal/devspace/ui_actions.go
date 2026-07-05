@@ -48,10 +48,10 @@ func dashboardPlanCmd() tea.Cmd {
 			}
 			return SaveLastPlan(plan)
 		})
-		rows, summary, snapshotErr := dashboardSnapshotFromState()
 		if err != nil {
 			return actionResultMsg{label: "plan", err: err}
 		}
+		rows, summary, snapshotErr := dashboardSnapshotFromState()
 		if snapshotErr != nil {
 			return actionResultMsg{label: "plan", err: snapshotErr}
 		}
@@ -67,10 +67,10 @@ func dashboardApplyCmd() tea.Cmd {
 			plan, applyErr = ApplyLastPlan()
 			return applyErr
 		})
-		rows, summary, snapshotErr := dashboardSnapshotFromState()
 		if err != nil {
 			return actionResultMsg{label: "apply-safe", err: err}
 		}
+		rows, summary, snapshotErr := dashboardSnapshotFromState()
 		if snapshotErr != nil {
 			return actionResultMsg{label: "apply-safe", err: snapshotErr}
 		}
@@ -93,10 +93,10 @@ func dashboardHydrateCmd(ref string) tea.Cmd {
 			project, hydrateErr = HydrateProject(ref)
 			return hydrateErr
 		})
-		rows, summary, snapshotErr := dashboardSnapshotFromState()
 		if err != nil {
 			return actionResultMsg{label: "hydrate", err: err}
 		}
+		rows, summary, snapshotErr := dashboardSnapshotFromState()
 		if snapshotErr != nil {
 			return actionResultMsg{label: "hydrate", err: snapshotErr}
 		}
