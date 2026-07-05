@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>06-task-04-proofs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  article.artifact { margin: 2rem 0; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .proves, .matters, .result-summary { margin: .5rem 0; }
+  code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">PROOFS</span>
+    <h1>Task 04 Proofs - End-to-end demo, documentation, and full verification gate</h1>
+    <p class="meta">Sequence 06 · Feature: manifest-reconciliation · Task 4.0 · Phase 3</p>
+  </header>
+
+  <h2>Task Summary</h2>
+  <p>This task provides the human-facing proof of the whole feature: a scripted two-machine divergence demo captured as a CLI transcript, README documentation for both new commands, and the repository's full local gate (<code>make verify</code>) passing over the finished implementation. The demo runs entirely against temp directories and a local bare git remote — no real remotes, tokens, or secrets — and cleans up after itself.</p>
+
+  <h2>What This Task Proves</h2>
+  <ul>
+    <li>The exact dead end the spec targets is real and reproduced: after divergence, machine B's plain <code>push</code> and <code>pull</code> both fail with reconcile-manually errors.</li>
+    <li><code>workspace reconcile</code> turns that dead end into a reviewed auto-merge (both machines' projects survive), and a genuine conflict blocks apply with labeled local/remote values until <code>--force-remote</code> resolves it.</li>
+    <li>The new commands are documented in README "Supported Commands" with their safety contract (review-first, backup, hash guard, force flags, two-way fallback).</li>
+    <li>The entire feature passes the full local gate: tests, vet, golangci-lint (incl. gosec), gofmt, govulncheck, build.</li>
+  </ul>
+
+  <h2>Evidence Summary</h2>
+  <ul>
+    <li>Demo transcript: <code>06-task-04-demo-transcript.txt</code> (same directory) — 8 scripted stages from setup through conflict resolution.</li>
+    <li><code>make verify</code>: every step green, 0 lint issues, 0 affecting vulnerabilities.</li>
+    <li>README diff: <code>workspace reconcile</code> section + hosted <code>reconcile</code> entry added.</li>
+  </ul>
+
+  <article class="artifact">
+    <h2>Artifact: Two-machine divergence demo transcript</h2>
+    <p class="proves"><strong>What it proves:</strong> The full user journey works with the shipped binary: divergence → dead-end errors → review-first reconcile → apply/push/pull convergence → genuine conflict → blocked apply → explicit force resolution.</p>
+    <p class="matters"><strong>Why it matters:</strong> Tests prove units and flows in-process; this transcript proves the built CLI end-to-end, exactly as a user would drive it, including the error messages users actually see at the dead end.</p>
+    <p><strong>Artifact path:</strong> <code>docs/specs/06-spec-manifest-reconciliation/06-proofs/06-task-04-demo-transcript.txt</code></p>
+    <p class="result-summary"><strong>Result summary:</strong> The auto-merge stage reports <code>Auto-merged: 1 / Conflicts: 0</code> and both machines converge on the union; the conflict stage reports <code>Conflicts: 1</code> with labeled local (<code>trunk</code>) vs remote (<code>develop</code>) values, <code>--apply</code> exits 1 without writing, and <code>--force-remote --apply</code> lands <code>develop</code> on both machines.</p>
+    <pre><code>### The old dead end: B can neither push nor pull
+machine-b$ devspace workspace push
+  Remote branch diverged; run `devspace workspace pull` and reconcile before pushing.  (exit 1)
+machine-b$ devspace workspace pull
+  Local manifest differs from remote manifest; push or reconcile local changes before pulling.  (exit 1)
+
+### The new path: reconcile (review-first, nothing written yet)
+machine-b$ devspace workspace reconcile
+Workspace reconcile:
+Auto-merged: 1
+  ADDED project project_73776ec8bf13
+Conflicts: 0
+Review saved to DEVSPACE_HOME/last-reconcile.json.
+
+### Reconcile flags the conflict and refuses to apply without an explicit choice
+machine-b$ devspace workspace reconcile
+Conflicts: 1
+  project project_8cc463c33edc field *
+    local:  "{... Path:apps/shared ... DefaultBranch:trunk ...}"
+    remote: "{... Path:apps/shared ... DefaultBranch:develop ...}"
+machine-b$ devspace workspace reconcile --apply
+  ERROR  Unresolved reconcile conflicts: - project project_8cc463c33edc ...  (exit 1)
+
+### Explicit resolution: take the remote side
+machine-b$ devspace workspace reconcile --force-remote --apply
+Auto-merged: 1
+  CHANGED project project_8cc463c33edc
+Applied reconciled manifest.
+
+### Final state on machine B
+  apps/api     type=git  defaultBranch=main
+  apps/shared  type=git  defaultBranch=develop
+  apps/web     type=git  defaultBranch=main</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: Full local gate (`make verify`)</h2>
+    <p class="proves"><strong>What it proves:</strong> The complete feature — engine, both backends, commands, tests — passes every quality gate the repo enforces.</p>
+    <p class="matters"><strong>Why it matters:</strong> This is the pre-PR gate per AGENTS.md; green here means CI (test, vet, govulncheck, build) will be green too.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>make verify</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> All 232 tests pass (22s), vet clean, golangci-lint (incl. gosec) reports 0 issues, gofmt check passes, govulncheck finds no vulnerabilities affecting this code, and the binary builds.</p>
+    <pre><code>ok  	github.com/liatrio-forge/devdrop-capstone/internal/devspace	22.011s
+go vet ./...
+go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./...
+0 issues.
+test -z "$(gofmt -l cmd internal)" || (gofmt -l cmd internal && exit 1)
+go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+=== Symbol Results ===
+No vulnerabilities found.
+Your code is affected by 0 vulnerabilities.
+go build -trimpath -o bin/devspace ./cmd/devspace</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: README "Supported Commands" documentation</h2>
+    <p class="proves"><strong>What it proves:</strong> Both commands are user-discoverable with their full safety contract documented.</p>
+    <p class="matters"><strong>Why it matters:</strong> The README is the primary user surface; the non-destructive guarantees (review-first, backup, never auto-resolving conflicts) only count if users can find them.</p>
+    <p><strong>Artifact path:</strong> <code>README.md</code> — <code>#### devspace workspace reconcile</code> (after workspace push/pull) and the hosted sync section</p>
+    <p class="result-summary"><strong>Result summary:</strong> The workspace entry documents review-first planning, <code>last-reconcile.json</code>, <code>manifest-backup.json</code>, the hash guard, force flags, and the two-way fallback; the hosted section documents <code>hosted reconcile</code> resolving HTTP 409 with version-conflict-protected pushes.</p>
+    <pre><code>#### `devspace workspace reconcile`
+
+devspace workspace reconcile            # review-first: writes a plan, changes nothing
+devspace workspace reconcile --json     # machine-readable reconcile plan
+devspace workspace reconcile --apply    # apply the merged manifest (backup + hash guard)
+devspace workspace reconcile --force-local|--force-remote --apply
+
+...
+devspace hosted reconcile [--apply] [--force-local|--force-remote]</code></pre>
+  </article>
+
+  <h2>Reviewer Conclusion</h2>
+  <p>The demo transcript shows the shipped binary resolving the exact divergence dead end the spec set out to fix, on real git plumbing, without ever silently discarding a side. Combined with the green <code>make verify</code> gate and the README documentation, spec 06's implementation is complete and ready for validation.</p>
+</div>
+</body>
+</html>

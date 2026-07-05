@@ -1,0 +1,157 @@
+### Setup: machine A initializes a workspace, creates a local bare manifest remote, pushes
+
+machine-a$ devspace init --workspace /tmp/devspace-reconcile-demo.R0uVrh/machine-a/code
+Initialized DevSpace workspace: /tmp/devspace-reconcile-demo.R0uVrh/machine-a/code
+Machine: Jacobs-MacBook-Pro.local (machine_a38250f1c8f6016f)
+
+machine-a$ devspace workspace remote create local /tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
+/tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
+
+machine-a$ devspace scan
+Scanning workspace...
+Found 1 projects
+1 Git repos
+1 untracked folders
+0 local-only projects
+0 projects with env files
+
+machine-a$ devspace workspace push
+Pushed workspace manifest.
+
+### Machine B joins: same remote, pulls the manifest
+
+machine-b$ devspace init --workspace /tmp/devspace-reconcile-demo.R0uVrh/machine-b/code
+Initialized DevSpace workspace: /tmp/devspace-reconcile-demo.R0uVrh/machine-b/code
+Machine: Jacobs-MacBook-Pro.local (machine_31abf8e2cadcbd26)
+
+machine-b$ devspace workspace remote set /tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
+/tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
+
+machine-b$ devspace workspace pull
+Pulled workspace manifest.
+Next: devspace plan && devspace apply
+
+### Divergence: A adds apps/api and pushes; B adds apps/web without pulling
+
+machine-a$ devspace scan
+Scanning workspace...
+Found 2 projects
+2 Git repos
+1 untracked folders
+0 local-only projects
+0 projects with env files
+
+machine-a$ devspace workspace push
+Pushed workspace manifest.
+
+machine-b$ devspace scan
+Scanning workspace...
+Found 1 projects
+1 Git repos
+1 untracked folders
+0 local-only projects
+0 projects with env files
+
+### The old dead end: B can neither push nor pull
+
+machine-b$ devspace workspace push
+          
+   ERROR  
+          
+  Remote manifest is newer; run `devspace workspace pull` before pushing.                                             
+
+(exit 1)
+
+machine-b$ devspace workspace pull
+          
+   ERROR  
+          
+  Local manifest differs from remote manifest; push or reconcile local changes before pulling.                        
+
+(exit 1)
+
+### The new path: reconcile (review-first, nothing written yet)
+
+machine-b$ devspace workspace reconcile
+Workspace reconcile:
+Auto-merged: 1
+  ADDED project project_73776ec8bf13
+Conflicts: 0
+No reconcile conflicts.
+Review saved to DEVSPACE_HOME/last-reconcile.json.
+
+### Apply the reviewed merge, then push and sync A
+
+machine-b$ devspace workspace reconcile --apply
+Workspace reconcile:
+Auto-merged: 1
+  ADDED project project_73776ec8bf13
+Conflicts: 0
+No reconcile conflicts.
+Applied reconciled manifest.
+
+machine-b$ devspace workspace push
+Pushed workspace manifest.
+
+machine-a$ devspace workspace pull
+Pulled workspace manifest.
+Next: devspace plan && devspace apply
+
+### Genuine conflict: A sets apps/shared defaultBranch=develop, B sets trunk
+
+machine-a$ devspace workspace push
+Pushed workspace manifest.
+
+### Reconcile flags the conflict and refuses to apply without an explicit choice
+
+machine-b$ devspace workspace reconcile
+Workspace reconcile:
+Auto-merged: 0
+No local manifest changes.
+Conflicts: 1
+  project project_8cc463c33edc field *
+    local: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+    remote: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+Review saved to DEVSPACE_HOME/last-reconcile.json.
+
+machine-b$ devspace workspace reconcile --apply
+Workspace reconcile:
+Auto-merged: 0
+No local manifest changes.
+Conflicts: 1
+  project project_8cc463c33edc field *
+    local: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+    remote: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+Review saved to DEVSPACE_HOME/last-reconcile.json.
+          
+   ERROR  
+          
+  Unresolved reconcile conflicts:                                                                                     
+  - project project_8cc463c33edc *: local="{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote:     
+  DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor  
+  coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"                              
+  remote="{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-
+  demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log]    
+  Setup:{PackageManager: InstallCommand: DevCommand:}}".                                                              
+
+(exit 1)
+
+### Explicit resolution: take the remote side
+
+machine-b$ devspace workspace reconcile --force-remote --apply
+Workspace reconcile:
+Auto-merged: 1
+  CHANGED project project_8cc463c33edc
+Conflicts: 0
+No reconcile conflicts.
+Applied reconciled manifest.
+
+machine-b$ devspace workspace push
+Workspace manifest already up to date.
+
+### Final state on machine B
+  apps/api  type=git  defaultBranch=main
+  apps/shared  type=git  defaultBranch=develop
+  apps/web  type=git  defaultBranch=main
+
+### Demo complete (all temp state removed)

@@ -222,6 +222,17 @@ devspace workspace pull
 
 Validates, caches, and pushes/pulls the `manifest.json` from the configured Git remote. It does **not** pull project repos, install dependencies, or overwrite project contents.
 
+#### `devspace workspace reconcile`
+
+```bash
+devspace workspace reconcile            # review-first: writes a plan, changes nothing
+devspace workspace reconcile --json     # machine-readable reconcile plan
+devspace workspace reconcile --apply    # apply the merged manifest (backup + hash guard)
+devspace workspace reconcile --force-local|--force-remote --apply
+```
+
+When local and remote manifests diverge (the push/pull "diverged, reconcile manually" dead end), `reconcile` performs a three-way, project-level merge against the last-synced base manifest. Non-conflicting changes (each side added/removed/changed different projects) merge automatically; a project changed differently on both sides is a **conflict** that is never auto-resolved — apply is blocked until you pass `--force-local` or `--force-remote`. The command is review-first: it writes the plan to `DEVSPACE_HOME/last-reconcile.json`, and `--apply` backs up the previous manifest to `DEVSPACE_HOME/manifest-backup.json` before writing, guarded by a manifest-hash check. Without a base snapshot (first run after upgrade), it falls back to a conservative two-way union where every same-project difference is a conflict.
+
 #### `devspace workspace diff`
 
 ```bash
@@ -240,7 +251,10 @@ devspace hosted serve --addr 127.0.0.1:8787 --store ~/.devspace/hosted-control-p
 devspace hosted config set http://127.0.0.1:8787 --token dev-token --workspace team-a
 devspace hosted push
 devspace hosted pull
+devspace hosted reconcile [--apply] [--force-local|--force-remote]
 ```
+
+`devspace hosted reconcile` resolves hosted version conflicts (HTTP 409) the same way as `workspace reconcile`: three-way merge against the base snapshot, review-first plan, backup + hash-guarded apply, and explicit force flags for genuine conflicts. On apply it pushes the merged manifest with version-conflict protection, then refreshes the local manifest and sync baseline.
 
 The prototype server accepts `manifest.json` metadata via API. It **never** receives source files, dependency folders, `.env` files, or encrypted/plaintext secret payloads.
 Prefer setting the `DEVSPACE_HOSTED_TOKEN` environment variable over using the `--token` flag for security.
