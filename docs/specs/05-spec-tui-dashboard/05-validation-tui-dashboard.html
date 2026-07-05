@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-validation-tui-dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .metric-list { list-style:none; padding-left:0; }
+  .metric-list li { padding:.25rem 0; }
+  .gate-list { margin:.5rem 0; }
+  code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body data-overall-status="PASS">
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">Validation</span>
+    <h1>05-validation-tui-dashboard</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Phase 4</p>
+  </header>
+
+  <section id="executive-summary">
+    <h2>1) Executive Summary</h2>
+    <div class="card">
+      <p><strong>Overall:</strong> <span class="badge status-pass" data-role="overall-status">PASS</span></p>
+      <p><strong>Gates tripped:</strong></p>
+      <ul class="gate-list">
+        <li>None — all gates passed (A: no CRITICAL/HIGH; B: zero Unknown FRs; C: all proofs functional; D: no unmapped out-of-scope core changes; E: repo standards followed; F: no real secrets).</li>
+      </ul>
+      <p><strong>Implementation Ready:</strong> Yes — every functional requirement is demonstrated by a passing automated test and/or a reproducible proof artifact, and the full authoritative gate (<code>make verify</code>) is green with no regressions.</p>
+      <p><strong>Key metrics:</strong></p>
+      <ul class="metric-list">
+        <li>Requirements Verified: 100% (16/16)</li>
+        <li>Proof Artifacts Working: 100% (4/4 proof docs + 10/10 tests + vhs gif)</li>
+        <li>Files Changed vs Expected: 6 core files changed (ui.go, ui_model.go, ui_actions.go, ui_test.go, commands.go, README.md) vs Relevant Files; <code>styles.go</code>/<code>watch.go</code>/<code>lock.go</code>/<code>workspace.go</code> were reference-only and correctly unchanged</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="coverage-matrix">
+    <h2>2) Coverage Matrix</h2>
+
+    <h3>Functional Requirements</h3>
+    <table>
+      <thead>
+        <tr><th>Requirement</th><th>Status</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>U1: <code>ui</code> subcommand registered; bare <code>devspace</code> unchanged</td><td><span class="badge status-verified">Verified</span></td><td><code>commands.go</code> AddCommand; proof-01 (bare devspace prints help); commit <code>c8450ef</code></td></tr>
+        <tr><td>U1: full-screen Bubble Tea v2 model (Init/Update/View, alt-screen)</td><td><span class="badge status-verified">Verified</span></td><td><code>ui_model.go</code>; <code>TestDashboardHeadlessRenderSmoke</code> boots the program headlessly</td></tr>
+        <tr><td>U1: startup scan renders table (status/dirty/branch/env)</td><td><span class="badge status-verified">Verified</span></td><td><code>TestDashboardInitialModelRendersScan</code> asserts rows + fields from real scan</td></tr>
+        <tr><td>U1: workspace status/summary pane + header</td><td><span class="badge status-verified">Verified</span></td><td><code>renderSummary</code>/header in <code>ui_model.go</code>; smoke test asserts "DevSpace UI" header present</td></tr>
+        <tr><td>U1: navigation (arrows/j/k) + quit (q/ctrl+c)</td><td><span class="badge status-verified">Verified</span></td><td><code>TestDashboardNavigateAndQuit</code></td></tr>
+        <tr><td>U1: text-label status (not color-only) + TTY guard (script-safe)</td><td><span class="badge status-verified">Verified</span></td><td><code>renderStatus/Dirty/Env</code> use text labels; proof-01 non-TTY guard exits <code>rc=1</code></td></tr>
+        <tr><td>U2: four safe actions (scan/plan/apply-safe/hydrate), keyed + footer</td><td><span class="badge status-verified">Verified</span></td><td><code>ui_actions.go</code> cmd constructors; footer key-hints in <code>View</code></td></tr>
+        <tr><td>U2: single serialized <code>withAppLock</code> op in a non-blocking <code>tea.Cmd</code></td><td><span class="badge status-verified">Verified</span></td><td><code>runLocked</code> boundary; <code>TestDashboardActionTransitions</code> (busy→result; apply parity with <code>ApplyLastPlan</code>)</td></tr>
+        <tr><td>U2: single-flight — no overlapping lock acquisitions</td><td><span class="badge status-verified">Verified</span></td><td><code>TestDashboardSingleFlightRejectsConcurrent</code></td></tr>
+        <tr><td>U2: action lifecycle + error surfaced without crash</td><td><span class="badge status-verified">Verified</span></td><td><code>TestDashboardActionError</code></td></tr>
+        <tr><td>U2: only safe actions; non-reentrancy verified against <code>lock.go</code></td><td><span class="badge status-verified">Verified</span></td><td>Only 4 action cmds exist; <code>runLocked</code> comment documents the non-reentrant contract</td></tr>
+        <tr><td>U3: fsnotify <code>tea.Cmd</code> reuses filters, emits <code>WatchRefresh</code></td><td><span class="badge status-verified">Verified</span></td><td><code>dashboardWatchCmd</code> reuses registry/<code>watchEventRelevant</code>; <code>TestDashboardWatcherEmitsRefreshOnFileChange</code> (real fs change)</td></tr>
+        <tr><td>U3: refreshes routed through the same single-flight queue</td><td><span class="badge status-verified">Verified</span></td><td><code>dashboardWatchRefresh</code> wraps refresh in <code>runLocked</code></td></tr>
+        <tr><td>U3: <code>r</code> manual refresh (with watcher + with <code>--no-watch</code>)</td><td><span class="badge status-verified">Verified</span></td><td><code>TestDashboardManualRefreshKey</code> (both modes)</td></tr>
+        <tr><td>U3: <code>--no-watch</code> skips the watcher</td><td><span class="badge status-verified">Verified</span></td><td><code>TestDashboardNoWatchDisablesWatcher</code>; <code>--no-watch</code> shown in <code>ui --help</code></td></tr>
+        <tr><td>U3: bounded, most-recent-first live events pane</td><td><span class="badge status-verified">Verified</span></td><td><code>prependEvent</code> (cap 6); <code>TestDashboardWatchRefreshUpdatesModel</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Repository Standards</h3>
+    <table>
+      <thead>
+        <tr><th>Standard Area</th><th>Status</th><th>Evidence &amp; Compliance Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Coding standards (gofmt, explicit errors, charm.land v2)</td><td><span class="badge status-verified">Verified</span></td><td><code>gofmt -l cmd internal</code> empty; golangci-lint (incl. gosec) 0 issues; uses <code>charm.land/*/v2</code></td></tr>
+        <tr><td>Testing patterns (<code>*_test.go</code>, <code>t.Setenv DEVSPACE_HOME</code>, behavior names)</td><td><span class="badge status-verified">Verified</span></td><td><code>ui_test.go</code> seeds temp workspaces via <code>DEVSPACE_HOME</code>; tests named for behavior; no teatest</td></tr>
+        <tr><td>Quality gates (<code>make verify</code>)</td><td><span class="badge status-verified">Verified</span></td><td>test (210 pass) + vet + lint (0) + govulncheck (0 affecting) + build all green</td></tr>
+        <tr><td>Path safety + lock discipline (invariants)</td><td><span class="badge status-verified">Verified</span></td><td>hydrate uses <code>safeWorkspacePath</code>; single non-reentrant <code>withAppLock</code> boundary at the queue</td></tr>
+        <tr><td>Documentation + commits (Conventional Commits)</td><td><span class="badge status-verified">Verified</span></td><td>README "Supported Commands" gains <code>devspace ui</code>; commits <code>feat:</code>/<code>docs:</code> with spec references</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Proof Artifacts</h3>
+    <table>
+      <thead>
+        <tr><th>Unit/Task</th><th>Proof Artifact</th><th>Status</th><th>Verification Result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Task 1.0</td><td><code>05-task-01-proofs.html</code> (help, TTY guard, render tests)</td><td><span class="badge status-verified">Verified</span></td><td>File present; <code>ui --help</code> shows <code>--no-watch</code>; non-TTY <code>rc=1</code>; 3 tests pass</td></tr>
+        <tr><td>Task 2.0</td><td><code>05-task-02-proofs.html</code> (action queue, single-flight, parity)</td><td><span class="badge status-verified">Verified</span></td><td>File present; 3 tests pass incl. single-flight + apply parity</td></tr>
+        <tr><td>Task 3.0</td><td><code>05-task-03-proofs.html</code> (watch/refresh/no-watch)</td><td><span class="badge status-verified">Verified</span></td><td>File present; 4 tests pass incl. real-fsnotify integration</td></tr>
+        <tr><td>Task 4.0</td><td><code>05-task-04-proofs.html</code> + <code>05-ui-tour.gif</code> + <code>make verify</code></td><td><span class="badge status-verified">Verified</span></td><td>File present; gif (1200×720) renders the tour; gate green</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="validation-issues">
+    <h2>3) Validation Issues</h2>
+    <table>
+      <thead>
+        <tr><th>Severity</th><th>Issue</th><th>Impact</th><th>Recommendation</th></tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4">No issues found. All gates passed; all functional requirements verified with reproducible evidence.</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Note: the vhs tape writes a dummy <code>TOKEN=x</code> into a throwaway temp workspace's <code>.env</code> — a placeholder value, not a real secret; it is never committed (the workspace lives under <code>mktemp</code>). GATE F: no real credentials in any committed artifact.</p>
+  </section>
+
+  <section id="evidence-appendix">
+    <h2>4) Evidence Appendix</h2>
+
+    <h3>Git Commits Analyzed</h3>
+    <pre><code>c8450ef feat: add devspace ui interactive dashboard
+        ui.go(+34) ui_model.go(+437) ui_actions.go(+240) ui_test.go(+325)
+        commands.go(+1) README.md(+9) + task/proof artifacts + 05-ui-tour.gif
+f15d111 feat: add TUI dashboard specifications and tasks
+        05-spec / 05-questions-1 / 05-audit / 05-tasks (initial)</code></pre>
+
+    <h3>Proof Artifact Test Results</h3>
+    <ul>
+      <li><code>go test ./internal/devspace</code> → <code>210 passed</code> (fresh independent run; no regressions)</li>
+      <li><code>go test ./internal/devspace -run TestDashboard</code> → <code>10 passed</code></li>
+      <li><code>bin/devspace ui --help</code> → command + <code>--no-watch</code> documented</li>
+      <li><code>bin/devspace ui &lt; /dev/null</code> → <code>rc=1</code>, "requires an interactive terminal"</li>
+      <li><code>golangci-lint run</code> → 0 issues; <code>gofmt -l cmd internal</code> → empty; <code>govulncheck</code> → 0 affecting called code</li>
+    </ul>
+    <p><strong>Screenshot/recording evidence:</strong> <code>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.gif</code></p>
+    <figure>
+      <img src="05-proofs/05-ui-tour.gif" alt="devspace ui dashboard tour: project table with status/dirty/branch/env, scan summary, events pane, responding to navigation, refresh, and scan before quitting" />
+      <figcaption>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.gif — launch → navigate → refresh → scan → quit on a real TTY</figcaption>
+    </figure>
+
+    <h3>File Comparison Results</h3>
+    <pre><code>Expected (Relevant Files)        Actual                 Notes
+ui.go                            changed (new)          core, mapped U1
+ui_model.go                      changed (new)          core, mapped U1-U3
+ui_actions.go                    changed (new)          core, mapped U2-U3
+ui_test.go                       changed (new)          supporting, all tests
+commands.go                      changed (+1)           core, U1 registration
+README.md                        changed (+9)           docs, task 4.0
+styles.go / watch.go /           unchanged              reference-only; reused
+  lock.go / workspace.go                                as-is (acceptable)
+05-proofs/* + tape + gif         added                  supporting, task 4.0
+No out-of-scope core changes.</code></pre>
+
+    <h3>Commands Executed</h3>
+    <pre><code>git log --oneline -6
+git show --stat c8450ef ; git show --stat f15d111
+go test ./internal/devspace                 -> 210 passed
+go test ./internal/devspace -run TestDashboard -> 10 passed
+grep -rniE '(AKIA|BEGIN|ghp_|sk-...)' 05-proofs/  -> no real secrets found</code></pre>
+  </section>
+
+  <section id="validation-metadata">
+    <h2>Validation Metadata</h2>
+    <p><strong>Validation Completed:</strong> 2026-07-04</p>
+    <p><strong>Validation Performed By:</strong> Claude Opus 4.8 (1M context)</p>
+  </section>
+</div>
+</body>
+</html>
