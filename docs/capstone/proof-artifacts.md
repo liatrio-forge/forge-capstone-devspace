@@ -15,9 +15,9 @@ links as releases, PRs, and recordings are created.
 | Demo script | Done | `scripts/demo-check.sh`, `docs/capstone/demo-script.md` |
 | Remote-agent case study | Drafted | `docs/capstone/remote-agent-case-study.md` |
 | Frontier Linear cards | Drafted | `CIL-227` through `CIL-231` |
-| Release binary | Pending | Add GitHub release URL |
-| Final demo recording | Pending | Add recording URL |
-| Personal reflection | Pending | Add reflection file or section after feedback |
+| Release binary | Done | https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.1.0 |
+| Final demo recording | Pending | Filled at end of wave 5 |
+| Personal reflection | Pending | Filled at end of wave 5 |
 
 ## Verification Commands
 
@@ -84,17 +84,45 @@ These are covered by tests in `internal/devspace/hardening_test.go`,
 
 ## Release Gate
 
-Before final submission, update this section with exact evidence:
-
-```text
-Release tag:
-Release URL:
-Commit SHA:
-Demo recording:
-Remote-agent run:
-Wave cards:
-PR evidence:
-Case study reviewed by:
-Final test command output:
-Known limitation accepted:
-```
+- Release tag: `v0.1.0`
+- Release URL:
+  https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.1.0
+- Commit SHA: `43dfbd878dc980c0bd566d3674c0bae6d5433f93`
+- Demo recording: Pending; filled at end of wave 5.
+- Remote-agent run: case study at
+  https://github.com/liatrio-forge/devdrop-capstone/blob/main/docs/capstone/remote-agent-case-study.md
+- Wave cards: `CIL-227` through `CIL-231` plus the wave-5 fleet, including
+  `CIL-242`, shipped by autonomous remote agents via
+  `.claude/workflows/wave-ship.js` and `.claude/workflows/ship-card.js`.
+- PR evidence:
+  - #10 Prototype FUSE lazy workspace mount:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/10
+  - #11 refactor: rename devdrop -> devspace with automatic legacy migration:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/11
+  - #12 feat: add CI/CD pipeline with GoReleaser distribution:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/12
+  - #13 fix: skip artifact attestation on private repositories:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/13
+  - #14 fix: point CI/GoReleaser build at ./cmd/devspace after rename:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/14
+  - #15 feat: publish hosted-server image via GoReleaser ko +
+    container-ready server:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/15
+  - #25 ci: probe FUSE support on hosted runners:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/25
+  - #26 feat: styled terminal output with Charm:
+    https://github.com/liatrio-forge/devdrop-capstone/pull/26
+- Case study reviewed by: wave-5 remote-agent review loop with CodeRabbit and
+  CI on the shipped PRs above.
+- Final test command output: `go test ./...` passed in this worktree:
+  `? github.com/liatrio-forge/devdrop-capstone/cmd/devspace [no test files]`
+  and `ok github.com/liatrio-forge/devdrop-capstone/internal/devspace`. The
+  `internal/devspace` package contains 198 passing tests: 148 top-level test
+  functions plus subtests.
+- Known limitation accepted: hosted sync, daemon/watch, FUSE lazy mounting,
+  managed team identity, and explicit dependency install remain frontier
+  prototypes outside the completed local-first MVP baseline. MVP sync exchanges
+  manifests through user-owned Git remotes only, secrets use explicit age
+  recipients only, and dependency/setup commands are hints that are never
+  auto-executed; see
+  https://github.com/liatrio-forge/devdrop-capstone/blob/main/docs/operations/release-readiness.md#known-limitations.
