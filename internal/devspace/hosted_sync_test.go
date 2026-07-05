@@ -711,12 +711,17 @@ func TestRunHostedSyncServerShutsDownCleanlyWhenContextIsCanceled(t *testing.T) 
 	}
 
 	deadline := time.Now().Add(2 * time.Second)
+	probeCtx, cancelProbe := context.WithDeadline(context.Background(), deadline)
+	defer cancelProbe()
 	for {
-		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://"+addr+"/healthz", nil)
+		attemptCtx, cancelAttempt := context.WithTimeout(probeCtx, 100*time.Millisecond)
+		req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet, "http://"+addr+"/healthz", nil)
 		if err != nil {
+			cancelAttempt()
 			t.Fatal(err)
 		}
 		resp, err := http.DefaultClient.Do(req)
+		cancelAttempt()
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
