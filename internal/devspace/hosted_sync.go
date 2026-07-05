@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -482,9 +483,14 @@ func RunHostedSyncServer(ctx context.Context, opts HostedSyncServeOptions) error
 	if opts.ready != nil {
 		opts.ready <- listener.Addr().String()
 	}
+	var errorLog *log.Logger
+	if opts.DiagnosticsWriter != nil {
+		errorLog = log.New(opts.DiagnosticsWriter, "", 0)
+	}
 	server := &http.Server{
 		Addr:              addr,
 		Handler:           opts.Handler,
+		ErrorLog:          errorLog,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       120 * time.Second,
