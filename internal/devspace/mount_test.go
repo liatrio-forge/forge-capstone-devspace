@@ -108,6 +108,31 @@ func TestMountWorkspaceRefusesNonEmptyMountpointBeforeFUSE(t *testing.T) {
 	}
 }
 
+func TestStatusFileAttrReportsGeneratedContentSize(t *testing.T) {
+	p := hardeningProject("apps/missing", ProjectTypeLocal, "")
+	p.Setup = Setup{
+		InstallCommand: "npm install",
+		DevCommand:     "npm run dev",
+	}
+	node := &projectStatusNode{
+		project: p,
+		entry: MountEntry{
+			Status:     "missing",
+			Dirty:      false,
+			EnvPresent: false,
+			SetupHint:  setupHint(p.Setup),
+		},
+	}
+	data := []byte(node.statusText())
+	attr := statusFileAttr(data)
+	if attr.Size != uint64(len(data)) {
+		t.Fatalf("status file size = %d, want %d", attr.Size, len(data))
+	}
+	if attr.Size == 0 {
+		t.Fatal("status file size must be non-zero")
+	}
+}
+
 func TestStaleMountGuidanceIncludesPlatformCleanupCommands(t *testing.T) {
 	guidance := staleMountGuidance("/tmp/devspace-mount")
 	for _, want := range []string{

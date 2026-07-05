@@ -380,11 +380,17 @@ func (n *projectStatusNode) Lookup(ctx context.Context, name string, out *fuse.E
 		return nil, syscall.ENOENT
 	}
 	data := []byte(n.statusText())
+	attr := statusFileAttr(data)
+	out.Attr = attr
 	file := &fs.MemRegularFile{
 		Data: data,
-		Attr: fuse.Attr{Mode: syscall.S_IFREG | 0o444, Size: uint64(len(data))},
+		Attr: attr,
 	}
 	return n.NewInode(ctx, file, fs.StableAttr{Mode: syscall.S_IFREG}), fs.OK
+}
+
+func statusFileAttr(data []byte) fuse.Attr {
+	return fuse.Attr{Mode: syscall.S_IFREG | 0o444, Size: uint64(len(data))}
 }
 
 func (n *projectStatusNode) statusText() string {
