@@ -313,8 +313,13 @@ func TestMountPreviewJSONHasStableFieldNames(t *testing.T) {
 	if len(entries) != 1 || entries[0].Path != "apps/lazy" {
 		t.Fatalf("entries = %+v, want one entry for apps/lazy", entries)
 	}
-	if !strings.Contains(stdout, `"hydrateMode"`) {
-		t.Fatalf("mount --preview --json missing expected field name:\n%s", stdout)
+	for _, want := range []string{`"hydrateMode"`, `"dirty"`, `"envPresent"`, `"setupHint"`} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("mount --preview --json missing expected field name %s:\n%s", want, stdout)
+		}
+	}
+	if entries[0].Dirty || entries[0].EnvPresent || entries[0].SetupHint != "" {
+		t.Fatalf("mount --preview --json diagnostics = %+v", entries[0])
 	}
 }
 

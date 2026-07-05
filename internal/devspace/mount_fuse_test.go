@@ -105,6 +105,43 @@ func TestFuseMountHydratesOnLookupAndPropagatesFailure(t *testing.T) {
 	}
 }
 
+func TestFuseMountStatusFileIncludesProjectDiagnostics(t *testing.T) {
+	if _, err := os.Stat("/dev/fuse"); err != nil {
+		t.Skipf("FUSE device unavailable: %v", err)
+	}
+	workspace := hardeningInitWorkspace(t, "code")
+	p := hardeningProject("apps/missing", ProjectTypeLocal, "")
+	p.Setup = Setup{
+		InstallCommand: "npm install",
+		DevCommand:     "npm run dev",
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{p},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	mountpoint, unmount, errOut := startFuseMount(t, false)
+	defer unmount()
+	waitForMountEntry(t, mountpoint, "apps")
+	status, err := os.ReadFile(filepath.Join(mountpoint, "apps", "missing", mountStatusFile))
+	if err != nil {
+		t.Fatalf("read status file: %v\nstderr:\n%s", err, errOut.String())
+	}
+	for _, want := range []string{
+		"status: missing",
+		"dirty: false",
+		"envPresent: false",
+		"setupHint: install: npm install; dev: npm run dev",
+	} {
+		if !strings.Contains(string(status), want) {
+			t.Fatalf("status file missing %q:\n%s", want, status)
+		}
+	}
+}
+
 func startFuseMount(t *testing.T, hydrateOnLookup bool) (string, func(), *syncBuffer) {
 	t.Helper()
 	mountpoint := filepath.Join(t.TempDir(), "mnt")
