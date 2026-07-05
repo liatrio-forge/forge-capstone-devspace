@@ -55,6 +55,14 @@ func statePath() (string, error) {
 	return filepath.Join(home, "state.json"), nil
 }
 
+func baseManifestPath() (string, error) {
+	home, err := appHome()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "last-synced-manifest.json"), nil
+}
+
 func expandPath(path string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("path is required")

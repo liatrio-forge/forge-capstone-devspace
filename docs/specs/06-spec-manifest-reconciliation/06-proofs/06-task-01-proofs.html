@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>06-task-01-proofs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  article.artifact { margin: 2rem 0; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .proves, .matters, .result-summary { margin: .5rem 0; }
+  code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">PROOFS</span>
+    <h1>Task 01 Proofs - Last-synced base manifest is tracked on every successful sync</h1>
+    <p class="meta">Sequence 06 · Feature: manifest-reconciliation · Task 1.0 · Phase 3</p>
+  </header>
+
+  <h2>Task Summary</h2>
+  <p>This task added the base-manifest snapshot: after every successful manifest sync — git <code>workspace push</code>/<code>pull</code> and hosted <code>push</code>/<code>pull</code> — DevSpace now persists the exact manifest content that was synced to <code>&lt;app home&gt;/last-synced-manifest.json</code> (atomic write, <code>0600</code>). A loader (<code>loadBaseManifest</code>) distinguishes "no base recorded yet" from real errors. This snapshot is the common ancestor that makes true three-way conflict detection possible in Tasks 2.0/3.0: without it, "changed on both sides" is indistinguishable from "independently added on both sides".</p>
+
+  <h2>What This Task Proves</h2>
+  <ul>
+    <li>A successful git push and pull each record a base snapshot equal to the manifest that was synced (the normalized/localized form sync actually wrote, which strips machine-local values).</li>
+    <li>A successful hosted push and pull record the same snapshot, alongside the existing hosted version/hash bookkeeping.</li>
+    <li>The loader cleanly signals absence (<code>ok=false</code>, nil error) on a fresh or upgraded install — the documented trigger for two-way fallback mode.</li>
+    <li>The snapshot is written with app-home state permissions (<code>0600</code>) and contains manifest metadata only.</li>
+  </ul>
+
+  <h2>Evidence Summary</h2>
+  <ul>
+    <li>Targeted tests: all three named proof tests pass (git, hosted, absent-base).</li>
+    <li>Full package suite: 217 tests pass; <code>gofmt -l cmd internal</code> empty; <code>go vet ./...</code> clean.</li>
+    <li>Diff: 4 files changed + 2 new files, 26 insertions in production code — recording hooks only on success paths; plain pull/push behavior otherwise unchanged.</li>
+  </ul>
+
+  <article class="artifact">
+    <h2>Artifact: Named proof tests pass</h2>
+    <p class="proves"><strong>What it proves:</strong> Git and hosted sync each record the base snapshot with the synced content and 0600 permissions, and the loader reports a missing base cleanly.</p>
+    <p class="matters"><strong>Why it matters:</strong> These are the exact proof tests the task list requires; they exercise both backends through real sync flows (temp <code>DEVSPACE_HOME</code>, local bare-repo remote, in-process hosted server) rather than testing the helpers in isolation.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>go test ./internal/devspace -run 'TestSyncRecordsBaseManifest|TestHostedSyncRecordsBaseManifest|TestBaseManifestAbsentIsDetectable' -v</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> All three tests pass in under a second; the git test covers push on machine A and pull on machine B with independent app homes.</p>
+    <pre><code>=== RUN   TestSyncRecordsBaseManifest
+--- PASS: TestSyncRecordsBaseManifest (0.50s)
+=== RUN   TestHostedSyncRecordsBaseManifest
+--- PASS: TestHostedSyncRecordsBaseManifest (0.19s)
+=== RUN   TestBaseManifestAbsentIsDetectable
+--- PASS: TestBaseManifestAbsentIsDetectable (0.00s)
+PASS
+ok  	github.com/liatrio-forge/devdrop-capstone/internal/devspace	0.699s</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: Full package suite + quality gates</h2>
+    <p class="proves"><strong>What it proves:</strong> The recording hooks added to the four sync success paths did not regress any existing sync, migration, hardening, or command behavior.</p>
+    <p class="matters"><strong>Why it matters:</strong> The base snapshot piggybacks on <code>PushWorkspaceManifest</code>/<code>PullWorkspaceManifest</code>/<code>PushHostedManifest</code>/<code>PullHostedManifest</code> — the most safety-sensitive flows in the CLI. A green full suite shows the hooks are purely additive.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>go test ./internal/devspace &amp;&amp; gofmt -l cmd internal &amp;&amp; go vet ./...</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> 217 tests pass, gofmt reports no unformatted files, vet reports no issues.</p>
+    <pre><code>Go test: 217 passed in 1 packages
+gofmt -l cmd internal: (no output — clean)
+Go vet: No issues found</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: Scoped diff — success-path hooks only</h2>
+    <p class="proves"><strong>What it proves:</strong> The implementation records exactly the manifest content that was synced (<code>normalized</code> on push, <code>localized</code> on pull), only after the sync fully succeeded, on both backends — including the "already up to date" push branch, which still refreshes the base.</p>
+    <p class="matters"><strong>Why it matters:</strong> Recording the wrong variant (e.g. the raw local manifest instead of the normalized synced form) would poison every future three-way merge; recording before success could persist a base for a sync that failed.</p>
+    <p><strong>Artifact path:</strong> commit diff on branch <code>spec/06-manifest-reconciliation</code></p>
+    <p class="result-summary"><strong>Result summary:</strong> 26 production insertions across <code>paths.go</code> (path helper), new <code>base_manifest.go</code> (record/load), <code>workspace_sync.go</code> and <code>hosted_sync.go</code> (success-path hooks), plus <code>base_manifest_test.go</code>.</p>
+    <pre><code>internal/devspace/base_manifest.go      (new) recordBaseManifest / loadBaseManifest
+internal/devspace/base_manifest_test.go (new) 3 behavior-named tests
+internal/devspace/paths.go              +8    baseManifestPath()
+internal/devspace/workspace_sync.go     +9    record on push (changed + no-op) and pull success
+internal/devspace/hosted_sync.go        +9    record on hosted push (changed + no-op) and pull success</code></pre>
+  </article>
+
+  <h2>Reviewer Conclusion</h2>
+  <p>Every successful sync on either backend now leaves behind a 0600, atomically-written base snapshot equal to the synced manifest, and its absence is a clean, detectable state rather than an error. The full suite staying green shows the hooks are additive. Task 2.0 can rely on <code>loadBaseManifest</code> for real three-way reconciliation.</p>
+</div>
+</body>
+</html>

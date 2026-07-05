@@ -250,7 +250,7 @@
       <section id="tasks">
         <h2>Tasks</h2>
 
-        <section class="parent-task" data-task-id="1.0" data-status="pending">
+        <section class="parent-task" data-task-id="1.0" data-status="done">
           <h3>1.0 Track the last-synced base manifest (Unit 1)</h3>
           <p>
             Record the synced manifest as a base snapshot in app home after
@@ -302,11 +302,11 @@
           <div class="subtasks">
             <h4>1.0 Tasks</h4>
             <ul class="task-list">
-              <li class="task" data-task-id="1.1" data-status="pending"><span class="task-label">1.1 Add <code>baseManifestPath()</code> to <code>paths.go</code>, resolving to <code>&lt;app home&gt;/last-synced-manifest.json</code> via the same <code>appHome()</code> resolution as <code>configPath()</code>/<code>statePath()</code> (honors <code>DEVSPACE_HOME</code>/<code>DEV_DROP_HOME</code>).</span></li>
-              <li class="task" data-task-id="1.2" data-status="pending"><span class="task-label">1.2 Create <code>base_manifest.go</code> with <code>recordBaseManifest(m Manifest) error</code> (atomic <code>writeJSON</code>, <code>0o600</code>) and <code>loadBaseManifest() (Manifest, bool, error)</code> that returns <code>ok=false</code> (no error) when the snapshot is absent, using the existing <code>missing(err)</code> helper.</span></li>
-              <li class="task" data-task-id="1.3" data-status="pending"><span class="task-label">1.3 Call <code>recordBaseManifest</code> on the success paths of <code>PullWorkspaceManifest</code> and <code>PushWorkspaceManifest</code> in <code>workspace_sync.go</code>, after the sync itself has fully succeeded, recording exactly the manifest content that was synced.</span></li>
-              <li class="task" data-task-id="1.4" data-status="pending"><span class="task-label">1.4 Call <code>recordBaseManifest</code> on the success paths of <code>PullHostedManifest</code> and <code>PushHostedManifest</code> in <code>hosted_sync.go</code>, alongside the existing <code>recordHostedSync(version, hash)</code> bookkeeping.</span></li>
-              <li class="task" data-task-id="1.5" data-status="pending"><span class="task-label">1.5 Write <code>TestSyncRecordsBaseManifest</code>, <code>TestHostedSyncRecordsBaseManifest</code> (in-process hosted server harness), and <code>TestBaseManifestAbsentIsDetectable</code> — each with <code>t.Setenv("DEVSPACE_HOME", ...)</code> + temp workspace, asserting snapshot content equals the synced manifest and file perms are <code>0o600</code>.</span></li>
+              <li class="task" data-task-id="1.1" data-status="done"><span class="task-label">1.1 Add <code>baseManifestPath()</code> to <code>paths.go</code>, resolving to <code>&lt;app home&gt;/last-synced-manifest.json</code> via the same <code>appHome()</code> resolution as <code>configPath()</code>/<code>statePath()</code> (honors <code>DEVSPACE_HOME</code>/<code>DEV_DROP_HOME</code>).</span></li>
+              <li class="task" data-task-id="1.2" data-status="done"><span class="task-label">1.2 Create <code>base_manifest.go</code> with <code>recordBaseManifest(m Manifest) error</code> (atomic <code>writeJSON</code>, <code>0o600</code>) and <code>loadBaseManifest() (Manifest, bool, error)</code> that returns <code>ok=false</code> (no error) when the snapshot is absent, using the existing <code>missing(err)</code> helper.</span></li>
+              <li class="task" data-task-id="1.3" data-status="done"><span class="task-label">1.3 Call <code>recordBaseManifest</code> on the success paths of <code>PullWorkspaceManifest</code> and <code>PushWorkspaceManifest</code> in <code>workspace_sync.go</code>, after the sync itself has fully succeeded, recording exactly the manifest content that was synced.</span></li>
+              <li class="task" data-task-id="1.4" data-status="done"><span class="task-label">1.4 Call <code>recordBaseManifest</code> on the success paths of <code>PullHostedManifest</code> and <code>PushHostedManifest</code> in <code>hosted_sync.go</code>, alongside the existing <code>recordHostedSync(version, hash)</code> bookkeeping.</span></li>
+              <li class="task" data-task-id="1.5" data-status="done"><span class="task-label">1.5 Write <code>TestSyncRecordsBaseManifest</code>, <code>TestHostedSyncRecordsBaseManifest</code> (in-process hosted server harness), and <code>TestBaseManifestAbsentIsDetectable</code> — each with <code>t.Setenv("DEVSPACE_HOME", ...)</code> + temp workspace, asserting snapshot content equals the synced manifest and file perms are <code>0o600</code>.</span></li>
             </ul>
           </div>
         </section>

@@ -156,12 +156,18 @@ func PushWorkspaceManifest() (bool, error) {
 		return false, err
 	}
 	if !changed {
+		if err := recordBaseManifest(normalized); err != nil {
+			return false, err
+		}
 		return false, nil
 	}
 	if err := commitManifestRepo(repo, cfg); err != nil {
 		return false, err
 	}
 	if err := pushManifestRepo(repo); err != nil {
+		return false, err
+	}
+	if err := recordBaseManifest(normalized); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -210,6 +216,9 @@ func PullWorkspaceManifest() (bool, error) {
 	}
 	after, err := os.ReadFile(manifestPath(cfg.WorkspaceRoot))
 	if err != nil {
+		return false, err
+	}
+	if err := recordBaseManifest(localized); err != nil {
 		return false, err
 	}
 	return !bytes.Equal(before, after), nil
