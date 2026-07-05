@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "ctx-agent-history-search": {
+      "source": "ctxrs/ctx",
+      "sourceType": "github",
+      "skillPath": "skills/ctx-agent-history-search/SKILL.md",
+      "computedHash": "b9ee8ae28832c0058d21c16f1dc1cad4e72ad70597359033d18b6b7e556c40ce"
+    },
     "sdd": {
       "source": "liatrio-labs/spec-driven-workflow",
       "sourceType": "github",
