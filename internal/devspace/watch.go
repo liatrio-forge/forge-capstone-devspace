@@ -105,11 +105,12 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 	}
 	defer watcher.Close()
 
-	watched, err := addWorkspaceWatches(watcher, cfg.WorkspaceRoot)
+	trackedProjects, _ := watchProjectPaths(cfg.WorkspaceRoot)
+	registry := newWatchRegistry(watcher, cfg.WorkspaceRoot)
+	watched, err := registry.sync(trackedProjects)
 	if err != nil {
 		return err
 	}
-	trackedProjects, _ := watchProjectPaths(cfg.WorkspaceRoot)
 	logger := newDiagnosticsLogger(out)
 	logger.Info("watching workspace",
 		"workspace", cfg.WorkspaceRoot,
@@ -138,10 +139,14 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 			if err != nil {
 				return err
 			}
-			result.WatchedDirCount = watched
 			if paths, err := watchProjectPaths(cfg.WorkspaceRoot); err == nil {
 				trackedProjects = paths
+				watched, err = registry.sync(paths)
+				if err != nil {
+					return err
+				}
 			}
+			result.WatchedDirCount = watched
 			if opts.OnRefresh != nil {
 				opts.OnRefresh(result)
 			}
@@ -194,15 +199,15 @@ func WatchWorkspace(ctx context.Context, opts WatchOptions, out io.Writer) error
 			if !ok {
 				return nil
 			}
-			if event.Op&fsnotify.Create != 0 {
-				added, err := addCreatedDirWatches(watcher, cfg.WorkspaceRoot, event.Name)
-				if err != nil {
-					return err
-				}
-				watched += added
-			}
 			if watchEventRelevant(cfg.WorkspaceRoot, event) {
 				if projectPath, ok := watchProjectPathForEvent(cfg.WorkspaceRoot, event.Name, trackedProjects); ok {
+					if event.Op&fsnotify.Create != 0 {
+						var err error
+						watched, err = registry.addCreatedDir(event.Name)
+						if err != nil {
+							return err
+						}
+					}
 					pending[projectPath] = true
 				} else {
 					fullScan = true
@@ -251,6 +256,100 @@ func watchProjectPaths(workspace string) ([]string, error) {
 	return paths, nil
 }
 
+type watchRegistry struct {
+	watcher   *fsnotify.Watcher
+	workspace string
+	watched   map[string]bool
+}
+
+func newWatchRegistry(watcher *fsnotify.Watcher, workspace string) *watchRegistry {
+	root, err := filepath.Abs(workspace)
+	if err != nil {
+		root = workspace
+	}
+	return &watchRegistry{
+		watcher:   watcher,
+		workspace: root,
+		watched:   map[string]bool{},
+	}
+}
+
+func (r *watchRegistry) sync(projectPaths []string) (int, error) {
+	targets := map[string]bool{}
+	if err := r.collectScopedTargets(projectPaths, targets); err != nil {
+		return len(r.watched), err
+	}
+	for path := range r.watched {
+		if targets[path] {
+			continue
+		}
+		_ = r.watcher.Remove(path)
+		delete(r.watched, path)
+	}
+	paths := make([]string, 0, len(targets))
+	for path := range targets {
+		if !r.watched[path] {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		if err := r.watcher.Add(path); err != nil {
+			return len(r.watched), err
+		}
+		r.watched[path] = true
+	}
+	return len(r.watched), nil
+}
+
+func (r *watchRegistry) collectScopedTargets(projectPaths []string, targets map[string]bool) error {
+	targets[r.workspace] = true
+	for _, projectPath := range projectPaths {
+		full, clean, err := safeWorkspacePath(r.workspace, projectPath)
+		if err != nil {
+			continue
+		}
+		components := strings.Split(filepath.ToSlash(clean), "/")
+		for i := 1; i < len(components); i++ {
+			ancestor := filepath.Join(append([]string{r.workspace}, components[:i]...)...)
+			if watchableExistingDirectory(r.workspace, ancestor) {
+				targets[ancestor] = true
+			}
+		}
+		if !watchableExistingDirectory(r.workspace, full) {
+			continue
+		}
+		if err := collectRecursiveWatchTargets(r.workspace, full, targets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *watchRegistry) addCreatedDir(path string) (int, error) {
+	if !watchableExistingDirectory(r.workspace, path) {
+		return len(r.watched), nil
+	}
+	targets := map[string]bool{}
+	if err := collectRecursiveWatchTargets(r.workspace, path, targets); err != nil {
+		return len(r.watched), err
+	}
+	paths := make([]string, 0, len(targets))
+	for path := range targets {
+		if !r.watched[path] {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		if err := r.watcher.Add(path); err != nil {
+			return len(r.watched), err
+		}
+		r.watched[path] = true
+	}
+	return len(r.watched), nil
+}
+
 func watchProjectPathForEvent(workspace, path string, projectPaths []string) (string, bool) {
 	components, ok := workspaceRelativeComponents(workspace, path)
 	if !ok || len(components) == 0 {
@@ -265,9 +364,8 @@ func watchProjectPathForEvent(workspace, path string, projectPaths []string) (st
 	return "", false
 }
 
-func addWorkspaceWatches(watcher *fsnotify.Watcher, workspace string) (int, error) {
-	count := 0
-	err := filepath.WalkDir(workspace, func(path string, d os.DirEntry, walkErr error) error {
+func collectRecursiveWatchTargets(workspace, root string, targets map[string]bool) error {
+	return filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -277,27 +375,14 @@ func addWorkspaceWatches(watcher *fsnotify.Watcher, workspace string) (int, erro
 		if !watchableDirectory(workspace, path) {
 			return filepath.SkipDir
 		}
-		if err := watcher.Add(path); err != nil {
-			return err
-		}
-		count++
+		targets[path] = true
 		return nil
 	})
-	return count, err
 }
 
-func addCreatedDirWatches(watcher *fsnotify.Watcher, workspace, path string) (int, error) {
+func watchableExistingDirectory(workspace, path string) bool {
 	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, nil
-		}
-		return 0, err
-	}
-	if !info.IsDir() || !watchableDirectory(workspace, path) {
-		return 0, nil
-	}
-	return addWorkspaceWatches(watcher, path)
+	return err == nil && info.IsDir() && watchableDirectory(workspace, path)
 }
 
 func watchEventRelevant(workspace string, event fsnotify.Event) bool {
@@ -353,11 +438,20 @@ func watchableDirectory(workspace, path string) bool {
 
 func hasIgnoredWatchComponent(components []string) bool {
 	for _, component := range components {
-		if component == workspaceDirName || component == legacyWorkspaceDirName || ignoredName(component) {
+		if component == workspaceDirName || component == legacyWorkspaceDirName || ignoredName(component) || watchGeneratedName(component) {
 			return true
 		}
 	}
 	return false
+}
+
+func watchGeneratedName(name string) bool {
+	switch name {
+	case ".build", ".swiftpm", "DerivedData":
+		return true
+	default:
+		return strings.HasSuffix(name, ".noindex")
+	}
 }
 
 func workspaceRelativeComponents(workspace, path string) ([]string, bool) {
@@ -412,6 +506,7 @@ func printWatchRefresh(logger *log.Logger, result WatchRefresh) {
 		"untracked", result.Summary.UntrackedFolders,
 		"localOnly", result.Summary.LocalOnlyProjects,
 		"withEnv", result.Summary.ProjectsWithEnv,
+		"directories", result.WatchedDirCount,
 	)
 	switch result.SyncMode {
 	case WatchSyncGit:

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-audit-tui-dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .gate-row td:nth-child(2) { white-space:nowrap; }
+  .finding { border-left: 3px solid var(--warn); padding-left:.75rem; margin:.75rem 0; }
+  .finding-required { border-left-color: var(--fail); }
+  .finding-flag { border-left-color: var(--warn); }
+  .remediation-status { font-weight:700; }
+  /* doc-type extension: contain long conflict text so the wide evidence table
+     never overflows the viewport (fixes Lavish layout-audit overflow warnings) */
+  #standards-evidence table { table-layout: fixed; }
+  #standards-evidence th, #standards-evidence td { overflow-wrap: anywhere; word-break: break-word; }
+  code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body data-overall-status="PASS">
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">AUDIT</span>
+    <h1>05-audit-tui-dashboard</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Phase 4 · Planning Audit · Run 2 (post-remediation)</p>
+  </header>
+
+  <section id="executive-summary" class="card">
+    <h2>Executive Summary</h2>
+    <p>Overall Status: <span class="badge status-pass" data-role="overall-status">PASS</span></p>
+    <p>Required Gate Failures: <strong>0</strong></p>
+    <p>Flagged Risks: <strong>0</strong></p>
+    <p>All REQUIRED gates pass. The Run 1 regression-risk FLAG was remediated (user-approved): two teatest-free integration tests were added to the plan — a headless program render/lifecycle smoke test (Task 1.8) and a real-fsnotify watcher-goroutine test (Task 3.6) — so the previously manual-only paths now have automated coverage. No blocking issues; ready for implementation.</p>
+  </section>
+
+  <section id="gateboard">
+    <h2>Gateboard</h2>
+    <table>
+      <thead>
+        <tr><th>Gate</th><th>Status</th><th>Why / Note (&lt;=12 words)</th><th>Exact target</th></tr>
+      </thead>
+      <tbody>
+        <tr class="gate-row"><td>Requirement-to-test traceability</td><td><span class="badge status-pass">PASS</span></td><td>Every Unit 1/2/3 FR maps to a named test in tasks</td><td>-</td></tr>
+        <tr class="gate-row"><td>Proof artifact verifiability</td><td><span class="badge status-pass">PASS</span></td><td>All proofs are exact commands/paths, observable, sanitized</td><td>-</td></tr>
+        <tr class="gate-row"><td>Repository standards consistency</td><td><span class="badge status-pass">PASS</span></td><td>5 sources read; one conflict resolved with precedence</td><td>-</td></tr>
+        <tr class="gate-row"><td>Open question resolution</td><td><span class="badge status-pass">PASS</span></td><td>Two open questions confirmed non-blocking assumptions</td><td>-</td></tr>
+        <tr class="gate-row"><td>Regression-risk blind spots</td><td><span class="badge status-pass">PASS</span></td><td>Remediated: watcher + render now have integration tests</td><td><code>#tasks 1.8, 3.6</code></td></tr>
+        <tr class="gate-row"><td>Non-goal leakage</td><td><span class="badge status-pass">PASS</span></td><td>Only safe actions; no sync/hosted/secret/destructive tasks</td><td>-</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="standards-evidence">
+    <h2>Standards Evidence Table (Required)</h2>
+    <table>
+      <thead>
+        <tr><th>Source File</th><th>Read</th><th>Standards Extracted</th><th>Conflicts</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>AGENTS.md</code></td><td>yes</td><td>gofmt on changed files; tests beside code named after behavior; explicit user-facing errors; Conventional Commits; never commit secrets/state</td><td>see Makefile row</td></tr>
+        <tr><td><code>README.md</code></td><td>yes</td><td>Styled output only when stdout is a TTY; <code>--no-color</code>/<code>NO_COLOR</code> fallback; non-destructive safety guarantees</td><td>see Makefile row</td></tr>
+        <tr><td><code>Makefile</code></td><td>yes</td><td><code>make verify</code> = test + vet + lint + vulncheck + build; lint requires <code>gofmt -l cmd internal</code> empty</td><td>Docs describe gate as test/vet/build only. Precedence: Makefile authoritative — lint + vulncheck also run.</td></tr>
+        <tr><td><code>.golangci.yml</code></td><td>yes</td><td>Linters: govet, errcheck, ineffassign, staticcheck, unused, gosec; <code>_test.go</code> exempt from gosec</td><td>none</td></tr>
+        <tr><td><code>.github/workflows/ci.yml</code></td><td>yes</td><td>CI runs test/vet/lint/vulncheck/build on PR + push to main; Go version from <code>go.mod</code> (1.26)</td><td>none</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="remediation-plan">
+    <h2>User-Approved Remediation Plan</h2>
+    <p class="remediation-status" data-role="remediation-status">Approved and applied</p>
+    <ul>
+      <li><strong>Task 1.8</strong> — <code>TestDashboardHeadlessRenderSmoke</code>: boot the Bubble Tea program over in-memory input/output, seed state, quit, assert rendered output + clean exit. Covers the real render/lifecycle path. No teatest.</li>
+      <li><strong>Task 3.6</strong> — <code>TestDashboardWatcherEmitsRefreshOnFileChange</code>: run the real <code>watchCmd</code> against a temp workspace, modify a tracked file, assert a <code>watchRefreshMsg</code> within a timeout; skip where fsnotify is unavailable. Covers the fsnotify goroutine path. No teatest.</li>
+    </ul>
+  </section>
+
+  <section id="reaudit-delta">
+    <h2>Re-Audit Delta (Runs 2+ only)</h2>
+    <ul>
+      <li>Changed gate statuses since Run 1: <strong>Regression-risk blind spots FLAG → PASS</strong> (remediation applied).</li>
+      <li>Still-failing REQUIRED gates: none.</li>
+      <li>Newly introduced findings: none.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

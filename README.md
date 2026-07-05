@@ -135,6 +135,15 @@ Runs a long-lived workspace watcher that debounces filesystem events and refresh
 
 Default behavior is local-only. `--sync git` and `--sync hosted` explicitly push the refreshed manifest to the configured remote. Watch mode **never** pulls remote manifests, applies saved plans, hydrates repositories, installs dependencies, runs setup commands, or uploads secrets/source files.
 
+#### `devspace ui`
+
+```bash
+devspace ui
+devspace ui --no-watch
+```
+
+Opens a full-screen workspace dashboard with project hydration, dirty, branch, env, scan summary, and recent refresh events. The dashboard exposes only safe actions: scan, plan, apply-safe, and hydrate selected. Use `--no-watch` to disable live filesystem watching and refresh manually with `r`.
+
 #### `devspace status`
 
 ```bash

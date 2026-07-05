@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-spec-tui-dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .unit { margin: 1.25rem 0; }
+</style>
+</head>
+<body data-overall-status="draft">
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">Spec</span>
+    <h1>05-spec-tui-dashboard</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Phase 1</p>
+  </header>
+
+  <section id="introduction">
+    <h2>Introduction/Overview</h2>
+    <p>DevSpace today exposes workspace state through a handful of separate commands (<code>scan</code>, <code>status</code>, <code>doctor</code>, <code>plan</code>, <code>apply</code>, <code>project hydrate</code>). A developer returning to a machine has to run several of them in sequence to answer a simple question: "what is the state of my workspace, and what safe thing should I do next?"</p>
+    <p>This feature adds <code>devspace ui</code>: a full-screen, read-first terminal dashboard (built on Bubble Tea v2) that renders the workspace in one place — a project table (hydration / dirty / env state), a workspace status pane, and a live watch-events pane — and lets the user trigger only the <strong>safe, non-destructive</strong> operations (scan, hydrate, plan, apply-safe) without leaving the interface. The primary goal is a single at-a-glance surface that reuses the existing domain functions rather than adding new logic, while preserving DevSpace's script-safe defaults and non-destructive-by-default invariants.</p>
+  </section>
+
+  <section id="goals">
+    <h2>Goals</h2>
+    <ul>
+      <li>Provide a single interactive screen (<code>devspace ui</code>) that renders current workspace state — project table plus summary status — without running multiple commands.</li>
+      <li>Reuse the existing domain functions (<code>ScanWorkspace</code>, <code>BuildPlan</code>, <code>ApplyLastPlan</code>, <code>HydrateProject</code>) and the fsnotify watcher surface; add no new scan/plan logic and duplicate no existing machinery.</li>
+      <li>Serialize every refresh and action through a single <code>withAppLock</code>-guarded, single-flight queue so the non-reentrant app lock is never contended and the Bubble Tea update loop never blocks.</li>
+      <li>Keep the root command script-safe: the dashboard lives behind <code>devspace ui</code>; bare <code>devspace</code> behavior (help + non-interactive exit) is unchanged.</li>
+      <li>Ship automated tests on the model's state machine (plain Go tests on <code>Update</code>) plus a <code>vhs</code> recording as TTY proof — with no <code>teatest</code> dependency.</li>
+    </ul>
+  </section>
+
+  <section id="user-stories">
+    <h2>User Stories</h2>
+    <ul>
+      <li><strong>As a</strong> developer returning to a machine, <strong>I want to</strong> open one screen showing which projects are hydrated, placeholder, missing, dirty, or lack an env file, <strong>so that</strong> I understand the workspace state without running <code>scan</code>, <code>status</code>, and <code>doctor</code> separately.</li>
+      <li><strong>As a</strong> developer, <strong>I want to</strong> run scan, plan, apply-safe, and hydrate the selected project from within the dashboard, <strong>so that</strong> I can bring the workspace into alignment without memorizing or leaving for individual subcommands.</li>
+      <li><strong>As a</strong> developer editing files in the workspace, <strong>I want</strong> the dashboard to reflect filesystem changes live, with a manual-refresh key and a <code>--no-watch</code> fallback, <strong>so that</strong> the view stays accurate even where fsnotify is noisy or unavailable.</li>
+      <li><strong>As a</strong> script author, <strong>I want</strong> bare <code>devspace</code> to keep printing help and exiting non-interactively, <strong>so that</strong> existing automation is unaffected by the new interactive surface.</li>
+    </ul>
+  </section>
+
+  <section id="demoable-units">
+    <h2>Demoable Units of Work</h2>
+    <p>Three end-to-end vertical slices, in build order. Each slice is independently demoable and leaves the previous slices working. The build order is deliberate: <strong>render</strong> the state first, then introduce the serialized action <strong>queue</strong> (the load-bearing concurrency primitive), then feed <strong>live</strong> refreshes through that same queue.</p>
+
+    <div class="card unit" id="unit-1">
+      <h3>Unit 1: <code>devspace ui</code> command + read-only dashboard</h3>
+      <p><strong>Purpose:</strong> Establish the command and a full-screen dashboard that renders workspace state from a real scan and quits cleanly. Smallest complete slice: launch → see state → quit. No actions, no live watch yet.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall register a <code>ui</code> subcommand on the root command via the existing <code>NewRootCommand</code> <code>AddCommand</code> pattern (<code>commands.go</code>), leaving <code>cmd/devspace/main.go</code> (the <code>fang.Execute</code> entrypoint) and bare-<code>devspace</code> behavior unchanged.</li>
+        <li>The system shall launch a full-screen (alt-screen) Bubble Tea v2 program implementing a single model with <code>Init</code> / <code>Update(msg) (model, cmd)</code> / <code>View</code>.</li>
+        <li>On startup the system shall perform one workspace scan and render a project table with, per project: name, type (<code>git</code>/<code>local</code>/<code>external</code>), status (Hydrated / Placeholder / Missing derived from <code>ProjectState.Hydrated</code>, <code>.Placeholder</code>, <code>.Missing</code>/<code>.Exists</code>), dirty flag (<code>ProjectState.Dirty</code>), current branch (<code>ProjectState.CurrentBranch</code>), and env presence (<code>ProjectState.EnvFilePresent</code>).</li>
+        <li>The system shall render a workspace status pane summarizing <code>ScanSummary</code> counts (found projects, git repos, untracked folders, local-only, projects-with-env) and the workspace root + machine identity in a header.</li>
+        <li>The user shall be able to navigate the project table (arrow keys and <code>j</code>/<code>k</code>) and quit at any time with <code>q</code> or <code>ctrl-c</code>.</li>
+        <li>Status shall be signaled with text labels (not color alone), using the existing <code>styles.go</code> theme and badge rendering for pass/warn/fail coloring.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>CLI: <code>devspace ui --help</code> output demonstrates the command exists and documents its flags.</li>
+        <li>Test: a plain Go unit test (<code>DEVSPACE_HOME</code> temp workspace) asserts the initial model, after the startup scan message, holds the expected project rows and summary counts — demonstrates the render is driven by real scan data.</li>
+        <li>vhs: a recording of launch → navigate → quit under <code>docs/specs/05-spec-tui-dashboard/05-proofs/</code> demonstrates the dashboard renders and exits cleanly on a TTY.</li>
+      </ul>
+    </div>
+
+    <div class="card unit" id="unit-2">
+      <h3>Unit 2: Safe actions through a serialized <code>withAppLock</code> queue</h3>
+      <p><strong>Purpose:</strong> Let the user trigger the safe operations from the dashboard, executed through a single-flight queue that holds the app lock for the whole operation and reports results back into the UI. This slice introduces the concurrency primitive the rest of the feature depends on.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The user shall be able to trigger, from the dashboard: scan (<code>ScanWorkspace</code>), plan (<code>BuildPlan</code>), apply-safe (<code>ApplyLastPlan</code>), and hydrate the selected project (<code>HydrateProject</code>), each bound to a documented key shown in the footer.</li>
+        <li>The system shall execute each action inside a single serialized queue that acquires <code>withAppLock</code> for the full span of the operation and runs it in a <code>tea.Cmd</code> goroutine, posting the result back as a <code>tea.Msg</code>; the <code>Update</code> loop shall never block on an action.</li>
+        <li>The system shall be single-flight: while an action or refresh is in progress it shall not start a second one (queue or reject with a visible "busy" indicator), so that no two <code>withAppLock</code> acquisitions ever overlap.</li>
+        <li>The system shall reflect each action's lifecycle in the UI (pending → success/failure) and surface any returned error text without crashing the program.</li>
+        <li>The system shall expose <strong>only</strong> the four safe actions above; it shall not offer any destructive, sync, remote, hosted, or secret-editing operation.</li>
+        <li>Implementation shall verify against <code>lock.go</code> which reused functions already acquire <code>withAppLock</code> and must not double-wrap them (the app lock is non-reentrant; see Technical Considerations).</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Test: a unit test drives an action message through <code>Update</code> and asserts the model transitions pending → result and that the underlying domain function's effect matches its CLI equivalent (temp <code>DEVSPACE_HOME</code>).</li>
+        <li>Test: a concurrency unit test asserts that a second action requested while one is in flight is queued/rejected rather than starting a second overlapping operation — demonstrates the single-flight lock discipline.</li>
+        <li>vhs: a "tour" recording (navigate → hydrate a placeholder → apply-safe) under <code>05-proofs/</code> demonstrates safe actions end-to-end.</li>
+      </ul>
+    </div>
+
+    <div class="card unit" id="unit-3">
+      <h3>Unit 3: Live watch pane + manual refresh + <code>--no-watch</code></h3>
+      <p><strong>Purpose:</strong> Keep the view current as the filesystem changes, reusing the existing fsnotify pipeline and feeding refreshes through the Unit 2 queue, with a manual refresh key and an escape hatch for environments where fsnotify is unreliable.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall run a <code>tea.Cmd</code> that owns an <code>fsnotify.Watcher</code>, reuses the existing <code>addWorkspaceWatches</code> and <code>watchEventRelevant</code> filters, and emits refresh results as a <code>tea.Msg</code> carrying a <code>WatchRefresh</code> (from <code>RefreshWorkspaceForWatch</code>).</li>
+        <li>The system shall route watch-triggered refreshes through the same single-flight queue as actions (Unit 2), so refreshes and actions never contend for <code>withAppLock</code>.</li>
+        <li>The user shall be able to press <code>r</code> to force an immediate refresh, which works even when the live watcher is active and when <code>--no-watch</code> is set.</li>
+        <li>The system shall accept a <code>--no-watch</code> flag that skips spawning the watcher <code>tea.Cmd</code> entirely; the dashboard shall remain fully usable with manual <code>r</code> refresh only.</li>
+        <li>The system shall render a live events pane showing recent refresh events (e.g. changed-project / count / timestamp from <code>WatchRefresh</code>), most-recent first, bounded to a fixed number of lines.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Test: a unit test sends a <code>WatchRefresh</code> message (and, separately, an <code>r</code>-key message) through <code>Update</code> and asserts the model's table/summary/events pane update accordingly.</li>
+        <li>Test: a unit test with <code>--no-watch</code> asserts no watcher command is scheduled and that <code>r</code> still refreshes.</li>
+        <li>vhs: a recording (edit a tracked path in a temp workspace → dashboard reflects the change; then toggle <code>--no-watch</code> + <code>r</code>) under <code>05-proofs/</code> demonstrates live and manual refresh.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="non-goals">
+    <h2>Non-Goals (Out of Scope)</h2>
+    <p>To manage scope and protect DevSpace's safety posture, this feature will NOT include:</p>
+    <ol>
+      <li><strong>Any destructive operation:</strong> no delete, overwrite, force, prune, or <code>git reset</code>/clean from the dashboard. Only the safe actions (scan, hydrate, plan, apply-safe) are exposed, preserving the non-destructive-by-default invariant and <code>Safety</code> tagging.</li>
+      <li><strong>Sync and remote management:</strong> no <code>workspace push/pull</code>, <code>remote set/create</code>, hosted control-plane config/serve, env-secret editing, or team/access/invite management from the UI — those stay CLI-only for this spec.</li>
+      <li><strong>Root-command interactivity:</strong> bare <code>devspace</code> stays non-interactive (help + exit); the dashboard is only reachable via <code>devspace ui</code>.</li>
+      <li><strong>teatest / golden-frame tests:</strong> no adoption of <code>teatest/v2</code> and no rendered-frame golden files (see Technical Considerations for rationale).</li>
+      <li><strong>Manifest reconciliation / conflict view:</strong> deferred to spec 06 (manifest-reconciliation); the dashboard does not resolve conflicts.</li>
+      <li><strong>Mouse support and theme configuration:</strong> keyboard-only for this spec; reuse the existing lipgloss theme without adding user-configurable themes.</li>
+    </ol>
+  </section>
+
+  <section id="design-considerations">
+    <h2>Design Considerations</h2>
+    <p>Full-screen alt-screen Bubble Tea v2 layout, top to bottom:</p>
+    <ul>
+      <li><strong>Header:</strong> workspace root path + machine identity + sync mode.</li>
+      <li><strong>Project table (main pane):</strong> columns Project · Type · Status · Dirty · Branch · Env. Status and Dirty use text labels plus theme color (pass/warn/fail badges from <code>styles.go</code>), never color alone.</li>
+      <li><strong>Status/summary pane:</strong> <code>ScanSummary</code> counts.</li>
+      <li><strong>Live events pane:</strong> recent watch refresh events, bounded line count (Unit 3).</li>
+      <li><strong>Footer key-hint bar:</strong> shows active keybindings (navigate, refresh, the four actions, quit).</li>
+    </ul>
+    <p><strong>Accessibility:</strong> <code>q</code>/<code>ctrl-c</code> always quit; no color-only signaling; follow the existing accessible-mode conventions already used with huh in <code>interactive.go</code>. Rendering should degrade gracefully in narrow terminals (truncate columns rather than break layout).</p>
+  </section>
+
+  <section id="repository-standards">
+    <h2>Repository Standards</h2>
+    <ul>
+      <li><strong>Architecture:</strong> single package <code>internal/devspace</code>; wire the command through <code>NewRootCommand</code>'s <code>AddCommand</code> pattern in <code>commands.go</code>; keep <code>cmd/devspace/main.go</code> thin (<code>fang.Execute</code> wraps the root).</li>
+      <li><strong>Reuse over reinvention:</strong> call existing domain functions and watch helpers; do not duplicate scan/plan logic.</li>
+      <li><strong>Path safety:</strong> any workspace-relative path from the manifest or user input goes through <code>safeWorkspacePath</code>; never join workspace paths by hand.</li>
+      <li><strong>Lock discipline:</strong> acquire <code>withAppLock</code> only at the outermost action/refresh boundary (the queue), never nested inside domain functions — matches the documented rule in <code>lock.go</code>.</li>
+      <li><strong>Styling:</strong> reuse the <code>styles.go</code> theme and lipgloss/v2; prefer the lipgloss/v2 table renderer already used in <code>output.go</code> for render consistency (bubbles/v2 table is an acceptable alternative — see Open Questions).</li>
+      <li><strong>Testing:</strong> tests set <code>DEVSPACE_HOME</code> via <code>t.Setenv</code> to a temp dir and operate on a temp workspace (per CLAUDE.md); use the <code>commands_test.go</code> <code>executeCommand</code>-style harness for command wiring. Gate with <code>make verify</code> (<code>go test ./...</code> + vet + lint + build).</li>
+      <li><strong>Conventions:</strong> conventional commit messages; idempotent, non-destructive operations only.</li>
+    </ul>
+  </section>
+
+  <section id="technical-considerations">
+    <h2>Technical Considerations</h2>
+    <p><strong>Framework:</strong> Bubble Tea v2 (<code>charm.land/bubbletea/v2</code>), full-screen program with alt-screen. This is the repo's first full interactive model — only a minimal <code>spinnerModel</code> exists today in <code>interactive.go</code>. Styling via <code>lipgloss/v2</code> + existing <code>styles.go</code>.</p>
+    <p><strong>Watch integration:</strong> reuse point is <code>RefreshWorkspaceForWatch(syncMode)</code> plus the <code>addWorkspaceWatches</code> / <code>watchEventRelevant</code> filters — <em>not</em> <code>WatchWorkspace</code>, which owns its own loop and writes to an <code>io.Writer</code> and is therefore not embeddable in the tea message loop. A <code>tea.Cmd</code> owns the <code>fsnotify.Watcher</code> and emits <code>WatchRefresh</code> as a <code>tea.Msg</code>. Polling is deliberately excluded — the <code>r</code> key covers the manual case without a ticker.</p>
+    <p><strong>Concurrency &amp; the app lock (critical correctness constraint):</strong> <code>withAppLock</code> (<code>lock.go</code>) is <strong>non-reentrant</strong> and uses a bounded <code>TryLockContext</code> (~10s) — a nested or overlapping acquisition will fight the timeout. The reused domain functions (<code>ScanWorkspace</code>, <code>BuildPlan</code>, <code>ApplyLastPlan</code>, <code>HydrateProject</code>) and <code>RefreshWorkspaceForWatch</code> do <strong>not</strong> acquire the lock themselves; the CLI commands acquire it at their <code>RunE</code> boundary, and the watch loop acquires it in its <code>runRefresh</code> closure. Therefore the dashboard must: (1) run every action and every refresh through a <strong>single serialized queue</strong> that holds <code>withAppLock</code> for the whole operation; (2) be <strong>single-flight</strong> so two acquisitions never overlap; (3) execute the locked operation in a <code>tea.Cmd</code> goroutine and post the result back as a message so the <code>Update</code> loop never blocks. Implementation MUST re-read <code>lock.go</code> and the current call sites during Phase 3 to confirm no reused function is double-wrapped.</p>
+    <p><strong>Test strategy (decided — no teatest):</strong> the app is on the <code>charm.land/*/v2</code> line; <code>teatest/v2</code> is experimental (<code>x/exp</code>, never graduated) and pins a bubbletea RC, a version-friction risk in exchange for brittle golden-frame assertions. Instead, thread message <strong>sequences</strong> through <code>Update()</code> in plain Go tests to cover both pure state transitions and interaction flows (navigate → trigger action → assert resulting model state) — more stable than golden frames. The action <code>tea.Cmd</code>s are thin wrappers over already-tested domain functions, so they need no new harness. <code>vhs</code> provides the TTY render proof for humans.</p>
+  </section>
+
+  <section id="security-considerations">
+    <h2>Security Considerations</h2>
+    <ul>
+      <li>No new credentials or tokens are introduced. The dashboard triggers only existing safe operations; <code>HydrateProject</code> uses the existing git authentication path.</li>
+      <li>Env profiles are shown only as a boolean presence indicator (<code>ProjectState.EnvFilePresent</code>); the UI shall <strong>never</strong> render env contents, secret values, or decrypted profile data. Generated <code>.env</code> files remain <code>0600</code> and are not created by the dashboard.</li>
+      <li>Remote URLs may embed credentials; the table shows project/branch/status, and any remote display must not surface embedded tokens.</li>
+      <li><strong>Proof artifact security:</strong> vhs recordings and screenshots must be captured against a sanitized temp workspace and must not commit real remote URLs with tokens, secret values, or private paths. Recordings live under <code>05-proofs/</code>.</li>
+    </ul>
+  </section>
+
+  <section id="success-metrics">
+    <h2>Success Metrics</h2>
+    <ol>
+      <li><strong>Launches and renders:</strong> <code>devspace ui</code> opens full-screen, renders the project table + status pane from a real scan, and quits cleanly on <code>q</code>/<code>ctrl-c</code> in 100% of manual runs.</li>
+      <li><strong>Script safety preserved:</strong> bare <code>devspace</code> behavior is unchanged — existing command tests continue to pass.</li>
+      <li><strong>Action parity:</strong> each dashboard safe action produces the same result as its CLI equivalent, verified by unit tests asserting model state after action messages.</li>
+      <li><strong>Zero lock contention:</strong> no two overlapping <code>withAppLock</code> acquisitions under normal use; enforced by the single-flight queue and covered by a concurrency unit test.</li>
+      <li><strong>Gate green:</strong> <code>make verify</code> passes; new state-transition tests added; at least one <code>vhs</code> recording committed as TTY proof.</li>
+    </ol>
+  </section>
+
+  <section id="open-questions">
+    <h2>Open Questions</h2>
+    <p>Non-blocking; can be resolved during implementation without changing scope, requirements, demoable units, or proof artifacts:</p>
+    <ol>
+      <li>Table component: reuse the lipgloss/v2 table renderer already imported in <code>output.go</code>, or adopt the bubbles/v2 table component. Both satisfy the render requirement; prefer the lipgloss renderer for consistency unless bubbles/v2 table materially eases in-table selection/scrolling.</li>
+      <li>Exact non-essential keybindings (beyond <code>q</code>/<code>ctrl-c</code> quit, <code>r</code> refresh, arrows/<code>j</code>/<code>k</code> navigate, and the four action keys) and the events-pane line budget may be tuned during implementation.</li>
+    </ol>
+  </section>
+</div>
+</body>
+</html>

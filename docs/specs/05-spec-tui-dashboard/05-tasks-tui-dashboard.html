@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-tasks-tui-dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .parent-task { border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1.25rem 0; }
+  .parent-task > h3 { margin-top:0; }
+  .proof-artifacts ul { margin:.5rem 0; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">TASKS</span>
+    <h1>05-tasks-tui-dashboard</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Phase 2 · Sub-tasks generated</p>
+  </header>
+
+  <section id="overview">
+    <h2>Overview</h2>
+    <p>Four parent tasks. Tasks 1.0–3.0 map one-to-one to the spec's three demoable units in build order (render → serialized action queue → live watch). Task 4.0 collects the cross-cutting proof artifacts (vhs), documentation, and the full <code>make verify</code> gate. Implementation routes to <code>codex exec</code>; sub-tasks are written test-first where practical, per the repo's Go <code>testing</code> conventions.</p>
+  </section>
+
+  <section id="relevant-files">
+    <h2>Relevant Files</h2>
+    <table>
+      <thead>
+        <tr><th>File</th><th>Why It Is Relevant</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>internal/devspace/ui.go</code> (new)</td><td>Builds the <code>devspace ui</code> Cobra command: <code>newUICommand()</code>, <code>--no-watch</code> flag, TTY guard, and Bubble Tea program launch (alt-screen).</td></tr>
+        <tr><td><code>internal/devspace/ui_model.go</code> (new)</td><td>The dashboard <code>Model</code> plus message types and <code>Init</code>/<code>Update</code>/<code>View</code> — the message-driven state machine that is the core testable logic.</td></tr>
+        <tr><td><code>internal/devspace/ui_actions.go</code> (new)</td><td>The single-flight <code>withAppLock</code> queue and the <code>tea.Cmd</code> constructors for scan/plan/apply-safe/hydrate and the fsnotify watch command.</td></tr>
+        <tr><td><code>internal/devspace/ui_test.go</code> (new)</td><td>Plain-Go unit tests driving message sequences through <code>Update</code> (state transitions, actions, single-flight, watch, no-watch) with a temp <code>DEVSPACE_HOME</code>.</td></tr>
+        <tr><td><code>internal/devspace/commands.go</code> (modify)</td><td>Register the new subcommand via <code>cmd.AddCommand(newUICommand())</code> in <code>NewRootCommand</code>.</td></tr>
+        <tr><td><code>internal/devspace/watch.go</code> (reference)</td><td>Reuse <code>RefreshWorkspaceForWatch</code>, <code>addWorkspaceWatches</code>, <code>watchEventRelevant</code>, and the <code>WatchRefresh</code> type; do not embed <code>WatchWorkspace</code>.</td></tr>
+        <tr><td><code>internal/devspace/lock.go</code> (reference)</td><td>Confirm <code>withAppLock</code> is non-reentrant and that reused functions do not self-lock, so the queue wraps each operation exactly once.</td></tr>
+        <tr><td><code>internal/devspace/workspace.go</code> (reference)</td><td>Source of <code>ScanWorkspace</code>, <code>BuildPlan</code>, <code>ApplyLastPlan</code>, <code>HydrateProject</code>, <code>ScanSummary</code>, and <code>ProjectState</code> fields rendered by the table.</td></tr>
+        <tr><td><code>internal/devspace/styles.go</code> (reference/modify)</td><td>Reuse the existing lipgloss/v2 theme + badge rendering for status coloring; add pane/table styles if needed.</td></tr>
+        <tr><td><code>README.md</code> (modify)</td><td>Add a <code>devspace ui</code> entry under "Supported Commands" per repo documentation convention.</td></tr>
+        <tr><td><code>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.tape</code> (new)</td><td>vhs script that drives the dashboard end-to-end against a sanitized temp workspace.</td></tr>
+        <tr><td><code>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.gif</code> (new)</td><td>Rendered TTY recording proving the dashboard works on a real terminal.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Notes</h3>
+    <ul>
+      <li>Put tests in <code>internal/devspace/ui_test.go</code>; name tests after behavior (e.g. <code>TestDashboardSingleFlightRejectsConcurrent</code>), per <code>AGENTS.md</code>.</li>
+      <li>Every test that reads/writes config/state/manifest must set <code>t.Setenv("DEVSPACE_HOME", tmp)</code> and operate on a temp workspace — never touch the real <code>~/.devspace</code>.</li>
+      <li>Run the gate with <code>make verify</code> (test + vet + lint + vulncheck + build). Lint enforces <code>gofmt -l cmd internal</code> empty and golangci-lint incl. gosec.</li>
+      <li>Do not commit real remotes, tokens, age identities, or generated state into proof artifacts; use placeholders / temp workspaces (<code>AGENTS.md</code> security rule).</li>
+      <li>Test strategy is decided: plain-Go <code>Update</code> tests + vhs; <strong>no teatest</strong> (see spec Technical Considerations).</li>
+    </ul>
+  </section>
+
+  <section id="tasks">
+    <h2>Tasks</h2>
+
+    <section class="parent-task" data-task-id="1.0" data-status="done">
+      <h3>1.0 <code>devspace ui</code> command + read-only dashboard (Unit 1)</h3>
+
+      <div class="proof-artifacts">
+        <h4>1.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>CLI: <code>go run ./cmd/devspace ui --help</code> output demonstrates the command and its <code>--no-watch</code> flag exist and are documented.</li>
+          <li>CLI: <code>go run ./cmd/devspace ui &lt; /dev/null</code> (not a TTY) exits non-zero with a clear "requires an interactive terminal" error — demonstrates the script-safe TTY guard.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardInitialModelRendersScan -v</code> passes — initial model after the scan message holds expected rows (status/dirty/branch/env) and <code>ScanSummary</code> counts on a temp workspace.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardNavigateAndQuit -v</code> passes — arrow/<code>j</code>/<code>k</code> move the selection and <code>q</code>/<code>ctrl-c</code> return <code>tea.Quit</code>.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardHeadlessRenderSmoke -v</code> passes — boots the Bubble Tea program with in-memory input/output (no teatest), seeds state, and asserts the rendered output contains the header/table and the program exits cleanly. <em>(audit remediation: covers the real render/lifecycle path)</em></li>
+        </ul>
+      </div>
+
+      <div class="subtasks">
+        <h4>1.0 Tasks</h4>
+        <ul class="task-list">
+          <li class="task" data-task-id="1.1" data-status="done"><span class="task-label">1.1 Create <code>ui.go</code> with <code>newUICommand() *cobra.Command</code> (a <code>--no-watch</code> bool flag) and register it in <code>NewRootCommand</code> via <code>cmd.AddCommand(newUICommand())</code>. No lock acquired at construction.</span></li>
+          <li class="task" data-task-id="1.2" data-status="done"><span class="task-label">1.2 In the command's <code>RunE</code>, add a TTY guard: if stdout is not a terminal, return a clear error and non-zero exit; otherwise launch the Bubble Tea program with alt-screen. Reuse the repo's existing terminal-detection path if one exists (it drives styled output).</span></li>
+          <li class="task" data-task-id="1.3" data-status="done"><span class="task-label">1.3 In <code>ui_model.go</code>, define <code>Model</code> (project rows derived from <code>ProjectState</code>, <code>ScanSummary</code> counts, selected index, events slice, <code>busy</code> flag, <code>errText</code>, <code>noWatch</code> bool) and message types (<code>scanLoadedMsg</code>, <code>actionResultMsg</code>, <code>watchRefreshMsg</code>, <code>errMsg</code>).</span></li>
+          <li class="task" data-task-id="1.4" data-status="done"><span class="task-label">1.4 Implement <code>Init</code> (fire the initial scan/refresh command) and the <code>Update</code>/<code>View</code> for the read-only path: populate rows+summary on <code>scanLoadedMsg</code>, handle window-size, and render header (workspace root + machine id + sync mode), the project table (Project · Type · Status · Dirty · Branch · Env with text labels + theme badges), the summary pane, and the footer key-hint bar. Reuse <code>styles.go</code> + lipgloss/v2 table renderer.</span></li>
+          <li class="task" data-task-id="1.5" data-status="done"><span class="task-label">1.5 Implement navigation (arrows + <code>j</code>/<code>k</code>, clamped to row bounds) and quit (<code>q</code>/<code>ctrl-c</code> → <code>tea.Quit</code>). Status must never be color-only; degrade gracefully in narrow widths.</span></li>
+          <li class="task" data-task-id="1.6" data-status="done"><span class="task-label">1.6 Write <code>TestDashboardInitialModelRendersScan</code> and <code>TestDashboardNavigateAndQuit</code> in <code>ui_test.go</code> (temp <code>DEVSPACE_HOME</code>, seeded workspace; thread scan-loaded + key messages through <code>Update</code>; assert rows/summary/selection/quit).</span></li>
+          <li class="task" data-task-id="1.7" data-status="done"><span class="task-label">1.7 Capture the <code>ui --help</code> output and the non-TTY guard behavior for the proof artifacts.</span></li>
+          <li class="task" data-task-id="1.8" data-status="done"><span class="task-label">1.8 (audit remediation) Add <code>TestDashboardHeadlessRenderSmoke</code> in <code>ui_test.go</code>: construct the program with <code>tea.WithInput</code>/<code>tea.WithOutput</code> over in-memory buffers, send a scan-loaded message then a quit key, and assert <code>Run</code> returns nil and the output buffer contains the header + a table row. Closes the "real render only in vhs" gap without teatest.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="parent-task" data-task-id="2.0" data-status="done">
+      <h3>2.0 Serialized <code>withAppLock</code> action queue + safe actions (Unit 2)</h3>
+
+      <div class="proof-artifacts">
+        <h4>2.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardActionTransitions -v</code> passes — an action message drives pending→result and the effect (e.g. apply-safe placeholder creation) matches the CLI equivalent on a temp workspace.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardSingleFlightRejectsConcurrent -v</code> passes — a second action while one is in flight is queued/rejected; no two <code>withAppLock</code> acquisitions overlap.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardActionError -v</code> passes — a failing action surfaces its error text without panicking or quitting.</li>
+          <li>CLI: workspace files before/after an apply-safe triggered in the dashboard equal the result of <code>devspace apply</code> — demonstrates action parity and no destructive changes.</li>
+        </ul>
+      </div>
+
+      <div class="subtasks">
+        <h4>2.0 Tasks</h4>
+        <ul class="task-list">
+          <li class="task" data-task-id="2.1" data-status="done"><span class="task-label">2.1 Re-read <code>lock.go</code> and confirm which reused functions acquire <code>withAppLock</code> (expected: none of <code>ScanWorkspace</code>/<code>BuildPlan</code>/<code>ApplyLastPlan</code>/<code>HydrateProject</code>/<code>RefreshWorkspaceForWatch</code> self-lock). Record the finding in a comment at the queue so the non-reentrancy contract is explicit.</span></li>
+          <li class="task" data-task-id="2.2" data-status="done"><span class="task-label">2.2 In <code>ui_actions.go</code>, implement the single-flight queue: a helper that wraps an operation <code>func() (payload, error)</code> in <code>withAppLock</code>, runs it inside a <code>tea.Cmd</code> goroutine, and returns <code>actionResultMsg</code>/<code>errMsg</code>. The <code>Update</code> loop must never block on it.</span></li>
+          <li class="task" data-task-id="2.3" data-status="done"><span class="task-label">2.3 Add <code>tea.Cmd</code> constructors for the four safe actions — scan (<code>ScanWorkspace</code>), plan (<code>BuildPlan</code>), apply-safe (<code>ApplyLastPlan</code>), hydrate-selected (<code>HydrateProject</code> on the selected row) — each routed through the queue, bound to a documented key, and shown in the footer. Any path handling goes through <code>safeWorkspacePath</code>. Expose no destructive/sync/hosted/secret action.</span></li>
+          <li class="task" data-task-id="2.4" data-status="done"><span class="task-label">2.4 Update <code>Update</code>: set <code>busy=true</code> on action start and reject a new action while busy; on <code>actionResultMsg</code>/<code>errMsg</code> clear <code>busy</code>, apply the result (re-render affected rows/summary) or show the error text in the status line without quitting.</span></li>
+          <li class="task" data-task-id="2.5" data-status="done"><span class="task-label">2.5 Write <code>TestDashboardActionTransitions</code>, <code>TestDashboardSingleFlightRejectsConcurrent</code>, and <code>TestDashboardActionError</code> in <code>ui_test.go</code>.</span></li>
+          <li class="task" data-task-id="2.6" data-status="done"><span class="task-label">2.6 Manual parity check: trigger apply-safe from the dashboard vs <code>devspace apply</code> on the same temp workspace; confirm identical placeholder creation and no destructive changes. Capture for the proof artifact.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="parent-task" data-task-id="3.0" data-status="done">
+      <h3>3.0 Live watch pane + manual refresh + <code>--no-watch</code> (Unit 3)</h3>
+
+      <div class="proof-artifacts">
+        <h4>3.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardWatchRefreshUpdatesModel -v</code> passes — a <code>WatchRefresh</code> message updates the table, summary, and events pane.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardManualRefreshKey -v</code> passes — <code>r</code> enqueues a refresh with the watcher active and with <code>--no-watch</code> set.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardNoWatchDisablesWatcher -v</code> passes — with <code>--no-watch</code>, <code>Init</code> schedules no watcher command.</li>
+          <li>CLI: <code>go run ./cmd/devspace ui --help</code> shows <code>--no-watch</code> documented — demonstrates the flag is wired end-to-end.</li>
+          <li>Test: <code>go test ./internal/devspace -run TestDashboardWatcherEmitsRefreshOnFileChange -v</code> passes — boots the real <code>watchCmd</code> against a temp workspace, modifies a tracked file, and asserts a <code>watchRefreshMsg</code> is produced within a timeout. <em>(audit remediation: exercises the fsnotify goroutine + filters + <code>RefreshWorkspaceForWatch</code> end-to-end)</em></li>
+        </ul>
+      </div>
+
+      <div class="subtasks">
+        <h4>3.0 Tasks</h4>
+        <ul class="task-list">
+          <li class="task" data-task-id="3.1" data-status="done"><span class="task-label">3.1 In <code>ui_actions.go</code>, add <code>watchCmd</code>: a <code>tea.Cmd</code> that creates an <code>fsnotify.Watcher</code>, calls <code>addWorkspaceWatches</code>, and on relevant/debounced events (<code>watchEventRelevant</code>) runs <code>RefreshWorkspaceForWatch</code> through the single-flight queue, emitting <code>watchRefreshMsg</code> carrying the <code>WatchRefresh</code>.</span></li>
+          <li class="task" data-task-id="3.2" data-status="done"><span class="task-label">3.2 In <code>Init</code>, schedule <code>watchCmd</code> only when <code>noWatch</code> is false.</span></li>
+          <li class="task" data-task-id="3.3" data-status="done"><span class="task-label">3.3 Handle the <code>r</code> key: enqueue an immediate refresh via the queue (works with the watcher active and with <code>--no-watch</code>).</span></li>
+          <li class="task" data-task-id="3.4" data-status="done"><span class="task-label">3.4 Update <code>Update</code>/<code>View</code> for <code>watchRefreshMsg</code>: refresh table + summary and prepend a bounded (fixed-N, most-recent-first) entry to the live events pane.</span></li>
+          <li class="task" data-task-id="3.5" data-status="done"><span class="task-label">3.5 Write <code>TestDashboardWatchRefreshUpdatesModel</code>, <code>TestDashboardManualRefreshKey</code>, and <code>TestDashboardNoWatchDisablesWatcher</code> in <code>ui_test.go</code>.</span></li>
+          <li class="task" data-task-id="3.6" data-status="done"><span class="task-label">3.6 (audit remediation) Add <code>TestDashboardWatcherEmitsRefreshOnFileChange</code> in <code>ui_test.go</code>: start the <code>watchCmd</code> against a seeded temp workspace, create/modify a tracked file, and assert (bounded timeout) a <code>watchRefreshMsg</code> carrying an updated <code>WatchRefresh</code> is emitted. Skip cleanly where fsnotify is unavailable. Closes the watcher-goroutine coverage gap.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="parent-task" data-task-id="4.0" data-status="done">
+      <h3>4.0 Proof recordings, docs, and verification gate</h3>
+
+      <div class="proof-artifacts">
+        <h4>4.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>vhs: <code>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.tape</code> + rendered <code>05-ui-tour.gif</code> demonstrate launch → navigate → hydrate → apply-safe → live refresh on a real TTY (sanitized temp workspace, no secrets).</li>
+          <li>CLI: <code>make verify</code> output (test + vet + lint + vulncheck + build) shows all steps passing, including <code>gofmt -l cmd internal</code> empty and golangci-lint (gosec) clean.</li>
+          <li>Diff: <code>README.md</code> "Supported Commands" gains a <code>devspace ui</code> entry — demonstrates the command is documented per repo convention.</li>
+        </ul>
+      </div>
+
+      <div class="subtasks">
+        <h4>4.0 Tasks</h4>
+        <ul class="task-list">
+          <li class="task" data-task-id="4.1" data-status="done"><span class="task-label">4.1 Write <code>05-proofs/05-ui-tour.tape</code> driving <code>devspace ui</code> over a sanitized temp workspace (launch → navigate → hydrate → apply-safe → observe live refresh → quit) and render <code>05-ui-tour.gif</code> with <code>vhs</code>. Verify no real remotes/tokens/secrets appear.</span></li>
+          <li class="task" data-task-id="4.2" data-status="done"><span class="task-label">4.2 Update <code>README.md</code> "Supported Commands" with a <code>devspace ui</code> entry (usage + <code>--no-watch</code>); adjust help text / <code>AGENTS.md</code> if needed.</span></li>
+          <li class="task" data-task-id="4.3" data-status="done"><span class="task-label">4.3 Run <code>make verify</code> and fix any gofmt / golangci-lint (gosec) / vet findings until the full gate is green; capture the passing output as the proof artifact.</span></li>
+        </ul>
+      </div>
+    </section>
+  </section>
+</div>
+</body>
+</html>

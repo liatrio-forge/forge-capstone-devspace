@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-task-01-proofs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  article.artifact { margin: 2rem 0; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .proves, .matters, .result-summary { margin: .5rem 0; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">PROOFS</span>
+    <h1>Task 01 Proofs - <code>devspace ui</code> command + read-only dashboard</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Task 01 · Phase 3</p>
+  </header>
+
+  <h2>Task Summary</h2>
+  <p>Added the <code>devspace ui</code> subcommand and a full-screen Bubble Tea v2 dashboard that renders workspace state from one scan (project table + summary pane + header + footer) and navigates/quits with the keyboard. The command refuses to launch on a non-TTY, keeping the CLI script-safe, and bare <code>devspace</code> behavior is unchanged.</p>
+
+  <h2>What This Task Proves</h2>
+  <ul>
+    <li>The <code>ui</code> command exists, is registered on the root, and documents its <code>--no-watch</code> flag.</li>
+    <li>Launching without an interactive terminal fails fast and clearly (exit code 1), so scripts and pipes are unaffected.</li>
+    <li>The dashboard model renders real scan-derived rows and summary counts, and keyboard navigation/quit behave correctly — verified by plain-Go tests plus a headless program boot.</li>
+  </ul>
+
+  <h2>Evidence Summary</h2>
+  <ul>
+    <li><code>devspace ui --help</code> lists the command and <code>--no-watch</code>.</li>
+    <li><code>devspace ui</code> on a non-TTY exits <code>1</code> with "requires an interactive terminal".</li>
+    <li>Bare <code>devspace</code> still prints help (script-safe posture preserved).</li>
+    <li>3 unit/lifecycle tests pass (render, navigate/quit, headless render smoke).</li>
+  </ul>
+
+  <article class="artifact">
+    <h2>Artifact: <code>ui --help</code> output</h2>
+    <p class="proves"><strong>What it proves:</strong> the command is wired into the root command tree with its flag documented.</p>
+    <p class="matters"><strong>Why it matters:</strong> discoverability is the whole point of the dashboard; the help output is the first contract a user sees.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>bin/devspace ui --help</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> help renders with the description and both <code>--no-watch</code> and the inherited <code>--no-color</code> flags.</p>
+    <pre><code>  Open a full-screen dashboard showing tracked projects, workspace scan counts,
+  and recent filesystem refreshes.
+
+  The dashboard exposes only safe actions: scan, plan, apply-safe, and hydrate
+  the selected project.
+
+  USAGE
+    devspace ui [--flags]
+
+  FLAGS
+    -h --help   Help for ui
+    --no-color  Disable styled output regardless of terminal capability
+    --no-watch  Disable the live filesystem watcher; use the r key to refresh manually</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: non-TTY guard</h2>
+    <p class="proves"><strong>What it proves:</strong> the dashboard refuses to run when stdout is not an interactive terminal, exiting non-zero with a clear message.</p>
+    <p class="matters"><strong>Why it matters:</strong> DevSpace's posture is script-safe by default; an interactive full-screen app must never hang or emit control codes into a pipe/CI log.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>bin/devspace ui &lt; /dev/null &gt; out.txt 2&gt;&amp;1 ; echo "rc=$?"</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> exit code <code>1</code> with a styled ERROR block reading "Devspace ui requires an interactive terminal."</p>
+    <pre><code>   ERROR
+  Devspace ui requires an interactive terminal.
+rc=1</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: bare <code>devspace</code> unchanged</h2>
+    <p class="proves"><strong>What it proves:</strong> adding the subcommand did not change the root command's non-interactive help/exit behavior.</p>
+    <p class="matters"><strong>Why it matters:</strong> spec non-goal — bare <code>devspace</code> must stay script-safe; existing automation depends on it.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>bin/devspace</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> prints the standard root help ("Synchronize local developer workspace metadata …"), exactly as before.</p>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: unit + lifecycle tests</h2>
+    <p class="proves"><strong>What it proves:</strong> the model renders real scan data, navigation clamps correctly, quit works, and the program boots+exits headlessly.</p>
+    <p class="matters"><strong>Why it matters:</strong> these are the render/state-machine contracts; the headless smoke test (audit remediation) covers the real render + program lifecycle without teatest.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>go test ./internal/devspace -run 'TestDashboardInitialModelRendersScan|TestDashboardNavigateAndQuit|TestDashboardHeadlessRenderSmoke' -v</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> all 3 pass.</p>
+    <pre><code>Go test: 3 passed in 1 packages</code></pre>
+  </article>
+
+  <h2>Reviewer Conclusion</h2>
+  <p>The <code>devspace ui</code> command exists, is documented, renders real workspace state, and is script-safe (non-TTY guard + unchanged root). The render and program lifecycle are covered by automated tests. Task 01 is complete and verifiable.</p>
+</div>
+</body>
+</html>

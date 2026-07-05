@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-questions-1-tui-dashboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .question { margin: 1.5rem 0; }
+  .options { list-style:none; padding-left:0; }
+  .options li { padding:.3rem 0; }
+  .options li input[type="checkbox"] { margin-right:.5rem; }
+  .context-note, .recommend-note { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:.75rem 1rem; margin:.5rem 0; }
+  .why-list { margin:.5rem 0 0; }
+</style>
+</head>
+<body data-overall-status="answered">
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">Questions</span>
+    <h1>05 Questions Round 1 - TUI Dashboard</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Round 1 · Phase 1</p>
+  </header>
+
+  <p>Please answer each question below (select one or more options, or add your own notes). Feel free to add additional context under any question. If you are using Lavish Editor, reply/annotate directly in the interactive session; otherwise edit this file's checkboxes and notes, or answer in chat as instructed.</p>
+
+  <p>The dashboard's overall shape is already decided (from spec 04's review): a full-screen bubbletea v2 app with a project table (hydration/dirty/env state), a workspace status pane, live watch events, and safe actions only — scan, hydrate, plan, apply-safe. The three questions below are the remaining material sub-decisions. Implementation coding for this spec will be routed to Codex per the wave-5 execution decision.</p>
+
+  <div class="card" style="border-left:4px solid var(--pass);">
+    <strong>✅ ANSWERS RECORDED — gate cleared.</strong> Decisions: <strong>Q1 → (A) <code>devspace ui</code></strong>, <strong>Q2 → (D) hybrid</strong>, <strong>Q3 → (B) unit tests + vhs</strong> (overrules the recommended (C) — see the decision card under Q3). Spec 05 generation may proceed; Track B (spec 06) questions round can run in parallel. Per-question rationale is in the decision cards below.</div>
+
+  <section class="question" id="q1">
+    <h2>1. Command Name</h2>
+    <p>What should the dashboard subcommand be called?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" checked /> (A) <code>devspace ui</code> — short, conventional for "the interactive interface"</label></li>
+      <li><label><input type="checkbox" /> (B) <code>devspace tui</code> — explicit about being terminal-based</label></li>
+      <li><label><input type="checkbox" /> (C) <code>devspace dash</code> / <code>dashboard</code> — names the surface after what it shows</label></li>
+      <li><label><input type="checkbox" /> (D) <code>devspace</code> with no args launches the dashboard (root becomes interactive; help moves behind <code>--help</code>)</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> Charm-family CLIs generally keep the root command non-interactive (safe for scripts) and expose the TUI behind a short subcommand; <code>gh</code>'s ecosystem popularized <code>dash</code> as a separate extension name, while k9s-style tools own the whole binary. Option (D) would change the root command's scripted behavior and contradicts the spec-04 posture of script-safe defaults.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (A)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li><code>(A) ui</code> is the shortest name that stays accurate if the dashboard later gains non-dashboard panes (logs, conflicts from spec 06), whereas <code>(C)</code> narrows the name to one layout.</li>
+        <li><code>(B) tui</code> is developer-jargon accurate but reads worse in docs ("run devspace tui"); <code>(A)</code> reads naturally.</li>
+        <li><code>(D)</code> is rejected-by-default: it would break every script that runs bare <code>devspace</code> expecting help/exit-2 behavior, violating the script-compat posture locked in spec 04.</li>
+      </ul>
+    </div>
+    <div class="card" style="border-left:4px solid var(--pass);">
+      <strong>✅ DECISION (Jacob): (A) <code>devspace ui</code>.</strong> Non-breaking (bare <code>devspace</code> keeps help/exit-2), reads naturally in docs, and stays accurate if the dashboard later gains non-dashboard panes (e.g. spec 06 conflict view). Endorses the recommendation as-is.
+    </div>
+  </section>
+
+  <section class="question" id="q2">
+    <h2>2. Live Watch Pane Mechanism</h2>
+    <p>The decided shape includes "live watch events." How should the dashboard's live refresh work under the hood?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" /> (A) Embed the existing fsnotify watcher: run <code>WatchWorkspace</code> in a goroutine with <code>WatchOptions.OnRefresh</code> feeding tea messages; events pane shows real refreshes as they happen</label></li>
+      <li><label><input type="checkbox" /> (B) Periodic polling: a tea tick every N seconds triggers the same scoped refresh path, no fsnotify inside the TUI</label></li>
+      <li><label><input type="checkbox" /> (C) Manual refresh only: an <code>r</code> keybinding triggers a refresh; no background updates</label></li>
+      <li><label><input type="checkbox" checked /> (D) Hybrid: fsnotify (A) with a manual-refresh keybinding as fallback, and a <code>--no-watch</code> flag to degrade to (C)</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> The repo already has a debounced, ignore-rule-aware fsnotify pipeline (<code>watch.go</code>: <code>WatchWorkspace</code> + <code>OnRefresh</code> callback + scoped refresh) whose per-refresh <code>withAppLock</code> usage is the established cross-process-safety pattern; reusing it means the dashboard inherits debouncing, ignore rules, and lock discipline for free. A polling loop would duplicate that machinery.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (D)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li><code>(D)</code> reuses the proven watcher exactly as <code>(A)</code> does, but the manual-refresh key and <code>--no-watch</code> escape hatch cover environments where fsnotify is noisy or unavailable (huge workspaces, network filesystems).</li>
+        <li><code>(B)</code> discards the existing debounce/ignore machinery and burns scans on idle workspaces; <code>(C)</code> alone fails the already-decided "live watch events" requirement.</li>
+        <li>The lock question is the real risk either way: refreshes and dashboard actions must serialize through <code>withAppLock</code> (non-reentrant), so the spec will require a single action/refresh queue regardless of which option you pick.</li>
+      </ul>
+    </div>
+    <div class="card" style="border-left:4px solid var(--pass);">
+      <strong>✅ DECISION (Jacob): (D) hybrid — with a sharpened reuse seam.</strong> The reuse point is <code>RefreshWorkspaceForWatch(syncMode)</code> (<code>watch.go:48</code>), <em>not</em> <code>WatchWorkspace</code>: the latter owns its own loop and writes to an <code>io.Writer</code>, so it is not drop-in embeddable in the tea loop. Instead a small <code>tea.Cmd</code> owns an <code>fsnotify.Watcher</code>, reuses the existing <code>addWorkspaceWatches</code>/<code>watchEventRelevant</code> filters, and emits <code>WatchRefresh</code> as a <code>tea.Msg</code>. The <code>r</code> key calls <code>RefreshWorkspaceForWatch</code> directly (useful even when fsnotify is live); <code>--no-watch</code> skips spawning the watcher cmd. Polling deliberately dropped — <code>r</code> covers the manual case without a ticker. As the context note flags, all refresh + action Cmds must serialize through a single queue because <code>withAppLock</code> is non-reentrant.
+    </div>
+  </section>
+
+  <section class="question" id="q3">
+    <h2>3. Test Strategy for the Dashboard</h2>
+    <p>Spec 04's planning audit explicitly deferred the <code>teatest/v2</code> adoption decision to this spec, where it becomes load-bearing. How should the dashboard be tested?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" /> (A) Adopt <code>github.com/charmbracelet/x/exp/teatest/v2</code> as a test-only dependency: drive the full dashboard model headlessly (send messages, assert final frames/golden files)</label></li>
+      <li><label><input type="checkbox" checked /> (B) Unit-test the model's Update/View functions directly (plain Go tests, no teatest) + manual vhs recordings as the TTY evidence, like spec 04</label></li>
+      <li><label><input type="checkbox" /> (C) Both: teatest for interaction flows (navigate, trigger scan, see result), plain unit tests for pure state transitions, vhs for demo proof</label></li>
+      <li><label><input type="checkbox" /> (D) vhs-only evidence, no automated dashboard tests</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> <code>teatest/v2</code> is still under the experimental <code>x/exp</code> path (maintained — imports moved to charm.land in Mar 2026 — but never graduated), and its go.mod pins a bubbletea RC, so version friction is possible. However, a full-screen dashboard has far more interactive surface than spec 04's spinner/confirm, and the spec-04 audit's accepted risk ("manual evidence for TTY paths") was premised on that surface being tiny.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (C)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li>A dashboard's core logic is its message-driven state machine — <code>(C)</code> tests that both at the unit level (cheap, stable) and through real interaction flows (teatest), leaving vhs for what only a human needs to see.</li>
+        <li><code>(B)</code> repeats spec 04's accepted gap at 10x the surface area; the planning audit will likely FLAG it again, and this time the risk is real.</li>
+        <li><code>(A)</code> alone couples every assertion to rendered frames, which are brittle against theme/layout tweaks; keeping pure state-transition tests teatest-free limits that blast radius.</li>
+        <li>If teatest's RC pin causes dependency friction during implementation, the spec's escape hatch will be to drop to <code>(B)</code> for the affected flows and record the friction as a known limitation — you can pre-approve that fallback here.</li>
+      </ul>
+    </div>
+    <div class="card" style="border-left:4px solid var(--warn);">
+      <strong>⚠️ DECISION (Jacob): (B) — overrules the recommended (C). Do not adopt teatest.</strong>
+      <p>Grounded in <code>go.mod</code>: the app is on the <code>charm.land/*/v2</code> line (<code>bubbletea/v2 v2.0.8</code>, <code>bubbles/v2</code>, <code>lipgloss/v2</code>, <code>huh/v2</code>, <code>fang/v2</code>), and <code>teatest/v2</code> is still experimental (<code>x/exp</code>, never graduated) and pins a bubbletea RC — a live version-friction risk against our pinned v2 line, in exchange for brittle golden-frame assertions the recommendation itself concedes are fragile.</p>
+      <p>The dashboard's core logic <em>is</em> its message-driven state machine, and that is fully reachable without a framework: thread message <strong>sequences</strong> through <code>Update()</code> in plain Go tests to cover both pure state transitions <em>and</em> interaction flows (navigate → trigger scan → assert resulting model state) — more stable than golden frames. The action Cmds (scan/hydrate/plan/apply-safe) are thin wrappers over already-tested domain functions, so they need no new harness. <code>vhs</code> proves the TTY render for humans. This is exactly the fallback (C) already names — we land on it directly, eyes open. Revisit teatest only if/when a v2-native harness graduates.</p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

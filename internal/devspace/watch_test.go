@@ -35,6 +35,97 @@ func TestWatchEventFilteringPreservesIgnoreRules(t *testing.T) {
 	}
 }
 
+func TestWatchRegistryScopesToTrackedProjects(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	tracked := filepath.Join(workspace, "apps", "api")
+	if err := os.MkdirAll(filepath.Join(tracked, "pkg", "service"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	untracked := filepath.Join(workspace, "family-events", "family-events-mobile", "ios", "SourcePackages", "checkouts", "deep")
+	if err := os.MkdirAll(untracked, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = watcher.Close()
+	}()
+	registry := newWatchRegistry(watcher, workspace)
+
+	count, err := registry.sync([]string{"apps/api"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if count != len(registry.watched) {
+		t.Fatalf("count = %d, watched entries = %d", count, len(registry.watched))
+	}
+	for _, path := range []string{
+		workspace,
+		filepath.Join(workspace, "apps"),
+		tracked,
+		filepath.Join(tracked, "pkg"),
+		filepath.Join(tracked, "pkg", "service"),
+	} {
+		if !registry.watched[path] {
+			t.Fatalf("expected %s to be watched", path)
+		}
+	}
+	for _, path := range []string{
+		filepath.Join(workspace, "family-events"),
+		filepath.Join(workspace, "family-events", "family-events-mobile"),
+		untracked,
+	} {
+		if registry.watched[path] {
+			t.Fatalf("untracked sibling was watched: %s", path)
+		}
+	}
+}
+
+func TestWatchRegistryIgnoresGeneratedProjectTrees(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	project := filepath.Join(workspace, "apps", "api")
+	for _, dir := range []string{
+		filepath.Join(project, "Sources", "App"),
+		filepath.Join(project, ".build", "checkouts", "dependency"),
+		filepath.Join(project, ".swiftpm", "configuration"),
+		filepath.Join(project, "DerivedData", "Index"),
+		filepath.Join(project, "Index.noindex", "DataStore"),
+	} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = watcher.Close()
+	}()
+	registry := newWatchRegistry(watcher, workspace)
+
+	if _, err := registry.sync([]string{"apps/api"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !registry.watched[filepath.Join(project, "Sources", "App")] {
+		t.Fatal("regular project source directory was not watched")
+	}
+	for _, path := range []string{
+		filepath.Join(project, ".build"),
+		filepath.Join(project, ".swiftpm"),
+		filepath.Join(project, "DerivedData"),
+		filepath.Join(project, "Index.noindex"),
+	} {
+		if registry.watched[path] {
+			t.Fatalf("generated directory was watched: %s", path)
+		}
+	}
+}
+
 func TestRefreshWorkspaceForWatchDefaultsToLocalOnly(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	if err := os.MkdirAll(filepath.Join(workspace, "apps", "api"), 0o755); err != nil {
@@ -136,6 +227,9 @@ func TestWatchDiagnosticsAreLogfmtWhenPiped(t *testing.T) {
 	}
 	if !strings.Contains(out, "msg=\"refreshed workspace metadata\"") {
 		t.Fatalf("expected logfmt-formatted refresh message, got %q", out)
+	}
+	if !strings.Contains(out, "directories=") {
+		t.Fatalf("expected watched directory count in diagnostics, got %q", out)
 	}
 }
 

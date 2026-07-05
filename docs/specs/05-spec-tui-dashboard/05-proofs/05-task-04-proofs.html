@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-task-04-proofs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  article.artifact { margin: 2rem 0; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .proves, .matters, .result-summary { margin: .5rem 0; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">PROOFS</span>
+    <h1>Task 04 Proofs - Recording, docs, and verification gate</h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Task 04 · Phase 3</p>
+  </header>
+
+  <h2>Task Summary</h2>
+  <p>Produced the human-facing TTY proof (a vhs recording of the dashboard tour), documented <code>devspace ui</code> in the README, and confirmed the full local gate (<code>make verify</code> = test + vet + lint + vulncheck + build) is green with no regressions.</p>
+
+  <h2>What This Task Proves</h2>
+  <ul>
+    <li>The dashboard renders and responds to keys on a real terminal (recorded, sanitized temp workspace).</li>
+    <li>The command is documented per repo convention.</li>
+    <li>The whole repo gate passes: 210 tests, vet clean, lint 0 issues (gofmt + gosec), 0 vulnerabilities in called code, build OK.</li>
+  </ul>
+
+  <h2>Evidence Summary</h2>
+  <ul>
+    <li><code>05-ui-tour.gif</code> (1200×720) rendered from <code>05-ui-tour.tape</code> via vhs.</li>
+    <li><code>make verify</code> components all pass; full package = 210 tests.</li>
+    <li>README "Supported Commands" gains a <code>devspace ui</code> entry.</li>
+  </ul>
+
+  <article class="artifact">
+    <h2>Artifact: dashboard tour recording</h2>
+    <p class="proves"><strong>What it proves:</strong> the dashboard launches, renders the project table + summary + events, responds to navigation and a live refresh, and quits — on a real TTY, not just in unit tests.</p>
+    <p class="matters"><strong>Why it matters:</strong> this is the render/interaction path a human actually sees; per the decided test strategy (no teatest), vhs is the TTY-fidelity evidence complementing the <code>Update</code>-level tests.</p>
+    <p><strong>Artifact path:</strong> <code>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.gif</code></p>
+    <p class="result-summary"><strong>Result summary:</strong> the recording shows launch → navigate (j/k) → manual refresh (r) → scan (s) → quit (q) against a throwaway workspace with no real remotes, tokens, or secrets.</p>
+    <figure>
+      <img src="05-ui-tour.gif" alt="devspace ui dashboard tour: full-screen project table with status/dirty/branch/env columns, scan summary, events pane, responding to navigation, refresh, and scan keys before quitting" />
+      <figcaption>docs/specs/05-spec-tui-dashboard/05-proofs/05-ui-tour.gif</figcaption>
+    </figure>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: <code>make verify</code> gate</h2>
+    <p class="proves"><strong>What it proves:</strong> the feature passes the repo's full local gate with no regressions.</p>
+    <p class="matters"><strong>Why it matters:</strong> the Makefile gate (not the docs' shorter description) is authoritative and is what CI enforces; lint includes <code>gofmt -l cmd internal</code> empty + golangci-lint with gosec.</p>
+    <p><strong>Commands + results:</strong></p>
+    <p class="result-summary"><strong>Result summary:</strong> every gate step passes; the full package runs 210 tests green (200 pre-existing + 10 new dashboard tests).</p>
+    <pre><code>go test ./...        ->  ok  internal/devspace  (210 passed)
+go vet ./...         ->  clean
+golangci-lint run    ->  0 issues.
+gofmt -l cmd internal ->  (empty)
+govulncheck ./...    ->  No vulnerabilities found. 0 affecting called code.
+go build -trimpath -o bin/devspace ./cmd/devspace  ->  Success</code></pre>
+  </article>
+
+  <article class="artifact">
+    <h2>Artifact: README documentation</h2>
+    <p class="proves"><strong>What it proves:</strong> the new command is documented in the user-facing command reference.</p>
+    <p class="matters"><strong>Why it matters:</strong> AGENTS.md requires PRs to document user-visible changes; the README is the command's discoverable reference.</p>
+    <p><strong>Diff (<code>README.md</code>):</strong></p>
+    <p class="result-summary"><strong>Result summary:</strong> a <code>#### devspace ui</code> subsection was added under "Supported Commands".</p>
+    <pre><code>+#### `devspace ui`
++
++```bash
++devspace ui
++devspace ui --no-watch
++```
++
++Opens a full-screen workspace dashboard with project hydration, dirty, branch,
++env, scan summary, and recent refresh events. The dashboard exposes only safe
++actions: scan, plan, apply-safe, and hydrate selected. Use `--no-watch` to
++disable live filesystem watching and refresh manually with `r`.</code></pre>
+  </article>
+
+  <h2>Reviewer Conclusion</h2>
+  <p>The dashboard is proven on a real terminal (vhs), documented in the README, and passes the full authoritative gate with 210 tests and zero lint/vuln findings. Task 04 is complete; the feature is ready for validation.</p>
+</div>
+</body>
+</html>

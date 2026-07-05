@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>05-task-03-proofs</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  article.artifact { margin: 2rem 0; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+  .proves, .matters, .result-summary { margin: .5rem 0; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">PROOFS</span>
+    <h1>Task 03 Proofs - Live watch pane + manual refresh + <code>--no-watch</code></h1>
+    <p class="meta">Sequence 05 · Feature: tui-dashboard · Task 03 · Phase 3</p>
+  </header>
+
+  <h2>Task Summary</h2>
+  <p>Added a <code>tea.Cmd</code> that owns an <code>fsnotify.Watcher</code>, reuses the existing watch registry + <code>watchEventRelevant</code> filters, and emits debounced refreshes as <code>watchRefreshMsg</code> routed through the Task 02 lock boundary. Added an <code>r</code> force-refresh key, a <code>--no-watch</code> flag that skips the watcher, and a bounded (most-recent-first) live-events pane.</p>
+
+  <h2>What This Task Proves</h2>
+  <ul>
+    <li>A <code>watchRefreshMsg</code> updates the table + summary and prepends an events entry, then re-schedules the watcher.</li>
+    <li>The <code>r</code> key enqueues a refresh both with the watcher active and with <code>--no-watch</code> set.</li>
+    <li>With <code>--no-watch</code>, <code>Init</code> starts no watcher command.</li>
+    <li>The real watcher goroutine emits a refresh on an actual filesystem change (integration test, audit remediation).</li>
+  </ul>
+
+  <h2>Evidence Summary</h2>
+  <ul>
+    <li>4 tests pass: watch-refresh model update, manual <code>r</code> (both watch modes), <code>--no-watch</code> disables the watcher, and the real-fsnotify end-to-end integration test.</li>
+    <li><code>--no-watch</code> is documented in <code>ui --help</code> (see Task 01 proof).</li>
+  </ul>
+
+  <article class="artifact">
+    <h2>Artifact: watch + refresh tests</h2>
+    <p class="proves"><strong>What it proves:</strong> the live-refresh state machine, the manual refresh key, the <code>--no-watch</code> escape hatch, and the real fsnotify goroutine all work.</p>
+    <p class="matters"><strong>Why it matters:</strong> <code>TestDashboardWatcherEmitsRefreshOnFileChange</code> (audit remediation) is the only test that exercises the real fsnotify goroutine end-to-end — it starts the watch cmd against a temp workspace, writes a file under the watched root, and asserts a <code>watchRefreshMsg</code> arrives within a timeout. It <code>t.Skip</code>s cleanly where fsnotify is unavailable.</p>
+    <p><strong>Command:</strong></p>
+    <pre><code>go test ./internal/devspace -run 'TestDashboardWatchRefreshUpdatesModel|TestDashboardManualRefreshKey|TestDashboardNoWatchDisablesWatcher|TestDashboardWatcherEmitsRefreshOnFileChange' -v</code></pre>
+    <p class="result-summary"><strong>Result summary:</strong> all 4 pass, including the real-fsnotify integration test.</p>
+    <pre><code>Go test: 4 passed in 1 packages</code></pre>
+  </article>
+
+  <h2>Reviewer Conclusion</h2>
+  <p>Live refresh is wired through the shared lock boundary, the manual <code>r</code> key and <code>--no-watch</code> fallback both work, and the real watcher goroutine is covered by an integration test — closing the coverage gap the planning audit flagged. Task 03 is complete and verifiable.</p>
+</div>
+</body>
+</html>
