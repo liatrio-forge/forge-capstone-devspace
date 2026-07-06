@@ -31,7 +31,7 @@ DevSpace keeps a developer workspace structurally aligned across machines by tra
 
 ---
 
-## 🚀 Overview
+## Overview
 
 ### Current MVP Status
 
@@ -67,19 +67,19 @@ go run ./cmd/devspace --help
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 DevSpace respects the following environment variables to configure its runtime behavior:
 
 | Variable | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `DEVSPACE_HOME` | The root directory for DevSpace application data, configuration, and state. Defaults to `~/.devspace`. |
 | `DEV_DROP_HOME` | Deprecated fallback alias for `DEVSPACE_HOME`. Maintained for backward compatibility. |
 | `DEVSPACE_HOSTED_TOKEN` | Bearer token used for hosted sync authentication. Prefer this over the `--token` CLI flag to prevent the token from appearing in shell history or process listings. |
 
 ---
 
-## 📦 Release Packaging
+## Release Packaging
 
 Releases are automated with GoReleaser: pushing a `v*` tag publishes a GitHub Release with prebuilt `devspace` archives for Linux and macOS (amd64/arm64), SHA256 checksums, and build-provenance attestation. Download archives from the [releases page](https://github.com/liatrio-forge/devdrop-capstone/releases) and verify them with `sha256sum -c` and `gh attestation verify`.
 
@@ -93,13 +93,13 @@ See [`docs/operations/release.md`](docs/operations/release.md) for the full rele
 
 ---
 
-## 🎓 Capstone Artifacts
+## Capstone Artifacts
 
 This repository is being prepared as a Liatrio Forge Module 5 capstone. See [`docs/capstone/README.md`](docs/capstone/README.md) for the capstone spec, proof checklist, case study, demo script, and playbook contribution. Open [`docs/capstone/index.html`](docs/capstone/index.html) for an interactive HTML reader generated from the repository Markdown.
 
 ---
 
-## 🛠️ Supported Commands
+## Supported Commands
 
 Output is styled (color, headers, tables) when stdout is a terminal, and automatically falls back to plain text when piped, redirected, or when `NO_COLOR`/`CLICOLOR_FORCE=0` is set. Pass the persistent `--no-color` flag to force plain output on any command regardless of terminal capability. Commands that support `--json` (`status`, `doctor`, `workspace diff`, `mount --preview`, `plan`, `setup plan`) always emit clean JSON with no ANSI content.
 
@@ -287,7 +287,7 @@ Reviews and executes dependency setup hints captured by `scan`.
 
 ---
 
-## 🔄 Example Workflows
+## Example Workflows
 
 ### Local Workflow (No Network Required)
 
@@ -335,7 +335,7 @@ bin/devspace status
 
 ---
 
-## 🛡️ Architecture & Safety
+## Architecture & Safety
 
 ### Safety Guarantees
 
@@ -366,7 +366,7 @@ Manifest sync stops with a clear error when:
 
 ---
 
-## ⚠️ Troubleshooting & Limitations
+## Troubleshooting & Limitations
 
 ### Known Limitations
 
@@ -388,7 +388,7 @@ On first run, an existing `~/.devdrop` application home is automatically migrate
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - Per-project conflict choices in `workspace reconcile` (global resolution and `--force-local` / `--force-remote` shipped).
 - Hosted sync: grow the shipped prototype into a managed service.
@@ -399,6 +399,6 @@ On first run, an existing `~/.devdrop` application home is automatically migrate
 
 ---
 
-## 📄 Manifest Structure
+## Manifest Structure
 
 See [`examples/manifest.json`](examples/manifest.json). The manifest is a versioned JSON file stored at `<workspace>/.devspace/manifest.json`. Project paths are always relative to the workspace root.
