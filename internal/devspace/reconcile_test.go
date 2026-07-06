@@ -2,6 +2,7 @@ package devspace
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -37,7 +38,7 @@ func TestReconcileMergeCases(t *testing.T) {
 			local:        local,
 			remote:       testMergeManifest(user, []Project{baseProject, remoteProject}, []ProjectAccess{baseAccess}),
 			wantProjects: []Project{baseProject, remoteProject},
-			wantOps:      []ReconcileOp{{Action: "added", Kind: "project", Key: remoteProject.ID}},
+			wantOps:      []ReconcileOp{{Action: "added", Kind: "project", Key: remoteProject.Path}},
 		},
 		{
 			name:         "remove-one-side",
@@ -45,7 +46,7 @@ func TestReconcileMergeCases(t *testing.T) {
 			local:        local,
 			remote:       testMergeManifest(user, nil, nil),
 			wantProjects: nil,
-			wantOps:      []ReconcileOp{{Action: "removed", Kind: "project", Key: baseProject.ID}, {Action: "removed", Kind: "access", Key: accessKey(baseAccess)}},
+			wantOps:      []ReconcileOp{{Action: "removed", Kind: "project", Key: baseProject.Path}, {Action: "removed", Kind: "access", Key: accessKey(baseAccess)}},
 		},
 		{
 			name:         "change-one-side",
@@ -53,7 +54,7 @@ func TestReconcileMergeCases(t *testing.T) {
 			local:        local,
 			remote:       testMergeManifest(user, []Project{withMergeRemote(baseProject, "git@example.com:team/app.git")}, []ProjectAccess{baseAccess}),
 			wantProjects: []Project{withMergeRemote(baseProject, "git@example.com:team/app.git")},
-			wantOps:      []ReconcileOp{{Action: "changed", Kind: "project", Key: baseProject.ID}},
+			wantOps:      []ReconcileOp{{Action: "changed", Kind: "project", Key: baseProject.Path}},
 		},
 		{
 			name:          "change-both-different",
@@ -85,7 +86,7 @@ func TestReconcileMergeCases(t *testing.T) {
 			local:        testMergeManifest(user, []Project{localProject}, nil),
 			remote:       testMergeManifest(user, []Project{remoteProject}, nil),
 			wantProjects: []Project{localProject, remoteProject},
-			wantOps:      []ReconcileOp{{Action: "added", Kind: "project", Key: remoteProject.ID}},
+			wantOps:      []ReconcileOp{{Action: "added", Kind: "project", Key: remoteProject.Path}},
 			wantTwoWay:   true,
 		},
 		{
@@ -335,6 +336,252 @@ func TestWorkspaceReconcileConflictBlocksApply(t *testing.T) {
 		t.Fatalf("force local project name = %q", appliedLocal.Projects[0].Name)
 	}
 }
+
+func TestReconcileSamePathDifferentIDConflict(t *testing.T) {
+	user := reconcileUser()
+	localProject := testMergeProject("project_local", "apps/app")
+	remoteProject := testMergeProject("project_remote", "apps/app")
+	local := testMergeManifest(user, []Project{localProject}, nil)
+	remote := testMergeManifest(user, []Project{remoteProject}, nil)
+	emptyBase := testMergeManifest(user, nil, nil)
+
+	cases := []struct {
+		name string
+		base *Manifest
+	}{
+		{name: "three-way", base: &emptyBase},
+		{name: "two-way", base: nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := reconcileManifests(tc.base, local, remote)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Conflicts) != 1 {
+				t.Fatalf("conflicts = %+v, want 1", result.Conflicts)
+			}
+			conflict := result.Conflicts[0]
+			if conflict.Entity != "project" || conflict.Key != "apps/app" || conflict.Field != "id" {
+				t.Fatalf("conflict = %+v, want project apps/app id", conflict)
+			}
+			forcedLocal := forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, "local")
+			if err := ValidateManifest(forcedLocal); err != nil {
+				t.Fatalf("force local failed validation: %v", err)
+			}
+			if len(forcedLocal.Projects) != 1 || forcedLocal.Projects[0].ID != localProject.ID {
+				t.Fatalf("force local projects = %+v", forcedLocal.Projects)
+			}
+			forcedRemote := forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, "remote")
+			if err := ValidateManifest(forcedRemote); err != nil {
+				t.Fatalf("force remote failed validation: %v", err)
+			}
+			if len(forcedRemote.Projects) != 1 || forcedRemote.Projects[0].ID != remoteProject.ID {
+				t.Fatalf("force remote projects = %+v", forcedRemote.Projects)
+			}
+		})
+	}
+}
+
+func TestReconcileUserTeamRemoteOnlyChangeMerges(t *testing.T) {
+	user := reconcileUser()
+	rotated := user
+	rotated.AgeRecipient = reconcileRotatedRecipient
+	team := Team{ID: "team_1", Name: "Core", CreatedAt: "2026-01-01T00:00:00Z"}
+	renamedTeam := team
+	renamedTeam.Name = "Platform"
+
+	base := testMergeManifest(user, nil, nil)
+	base.Teams = []Team{team}
+	local := base
+	remote := testMergeManifest(rotated, nil, nil)
+	remote.Teams = []Team{renamedTeam}
+
+	result, err := reconcileManifests(&base, local, remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Conflicts) != 0 {
+		t.Fatalf("conflicts = %+v, want none", result.Conflicts)
+	}
+	if len(result.Merged.Users) != 1 || result.Merged.Users[0].AgeRecipient != reconcileRotatedRecipient {
+		t.Fatalf("merged users = %+v, want rotated recipient", result.Merged.Users)
+	}
+	if len(result.Merged.Teams) != 1 || result.Merged.Teams[0].Name != "Platform" {
+		t.Fatalf("merged teams = %+v, want renamed team", result.Merged.Teams)
+	}
+	wantOps := []ReconcileOp{
+		{Action: "changed", Kind: "user", Key: user.ID},
+		{Action: "changed", Kind: "team", Key: team.ID},
+	}
+	if !reflect.DeepEqual(result.Ops, wantOps) {
+		t.Fatalf("ops = %+v, want %+v", result.Ops, wantOps)
+	}
+}
+
+func TestReconcileUserBothChangedConflict(t *testing.T) {
+	user := reconcileUser()
+	localUser := user
+	localUser.Name = "Local Name"
+	remoteUser := user
+	remoteUser.AgeRecipient = reconcileRotatedRecipient
+
+	base := testMergeManifest(user, nil, nil)
+	local := testMergeManifest(localUser, nil, nil)
+	remote := testMergeManifest(remoteUser, nil, nil)
+
+	result, err := reconcileManifests(&base, local, remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Conflicts) != 1 {
+		t.Fatalf("conflicts = %+v, want 1", result.Conflicts)
+	}
+	conflict := result.Conflicts[0]
+	if conflict.Entity != "user" || conflict.Key != user.ID {
+		t.Fatalf("conflict = %+v, want user %s", conflict, user.ID)
+	}
+	forced := forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, "remote")
+	if err := ValidateManifest(forced); err != nil {
+		t.Fatalf("force remote failed validation: %v", err)
+	}
+	if !reflect.DeepEqual(forced.Users, []User{remoteUser}) {
+		t.Fatalf("forced users = %+v, want %+v", forced.Users, remoteUser)
+	}
+}
+
+func TestReconcileTwoWayUserConflict(t *testing.T) {
+	user := reconcileUser()
+	remoteUser := user
+	remoteUser.Name = "Remote Name"
+
+	result, err := reconcileManifests(nil, testMergeManifest(user, nil, nil), testMergeManifest(remoteUser, nil, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.TwoWay {
+		t.Fatal("expected two-way mode")
+	}
+	if len(result.Conflicts) != 1 {
+		t.Fatalf("conflicts = %+v, want 1", result.Conflicts)
+	}
+	conflict := result.Conflicts[0]
+	if conflict.Entity != "user" || conflict.Key != user.ID || conflict.Field != "*" {
+		t.Fatalf("conflict = %+v, want user %s *", conflict, user.ID)
+	}
+}
+
+func TestWorkspaceReconcileJSONOutput(t *testing.T) {
+	root := t.TempDir()
+	remote := workspaceSyncBareRepo(t)
+	workspaceA := filepath.Join(root, "machine-a", "code")
+	workspaceB := filepath.Join(root, "machine-b", "code")
+	homeA := filepath.Join(root, "home-a")
+	homeB := filepath.Join(root, "home-b")
+
+	t.Setenv(envHome, homeA)
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspaceA, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspaceA,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeB)
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PullWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+	remoteManifest, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remoteManifest.Projects[0].Name = "remote-app"
+	if err := SaveManifest(workspaceB, remoteManifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeA)
+	localManifest, err := LoadManifest(workspaceA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	localManifest.Projects[0].Name = "local-app"
+	if err := SaveManifest(workspaceA, localManifest); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, _, err := executeCommand(t, "test", "workspace", "reconcile", "--json")
+	if err != nil {
+		t.Fatalf("reconcile --json error: %v", err)
+	}
+	var plan map[string]any
+	if err := json.Unmarshal([]byte(stdout), &plan); err != nil {
+		t.Fatalf("unmarshal reconcile --json output: %v\n%s", err, stdout)
+	}
+	if plan["backend"] != "git" {
+		t.Fatalf("backend = %v, want git", plan["backend"])
+	}
+	hash, _ := plan["manifestHash"].(string)
+	if hash == "" {
+		t.Fatalf("manifestHash missing in %s", stdout)
+	}
+	if _, ok := plan["merged"].(map[string]any); !ok {
+		t.Fatalf("merged missing in %s", stdout)
+	}
+	conflicts, _ := plan["conflicts"].([]any)
+	if len(conflicts) != 1 {
+		t.Fatalf("conflicts = %v, want 1", plan["conflicts"])
+	}
+	conflict, _ := conflicts[0].(map[string]any)
+	if conflict["entity"] != "project" || conflict["key"] != "apps/app" || conflict["field"] != "*" {
+		t.Fatalf("conflict = %v, want camelCase project/apps/app/*", conflict)
+	}
+	for _, want := range []string{"ours", "theirs"} {
+		if value, _ := conflict[want].(string); value == "" {
+			t.Fatalf("conflict %q missing in %v", want, conflict)
+		}
+	}
+	for _, stale := range []string{"Entity", "Key", "Field", "Ours", "Theirs"} {
+		if _, ok := conflict[stale]; ok {
+			t.Fatalf("conflict still serializes PascalCase key %q: %v", stale, conflict)
+		}
+	}
+}
+
+func TestReconcileForceFlagsMutuallyExclusive(t *testing.T) {
+	t.Setenv(envHome, t.TempDir())
+	for _, args := range [][]string{
+		{"workspace", "reconcile", "--force-local", "--force-remote"},
+		{"hosted", "reconcile", "--force-local", "--force-remote"},
+	} {
+		if _, _, err := executeCommand(t, "test", args...); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+			t.Fatalf("%v error = %v, want mutual exclusion error", args, err)
+		}
+	}
+}
+
+// reconcileRotatedRecipient is a second valid age X25519 recipient used to
+// simulate key rotation in merge tests.
+const reconcileRotatedRecipient = "age1neneutt8fuj4hsm8fwj6943g3c2hg790tlf2j5k4wz2vydcfhcvsslmu07"
 
 func reconcileUser() User {
 	return User{

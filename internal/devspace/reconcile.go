@@ -75,9 +75,19 @@ func reconcileTwoWay(local, remote Manifest) (ReconcileResult, error) {
 	conflicts = append(conflicts, projectConflicts...)
 	merged.Projects = projects
 
-	access, accessConflicts := twoWayAccessRecords(local.Access, remote.Access)
+	access, accessConflicts := twoWayRecordSection("access", local.Access, remote.Access, accessKey)
 	conflicts = append(conflicts, accessConflicts...)
 	merged.Access = access
+
+	// ponytail: users/teams merge at whole-record granularity, same shortcut as
+	// the three-way engine; upgrade to per-field merging if needed.
+	users, userConflicts := twoWayRecordSection("user", local.Users, remote.Users, userID)
+	conflicts = append(conflicts, userConflicts...)
+	merged.Users = users
+
+	teams, teamConflicts := twoWayRecordSection("team", local.Teams, remote.Teams, teamID)
+	conflicts = append(conflicts, teamConflicts...)
+	merged.Teams = teams
 
 	if len(conflicts) == 0 {
 		if err := ValidateManifest(merged); err != nil {
@@ -87,111 +97,83 @@ func reconcileTwoWay(local, remote Manifest) (ReconcileResult, error) {
 	return ReconcileResult{Merged: merged, Conflicts: conflicts, TwoWay: true}, nil
 }
 
+// twoWayProjectRecords keys by Path (see mergeProjectRecords) and flags a
+// same-path/different-ID pair as an "id" conflict.
 func twoWayProjectRecords(local, remote []Project) ([]Project, []MergeConflict) {
-	localByID := projectByID(local)
-	remoteByID := projectByID(remote)
-	keys := map[string]bool{}
-	for key := range localByID {
-		keys[key] = true
-	}
-	for key := range remoteByID {
-		keys[key] = true
-	}
-	merged := make([]Project, 0, len(keys))
-	var conflicts []MergeConflict
-	for _, key := range sortedKeys(keys) {
-		localProject, inLocal := localByID[key]
-		remoteProject, inRemote := remoteByID[key]
-		switch {
-		case inLocal && inRemote:
-			merged = append(merged, localProject)
-			if !reflect.DeepEqual(localProject, remoteProject) {
-				conflicts = append(conflicts, MergeConflict{Entity: "project", Key: key, Field: "*", Ours: fmt.Sprintf("%+v", localProject), Theirs: fmt.Sprintf("%+v", remoteProject)})
-			}
-		case inLocal:
-			merged = append(merged, localProject)
-		case inRemote:
-			merged = append(merged, remoteProject)
+	merged, conflicts := twoWayRecordSection("project", local, remote, projectPath)
+	localByPath := projectByPath(local)
+	remoteByPath := projectByPath(remote)
+	for i, conflict := range conflicts {
+		if localByPath[conflict.Key].ID != remoteByPath[conflict.Key].ID {
+			conflicts[i].Field = "id"
 		}
 	}
-	sortProjects(merged)
 	return merged, conflicts
 }
 
-func twoWayAccessRecords(local, remote []ProjectAccess) ([]ProjectAccess, []MergeConflict) {
-	localByKey := accessByKey(local)
-	remoteByKey := accessByKey(remote)
+func twoWayRecordSection[T any](entity string, local, remote []T, key func(T) string) ([]T, []MergeConflict) {
+	localByKey := recordsByKey(local, key)
+	remoteByKey := recordsByKey(remote, key)
 	keys := map[string]bool{}
-	for key := range localByKey {
-		keys[key] = true
+	for k := range localByKey {
+		keys[k] = true
 	}
-	for key := range remoteByKey {
-		keys[key] = true
+	for k := range remoteByKey {
+		keys[k] = true
 	}
-	merged := make([]ProjectAccess, 0, len(keys))
+	var merged []T
 	var conflicts []MergeConflict
-	for _, key := range sortedKeys(keys) {
-		localAccess, inLocal := localByKey[key]
-		remoteAccess, inRemote := remoteByKey[key]
+	for _, k := range sortedKeys(keys) {
+		localRecord, inLocal := localByKey[k]
+		remoteRecord, inRemote := remoteByKey[k]
 		switch {
 		case inLocal && inRemote:
-			merged = append(merged, localAccess)
-			if !reflect.DeepEqual(localAccess, remoteAccess) {
-				conflicts = append(conflicts, MergeConflict{Entity: "access", Key: key, Field: "*", Ours: fmt.Sprintf("%+v", localAccess), Theirs: fmt.Sprintf("%+v", remoteAccess)})
+			merged = append(merged, localRecord)
+			if !reflect.DeepEqual(localRecord, remoteRecord) {
+				conflicts = append(conflicts, MergeConflict{Entity: entity, Key: k, Field: "*", Ours: fmt.Sprintf("%+v", localRecord), Theirs: fmt.Sprintf("%+v", remoteRecord)})
 			}
 		case inLocal:
-			merged = append(merged, localAccess)
+			merged = append(merged, localRecord)
 		case inRemote:
-			merged = append(merged, remoteAccess)
+			merged = append(merged, remoteRecord)
 		}
 	}
-	sortAccess(merged)
+	slices.SortFunc(merged, func(a, b T) int {
+		return strings.Compare(key(a), key(b))
+	})
 	return merged, conflicts
 }
 
 func diffReconcileOps(local, merged Manifest) []ReconcileOp {
 	var ops []ReconcileOp
-	localProjects := projectByID(local.Projects)
-	mergedProjects := projectByID(merged.Projects)
-	projectKeys := map[string]bool{}
-	for key := range localProjects {
-		projectKeys[key] = true
-	}
-	for key := range mergedProjects {
-		projectKeys[key] = true
-	}
-	for _, key := range sortedKeys(projectKeys) {
-		localProject, inLocal := localProjects[key]
-		mergedProject, inMerged := mergedProjects[key]
-		switch {
-		case !inLocal && inMerged:
-			ops = append(ops, ReconcileOp{Action: "added", Kind: "project", Key: key})
-		case inLocal && !inMerged:
-			ops = append(ops, ReconcileOp{Action: "removed", Kind: "project", Key: key})
-		case inLocal && inMerged && !reflect.DeepEqual(localProject, mergedProject):
-			ops = append(ops, ReconcileOp{Action: "changed", Kind: "project", Key: key})
-		}
-	}
+	ops = append(ops, diffRecordOps("project", local.Projects, merged.Projects, projectPath)...)
+	ops = append(ops, diffRecordOps("access", local.Access, merged.Access, accessKey)...)
+	ops = append(ops, diffRecordOps("user", local.Users, merged.Users, userID)...)
+	ops = append(ops, diffRecordOps("team", local.Teams, merged.Teams, teamID)...)
+	return ops
+}
 
-	localAccess := accessByKey(local.Access)
-	mergedAccess := accessByKey(merged.Access)
-	accessKeys := map[string]bool{}
-	for key := range localAccess {
-		accessKeys[key] = true
+func diffRecordOps[T any](kind string, local, merged []T, key func(T) string) []ReconcileOp {
+	localByKey := recordsByKey(local, key)
+	mergedByKey := recordsByKey(merged, key)
+	keys := map[string]bool{}
+	for k := range localByKey {
+		keys[k] = true
 	}
-	for key := range mergedAccess {
-		accessKeys[key] = true
+	for k := range mergedByKey {
+		keys[k] = true
 	}
-	for _, key := range sortedKeys(accessKeys) {
-		localGrant, inLocal := localAccess[key]
-		mergedGrant, inMerged := mergedAccess[key]
+	var ops []ReconcileOp
+	for _, k := range sortedKeys(keys) {
+		localRecord, inLocal := localByKey[k]
+		mergedRecord, inMerged := mergedByKey[k]
 		switch {
 		case !inLocal && inMerged:
-			ops = append(ops, ReconcileOp{Action: "added", Kind: "access", Key: key})
+			ops = append(ops, ReconcileOp{Action: "added", Kind: kind, Key: k})
 		case inLocal && !inMerged:
-			ops = append(ops, ReconcileOp{Action: "removed", Kind: "access", Key: key})
-		case inLocal && inMerged && !reflect.DeepEqual(localGrant, mergedGrant):
-			ops = append(ops, ReconcileOp{Action: "changed", Kind: "access", Key: key})
+			ops = append(ops, ReconcileOp{Action: "removed", Kind: kind, Key: k})
+		case inLocal && inMerged && !reflect.DeepEqual(localRecord, mergedRecord):
+			ops = append(ops, ReconcileOp{Action: "changed", Kind: kind, Key: k})
 		}
 	}
 	return ops
@@ -296,7 +278,7 @@ func ReconcileWorkspaceManifest(force string, apply bool) (ReconcilePlan, error)
 	if err := SaveManifest(cfg.WorkspaceRoot, plan.Merged); err != nil {
 		return ReconcilePlan{}, err
 	}
-	if err := recordBaseManifest(plan.Merged); err != nil {
+	if err := recordBaseManifest(manifestForSync(plan.Merged)); err != nil {
 		return ReconcilePlan{}, err
 	}
 	return plan, nil
@@ -471,47 +453,50 @@ func reconcileGitRemoteSource(cfg Config) ReconcileRemoteSource {
 }
 
 func forceReconcileConflicts(merged Manifest, conflicts []MergeConflict, local, remote Manifest, force string) Manifest {
-	projects := projectByID(merged.Projects)
+	projects := projectByPath(merged.Projects)
 	access := accessByKey(merged.Access)
-	localProjects := projectByID(local.Projects)
-	remoteProjects := projectByID(remote.Projects)
-	localAccess := accessByKey(local.Access)
-	remoteAccess := accessByKey(remote.Access)
+	users := recordsByKey(merged.Users, userID)
+	teams := recordsByKey(merged.Teams, teamID)
 	for _, conflict := range conflicts {
 		switch conflict.Entity {
 		case "project":
-			source := localProjects
-			if force == "remote" {
-				source = remoteProjects
-			}
-			if project, ok := source[conflict.Key]; ok {
-				projects[conflict.Key] = project
-			} else {
-				delete(projects, conflict.Key)
-			}
+			forceResolveRecord(projects, projectByPath(local.Projects), projectByPath(remote.Projects), conflict.Key, force)
 		case "access":
-			source := localAccess
-			if force == "remote" {
-				source = remoteAccess
-			}
-			if grant, ok := source[conflict.Key]; ok {
-				access[conflict.Key] = grant
-			} else {
-				delete(access, conflict.Key)
-			}
+			forceResolveRecord(access, accessByKey(local.Access), accessByKey(remote.Access), conflict.Key, force)
+		case "user":
+			forceResolveRecord(users, recordsByKey(local.Users, userID), recordsByKey(remote.Users, userID), conflict.Key, force)
+		case "team":
+			forceResolveRecord(teams, recordsByKey(local.Teams, teamID), recordsByKey(remote.Teams, teamID), conflict.Key, force)
 		}
 	}
-	merged.Projects = make([]Project, 0, len(projects))
-	for _, project := range projects {
-		merged.Projects = append(merged.Projects, project)
-	}
-	sortProjects(merged.Projects)
-	merged.Access = make([]ProjectAccess, 0, len(access))
-	for _, grant := range access {
-		merged.Access = append(merged.Access, grant)
-	}
-	sortAccess(merged.Access)
+	merged.Projects = sortedRecordSlice(projects, projectPath)
+	merged.Access = sortedRecordSlice(access, accessKey)
+	merged.Users = sortedRecordSlice(users, userID)
+	merged.Teams = sortedRecordSlice(teams, teamID)
 	return merged
+}
+
+func forceResolveRecord[T any](records, localRecords, remoteRecords map[string]T, key, force string) {
+	source := localRecords
+	if force == "remote" {
+		source = remoteRecords
+	}
+	if record, ok := source[key]; ok {
+		records[key] = record
+	} else {
+		delete(records, key)
+	}
+}
+
+func sortedRecordSlice[T any](records map[string]T, key func(T) string) []T {
+	var out []T
+	for _, record := range records {
+		out = append(out, record)
+	}
+	slices.SortFunc(out, func(a, b T) int {
+		return strings.Compare(key(a), key(b))
+	})
+	return out
 }
 
 func formatReconcileConflictErrors(conflicts []MergeConflict) string {
@@ -540,16 +525,4 @@ func LoadReconcilePlan() (ReconcilePlan, error) {
 		return plan, err
 	}
 	return plan, nil
-}
-
-func sortProjects(projects []Project) {
-	slices.SortFunc(projects, func(a, b Project) int {
-		return strings.Compare(a.Path, b.Path)
-	})
-}
-
-func sortAccess(access []ProjectAccess) {
-	slices.SortFunc(access, func(a, b ProjectAccess) int {
-		return strings.Compare(accessKey(a), accessKey(b))
-	})
 }

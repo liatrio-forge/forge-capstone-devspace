@@ -133,7 +133,7 @@ func TestMergeManifests(t *testing.T) {
 			},
 			wantConflicts: 2,
 			wantConflict: []MergeConflict{
-				{Entity: "project", Key: baseProject.ID, Field: "*"},
+				{Entity: "project", Key: baseProject.Path, Field: "*"},
 				{Entity: "access", Key: baseProject.ID + "\x00" + user.ID + "\x00", Field: "*"},
 			},
 		},
@@ -158,7 +158,7 @@ func TestMergeManifests(t *testing.T) {
 			},
 			wantConflicts: 2,
 			wantConflict: []MergeConflict{
-				{Entity: "project", Key: baseProject.ID, Field: "*"},
+				{Entity: "project", Key: baseProject.Path, Field: "*"},
 				{Entity: "access", Key: baseProject.ID + "\x00" + user.ID + "\x00", Field: "*"},
 			},
 		},

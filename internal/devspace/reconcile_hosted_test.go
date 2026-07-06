@@ -2,10 +2,13 @@ package devspace
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -304,5 +307,155 @@ func TestHostedReconcileUpdatesBaseOnSuccess(t *testing.T) {
 	want := manifestForSync(plan.Merged)
 	if !reflect.DeepEqual(base, want) {
 		t.Fatalf("base manifest = %+v, want %+v", base, want)
+	}
+}
+
+func TestHostedReconcileUserConflictDoesNotClobberServer(t *testing.T) {
+	root := t.TempDir()
+	server := hostedSyncTestServer(t)
+	workspaceA := filepath.Join(root, "machine-a", "code")
+	workspaceB := filepath.Join(root, "machine-b", "code")
+	homeA := filepath.Join(root, "home-a")
+	homeB := filepath.Join(root, "home-b")
+	user := reconcileUser()
+
+	t.Setenv(envHome, homeA)
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetHostedSync(server.URL, "test-token", "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspaceA, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspaceA,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+		Users:         []User{user},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushHostedManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeB)
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetHostedSync(server.URL, "test-token", "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PullHostedManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeA)
+	remoteManifest, err := LoadManifest(workspaceA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remoteManifest.Users[0].AgeRecipient = reconcileRotatedRecipient
+	if err := SaveManifest(workspaceA, remoteManifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushHostedManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeB)
+	localManifest, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	localManifest.Users[0].Name = "Renamed Locally"
+	if err := SaveManifest(workspaceB, localManifest); err != nil {
+		t.Fatal(err)
+	}
+	beforeRemote := hostedSyncGet(t, server.URL, "team-a")
+
+	plan, err := ReconcileHostedManifest("", true)
+	if err == nil || !strings.Contains(err.Error(), "unresolved reconcile conflicts") {
+		t.Fatalf("apply conflict error = %v", err)
+	}
+	if len(plan.Conflicts) != 1 || plan.Conflicts[0].Entity != "user" || plan.Conflicts[0].Key != user.ID {
+		t.Fatalf("conflicts = %+v, want one user conflict", plan.Conflicts)
+	}
+	afterRemote := hostedSyncGet(t, server.URL, "team-a")
+	if !reflect.DeepEqual(afterRemote, beforeRemote) {
+		t.Fatalf("blocked reconcile changed server users: before=%+v after=%+v", beforeRemote, afterRemote)
+	}
+
+	if _, err := ReconcileHostedManifest("local", true); err != nil {
+		t.Fatal(err)
+	}
+	forced := hostedSyncGet(t, server.URL, "team-a")
+	if len(forced.Manifest.Users) != 1 {
+		t.Fatalf("server users = %+v", forced.Manifest.Users)
+	}
+	got := forced.Manifest.Users[0]
+	if got.Name != "Renamed Locally" || got.AgeRecipient != user.AgeRecipient {
+		t.Fatalf("force local server user = %+v, want local record", got)
+	}
+	applied, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(applied.Users, forced.Manifest.Users) {
+		t.Fatalf("local users = %+v, server users = %+v", applied.Users, forced.Manifest.Users)
+	}
+}
+
+func TestHostedReconcileHashGuardRefusesApply(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "code")
+	inner, err := NewHostedSyncServer(HostedSyncServerOptions{StoreDir: t.TempDir(), Token: "test-token"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// While enabled, every GET mutates the workspace manifest before responding,
+	// simulating a concurrent local edit between plan generation and apply.
+	var mutate atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && mutate.Load() {
+			m, loadErr := LoadManifest(workspace)
+			if loadErr != nil {
+				t.Error(loadErr)
+			} else {
+				m.Projects = append(m.Projects, hardeningProject("apps/raced", ProjectTypeLocal, ""))
+				if saveErr := SaveManifest(workspace, m); saveErr != nil {
+					t.Error(saveErr)
+				}
+			}
+		}
+		inner.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+
+	t.Setenv(envHome, t.TempDir())
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetHostedSync(server.URL, "test-token", "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/base", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushHostedManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	mutate.Store(true)
+	if _, err := ReconcileHostedManifest("", true); err == nil || !strings.Contains(err.Error(), "manifest changed since reconcile was generated") {
+		t.Fatalf("hash guard error = %v", err)
+	}
+	mutate.Store(false)
+	envelope := hostedSyncGet(t, server.URL, "team-a")
+	if envelope.Version != 1 {
+		t.Fatalf("hosted version = %d, want 1 (guard must block the push)", envelope.Version)
 	}
 }

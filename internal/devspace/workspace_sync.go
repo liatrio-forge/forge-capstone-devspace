@@ -218,7 +218,7 @@ func PullWorkspaceManifest() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err := recordBaseManifest(localized); err != nil {
+	if err := recordBaseManifest(manifestForSync(localized)); err != nil {
 		return false, err
 	}
 	return !bytes.Equal(before, after), nil

@@ -257,7 +257,7 @@ func PullHostedManifest() (HostedSyncResult, error) {
 	if err := recordHostedSync(remote.Version, remote.ManifestHash); err != nil {
 		return HostedSyncResult{}, err
 	}
-	if err := recordBaseManifest(localized); err != nil {
+	if err := recordBaseManifest(manifestForSync(localized)); err != nil {
 		return HostedSyncResult{}, err
 	}
 	return HostedSyncResult{Changed: !bytes.Equal(before, after), Version: remote.Version, ManifestHash: remote.ManifestHash}, nil

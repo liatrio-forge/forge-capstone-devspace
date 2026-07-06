@@ -8,12 +8,12 @@ import (
 )
 
 type MergeConflict struct {
-	Entity string
-	Key    string
-	Field  string
-	Base   string
-	Ours   string
-	Theirs string
+	Entity string `json:"entity"`
+	Key    string `json:"key"`
+	Field  string `json:"field"`
+	Base   string `json:"base,omitempty"`
+	Ours   string `json:"ours"`
+	Theirs string `json:"theirs"`
 }
 
 func mergeManifests(base, ours, theirs Manifest) (Manifest, []MergeConflict, error) {
@@ -30,6 +30,8 @@ func mergeManifests(base, ours, theirs Manifest) (Manifest, []MergeConflict, err
 	merged := ours
 	merged.Projects = nil
 	merged.Access = nil
+	merged.Users = nil
+	merged.Teams = nil
 
 	var conflicts []MergeConflict
 
@@ -41,6 +43,17 @@ func mergeManifests(base, ours, theirs Manifest) (Manifest, []MergeConflict, err
 	conflicts = append(conflicts, accessConflicts...)
 	merged.Access = access
 
+	// ponytail: users/teams merge at whole-record granularity (one side wins per
+	// record); upgrade to per-field merging inside mergeThreeWay if concurrent
+	// edits to the same user/team record become common.
+	users, userConflicts := mergeRecordSection("user", base.Users, ours.Users, theirs.Users, userID)
+	conflicts = append(conflicts, userConflicts...)
+	merged.Users = users
+
+	teams, teamConflicts := mergeRecordSection("team", base.Teams, ours.Teams, theirs.Teams, teamID)
+	conflicts = append(conflicts, teamConflicts...)
+	merged.Teams = teams
+
 	if len(conflicts) > 0 {
 		return merged, conflicts, nil
 	}
@@ -50,96 +63,82 @@ func mergeManifests(base, ours, theirs Manifest) (Manifest, []MergeConflict, err
 	return merged, nil, nil
 }
 
+// Projects reconcile by Path: paths are what humans review and what scan derives
+// IDs from, so the same folder created on two machines merges as one project.
+// A same-path pair with different IDs is surfaced as an "id" conflict instead of
+// dead-ending in ValidateManifest's duplicate-path error.
 func mergeProjectRecords(base, ours, theirs []Project) ([]Project, []MergeConflict) {
-	baseByID := projectByID(base)
-	oursByID := projectByID(ours)
-	theirsByID := projectByID(theirs)
-
-	ids := map[string]bool{}
-	for id := range baseByID {
-		ids[id] = true
-	}
-	for id := range oursByID {
-		ids[id] = true
-	}
-	for id := range theirsByID {
-		ids[id] = true
-	}
-
-	var merged []Project
-	var conflicts []MergeConflict
-	for _, id := range sortedKeys(ids) {
-		baseProject, inBase := baseByID[id]
-		oursProject, inOurs := oursByID[id]
-		theirsProject, inTheirs := theirsByID[id]
-
-		project, ok, conflict := mergeProjectRecord(id, baseProject, inBase, oursProject, inOurs, theirsProject, inTheirs)
-		if conflict != nil {
-			conflicts = append(conflicts, *conflict)
-		}
-		if ok {
-			merged = append(merged, project)
+	merged, conflicts := mergeRecordSection("project", base, ours, theirs, projectPath)
+	oursByPath := projectByPath(ours)
+	theirsByPath := projectByPath(theirs)
+	for i, conflict := range conflicts {
+		oursProject, inOurs := oursByPath[conflict.Key]
+		theirsProject, inTheirs := theirsByPath[conflict.Key]
+		if inOurs && inTheirs && oursProject.ID != theirsProject.ID {
+			conflicts[i].Field = "id"
 		}
 	}
-
-	slices.SortFunc(merged, func(a, b Project) int {
-		return strings.Compare(a.Path, b.Path)
-	})
 	return merged, conflicts
 }
 
-func mergeProjectRecord(id string, base Project, inBase bool, ours Project, inOurs bool, theirs Project, inTheirs bool) (Project, bool, *MergeConflict) {
-	return mergeThreeWay("project", id, base, inBase, ours, inOurs, theirs, inTheirs)
+func projectByPath(projects []Project) map[string]Project {
+	return recordsByKey(projects, projectPath)
 }
 
-func projectByID(projects []Project) map[string]Project {
-	byID := make(map[string]Project, len(projects))
-	for _, p := range projects {
-		byID[p.ID] = p
-	}
-	return byID
-}
+func projectPath(p Project) string { return p.Path }
+
+func userID(u User) string { return u.ID }
+
+func teamID(t Team) string { return t.ID }
 
 func mergeAccessRecords(base, ours, theirs []ProjectAccess) ([]ProjectAccess, []MergeConflict) {
-	baseByKey := accessByKey(base)
-	oursByKey := accessByKey(ours)
-	theirsByKey := accessByKey(theirs)
+	return mergeRecordSection("access", base, ours, theirs, accessKey)
+}
+
+func mergeRecordSection[T any](entity string, base, ours, theirs []T, key func(T) string) ([]T, []MergeConflict) {
+	baseByKey := recordsByKey(base, key)
+	oursByKey := recordsByKey(ours, key)
+	theirsByKey := recordsByKey(theirs, key)
 
 	keys := map[string]bool{}
-	for key := range baseByKey {
-		keys[key] = true
+	for k := range baseByKey {
+		keys[k] = true
 	}
-	for key := range oursByKey {
-		keys[key] = true
+	for k := range oursByKey {
+		keys[k] = true
 	}
-	for key := range theirsByKey {
-		keys[key] = true
+	for k := range theirsByKey {
+		keys[k] = true
 	}
 
-	var merged []ProjectAccess
+	var merged []T
 	var conflicts []MergeConflict
-	for _, key := range sortedKeys(keys) {
-		baseAccess, inBase := baseByKey[key]
-		oursAccess, inOurs := oursByKey[key]
-		theirsAccess, inTheirs := theirsByKey[key]
+	for _, k := range sortedKeys(keys) {
+		baseRecord, inBase := baseByKey[k]
+		oursRecord, inOurs := oursByKey[k]
+		theirsRecord, inTheirs := theirsByKey[k]
 
-		access, ok, conflict := mergeAccessRecord(key, baseAccess, inBase, oursAccess, inOurs, theirsAccess, inTheirs)
+		record, ok, conflict := mergeThreeWay(entity, k, baseRecord, inBase, oursRecord, inOurs, theirsRecord, inTheirs)
 		if conflict != nil {
 			conflicts = append(conflicts, *conflict)
 		}
 		if ok {
-			merged = append(merged, access)
+			merged = append(merged, record)
 		}
 	}
 
-	slices.SortFunc(merged, func(a, b ProjectAccess) int {
-		return strings.Compare(accessKey(a), accessKey(b))
+	slices.SortFunc(merged, func(a, b T) int {
+		return strings.Compare(key(a), key(b))
 	})
 	return merged, conflicts
 }
 
-func mergeAccessRecord(key string, base ProjectAccess, inBase bool, ours ProjectAccess, inOurs bool, theirs ProjectAccess, inTheirs bool) (ProjectAccess, bool, *MergeConflict) {
-	return mergeThreeWay("access", key, base, inBase, ours, inOurs, theirs, inTheirs)
+func recordsByKey[T any](records []T, key func(T) string) map[string]T {
+	byKey := make(map[string]T, len(records))
+	for _, record := range records {
+		byKey[key(record)] = record
+	}
+	return byKey
 }
 
 func mergeThreeWay[T any](entity, key string, base T, inBase bool, ours T, inOurs bool, theirs T, inTheirs bool) (T, bool, *MergeConflict) {

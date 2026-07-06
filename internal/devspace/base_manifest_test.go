@@ -50,7 +50,7 @@ func TestSyncRecordsBaseManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertBaseManifest(t, expected, 0o600)
+	assertBaseManifest(t, manifestForSync(expected), 0o600)
 }
 
 func TestHostedSyncRecordsBaseManifest(t *testing.T) {
@@ -96,7 +96,7 @@ func TestHostedSyncRecordsBaseManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertBaseManifest(t, expected, 0o600)
+	assertBaseManifest(t, manifestForSync(expected), 0o600)
 }
 
 func TestBaseManifestAbsentIsDetectable(t *testing.T) {
