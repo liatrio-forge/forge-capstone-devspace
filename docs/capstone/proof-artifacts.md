@@ -12,7 +12,7 @@ links as releases, PRs, and recordings are created.
 | Release readiness notes | Done | `docs/operations/release-readiness.md` |
 | Capstone spec | Done | `docs/capstone/spec.md` |
 | Case study | Done | `docs/capstone/case-study.md` |
-| Demo script | Done | `scripts/demo-check.sh`, `docs/capstone/demo-script.md` (demo-check.sh verified 2026-07-05) |
+| Demo script | Done | `scripts/demo-check.sh`, `docs/capstone/demo-script.md` (demo-check.sh verified 2026-07-06) |
 | Remote-agent case study | Done | `docs/capstone/remote-agent-case-study.md` |
 | Frontier Linear cards | Drafted | `CIL-227` through `CIL-231` |
 | Release binary | Done | https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.1.0 |

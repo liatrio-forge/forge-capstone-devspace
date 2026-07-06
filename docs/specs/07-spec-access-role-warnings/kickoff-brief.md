@@ -40,6 +40,9 @@ Per the follow-up cards in `docs/architecture/access-roles.md`:
 - Any hard enforcement (blocking, refusing, or altering command behavior
   based on role).
 - Blocking any command on unknown or unmatched users.
+- Revisiting direct-vs-team precedence (follow-up card 5 in access-roles.md)
+  — deferred until real team workflows create conflicting grants; Q1's
+  proposed default stands until then.
 
 ## Effective-Role Resolution Rules (from the architecture doc)
 
