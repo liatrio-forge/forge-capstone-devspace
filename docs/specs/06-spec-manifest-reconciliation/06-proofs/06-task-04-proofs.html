@@ -75,6 +75,10 @@
     <p class="proves"><strong>What it proves:</strong> The full user journey works with the shipped binary: divergence → dead-end errors → review-first reconcile → apply/push/pull convergence → genuine conflict → blocked apply → explicit force resolution.</p>
     <p class="matters"><strong>Why it matters:</strong> Tests prove units and flows in-process; this transcript proves the built CLI end-to-end, exactly as a user would drive it, including the error messages users actually see at the dead end.</p>
     <p><strong>Artifact path:</strong> <code>docs/specs/06-spec-manifest-reconciliation/06-proofs/06-task-04-demo-transcript.txt</code></p>
+    <figure>
+      <img src="06-reconcile.gif" alt="Animated terminal recording: machine B hits push/pull dead-end errors, reconciles the divergence with an auto-merged ADDED project, then a genuine conflict blocks apply until --force-remote resolves it" />
+      <figcaption>docs/specs/06-spec-manifest-reconciliation/06-proofs/06-reconcile.gif — VHS recording of the same flow (tape: <code>06-reconcile.tape</code>, regenerate with <code>vhs 06-reconcile.tape</code>)</figcaption>
+    </figure>
     <p class="result-summary"><strong>Result summary:</strong> The auto-merge stage reports <code>Auto-merged: 1 / Conflicts: 0</code> and both machines converge on the union; the conflict stage reports <code>Conflicts: 1</code> with labeled local (<code>trunk</code>) vs remote (<code>develop</code>) values, <code>--apply</code> exits 1 without writing, and <code>--force-remote --apply</code> lands <code>develop</code> on both machines.</p>
     <pre><code>### The old dead end: B can neither push nor pull
 machine-b$ devspace workspace push
