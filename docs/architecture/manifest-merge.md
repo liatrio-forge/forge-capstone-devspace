@@ -1,5 +1,15 @@
 # Manifest Conflict Reconciliation Spike
 
+> **Status: superseded.** Spec 06 (`docs/specs/06-spec-manifest-reconciliation/`)
+> is implemented (`internal/devspace/reconcile.go`) and resolved three open
+> questions differently than this spike recommends: (a) with no recoverable
+> base, reconcile falls back to a two-way merge instead of refusing; (b)
+> `Project` records are keyed by `Project.Path`, not `Project.ID` — a
+> same-path pair with different IDs is a conflict, not a union; (c) the force
+> flags shipped as global `--force-local`/`--force-remote`, not
+> `--force-mine`/`--force-theirs`. The rest of this document is kept as
+> historical design context and is not rewritten below.
+
 Manifest pull currently refuses when local and remote manifests both changed since the last sync point. That is the right default safety backstop, but it leaves multi-machine users with a manual JSON merge when two laptops scan or edit different projects before syncing.
 
 This spike proposes an opt-in three-way merge:

@@ -204,10 +204,14 @@
           conflict-reporting merge engine already exists at
           <code>internal/devspace/manifest_merge.go</code> —
           <code>mergeManifests(base, ours, theirs) (Manifest, []MergeConflict,
-          error)</code>, keyed by project ID with per-record and access-grant
-          merging, covered by <code>manifest_merge_test.go</code> — but it has
+          error)</code>, with per-record and access-grant merging, covered by
+          <code>manifest_merge_test.go</code> — but it has
           <em>no production callers</em>. Task 2.0 wires and extends this
-          engine (two-way fallback, ops summary) instead of writing a new one.
+          engine (two-way fallback, ops summary) instead of writing a new one;
+          along the way the engine was re-keyed to match projects by
+          <code>Project.Path</code> instead of <code>Project.ID</code>, so a
+          same-path pair with different IDs is now reported as an "id"
+          conflict rather than merged as two separate projects.
         </p>
       </section>
 
@@ -368,7 +372,7 @@
           <div class="subtasks">
             <h4>2.0 Tasks</h4>
             <ul class="task-list">
-              <li class="task" data-task-id="2.1" data-status="done"><span class="task-label">2.1 Create <code>reconcile.go</code> with <code>ReconcileResult</code> (merged manifest, added/removed/changed op summaries, <code>[]MergeConflict</code>) and <code>reconcileManifests(base *Manifest, local, remote Manifest) (ReconcileResult, error)</code> that wraps the existing <code>mergeManifests</code> from <code>manifest_merge.go</code>; a nil base triggers the documented two-way fallback: every same-key difference between local and remote becomes a conflict (no auto-merge, never a silent overwrite), with additions/removals unique to one side still merging.</span></li>
+              <li class="task" data-task-id="2.1" data-status="done"><span class="task-label">2.1 Create <code>reconcile.go</code> with <code>ReconcileResult</code> (merged manifest, added/removed/changed op summaries, <code>[]MergeConflict</code>) and <code>reconcileManifests(base *Manifest, local, remote Manifest) (ReconcileResult, error)</code> that wraps the existing <code>mergeManifests</code> from <code>manifest_merge.go</code>; a nil base triggers the documented two-way fallback: every same-path difference between local and remote becomes a conflict (no auto-merge, never a silent overwrite), with additions/removals unique to one side still merging.</span></li>
               <li class="task" data-task-id="2.2" data-status="done"><span class="task-label">2.2 Write table test <code>TestReconcileMergeCases</code> in <code>reconcile_test.go</code>: add-one-side, remove-one-side, change-one-side (auto-merge); change-both-different, add-add-different, change-vs-remove (conflict); no-base fallback flags all same-path diffs; re-reconciling an already-merged state yields zero ops (idempotency).</span></li>
               <li class="task" data-task-id="2.3" data-status="done"><span class="task-label">2.3 Add a persisted <code>ReconcilePlan</code> (ops, conflicts with text labels, local-manifest hash at plan time, remote source info) written atomically to app home via a new <code>reconcilePlanPath()</code> — the review-first artifact mirroring <code>last-plan.json</code> — plus load/save helpers.</span></li>
               <li class="task" data-task-id="2.4" data-status="done"><span class="task-label">2.4 Implement <code>ReconcileWorkspaceManifest(force string, apply bool)</code>: localize the remote manifest by reusing the fetch machinery behind <code>DiffWorkspaceManifest</code>, load the base (1.2), run <code>reconcileManifests</code>, write the plan (2.3); on apply, re-verify the local manifest hash against the plan (mirroring <code>apply</code>'s guard), back up the pre-reconcile manifest to app home, then write the merged manifest through <code>SaveManifest</code> and record the new base.</span></li>
