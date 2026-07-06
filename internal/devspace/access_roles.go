@@ -20,8 +20,9 @@ type effectiveRoleResult struct {
 }
 
 type roleCandidate struct {
-	role   string
-	source string
+	projectID string
+	role      string
+	source    string
 }
 
 func effectiveRole(m Manifest, projectID, localAgeRecipient string) effectiveRoleResult {
@@ -49,7 +50,7 @@ func resolveEffectiveRole(m Manifest, projectID, localAgeRecipient string) effec
 	}
 
 	result.Role = mostPrivilegedRole(candidates)
-	if directTeamDisagreement(candidates) {
+	if projectID != "" && directTeamDisagreement(candidates) {
 		result.Warnings = append(result.Warnings, "Access role advisory: direct and team grants disagree; using the most privileged active grant.")
 	}
 	return result
@@ -89,7 +90,7 @@ func activeRoleCandidates(m Manifest, projectID, userID string) ([]roleCandidate
 			continue
 		}
 		if access.UserID == userID {
-			candidates = append(candidates, roleCandidate{role: access.Role, source: "direct"})
+			candidates = append(candidates, roleCandidate{projectID: access.ProjectID, role: access.Role, source: "direct"})
 		}
 		if access.TeamID == "" {
 			continue
@@ -111,7 +112,7 @@ func activeRoleCandidates(m Manifest, projectID, userID string) ([]roleCandidate
 		if memberRank < accessRank {
 			cappedRole = member.Role
 		}
-		candidates = append(candidates, roleCandidate{role: cappedRole, source: "team"})
+		candidates = append(candidates, roleCandidate{projectID: access.ProjectID, role: cappedRole, source: "team"})
 	}
 	return candidates, warnings
 }
@@ -147,20 +148,31 @@ func mostPrivilegedRole(candidates []roleCandidate) string {
 }
 
 func directTeamDisagreement(candidates []roleCandidate) bool {
-	directRoles := map[string]bool{}
-	teamRoles := map[string]bool{}
+	type projectRoles struct {
+		direct map[string]bool
+		team   map[string]bool
+	}
+	rolesByProject := map[string]projectRoles{}
 	for _, candidate := range candidates {
+		roles := rolesByProject[candidate.projectID]
+		if roles.direct == nil {
+			roles.direct = map[string]bool{}
+			roles.team = map[string]bool{}
+		}
 		switch candidate.source {
 		case "direct":
-			directRoles[candidate.role] = true
+			roles.direct[candidate.role] = true
 		case "team":
-			teamRoles[candidate.role] = true
+			roles.team[candidate.role] = true
 		}
+		rolesByProject[candidate.projectID] = roles
 	}
-	for direct := range directRoles {
-		for team := range teamRoles {
-			if direct != team {
-				return true
+	for _, roles := range rolesByProject {
+		for direct := range roles.direct {
+			for team := range roles.team {
+				if direct != team {
+					return true
+				}
 			}
 		}
 	}
@@ -174,6 +186,9 @@ func accessRoleAdvisoryWarnings(surface, projectRef string, allowedRoles ...stri
 	}
 	m, err := LoadManifest(cfg.WorkspaceRoot)
 	if err != nil {
+		return nil
+	}
+	if len(m.Users) == 0 && len(m.Access) == 0 {
 		return nil
 	}
 	identityPath, err := resolveAgeIdentityPath(cfg)

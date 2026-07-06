@@ -14,11 +14,13 @@ func TestEffectiveRoleResolution(t *testing.T) {
 	baseProject := Project{ID: "project-api", Name: "api", Path: "apps/api", Type: ProjectTypeLocal, HydrateMode: HydrateManual}
 
 	cases := []struct {
-		name        string
-		manifest    Manifest
-		recipient   string
-		wantRole    string
-		wantWarning string
+		name          string
+		manifest      Manifest
+		recipient     string
+		wantRole      string
+		wantWarning   string
+		absentWarning string
+		workspace     bool
 	}{
 		{
 			name:      "most privileged direct and team grant wins",
@@ -120,15 +122,49 @@ func TestEffectiveRoleResolution(t *testing.T) {
 			},
 			wantWarning: "unknown project access role",
 		},
+		{
+			name:      "workspace grants on different projects do not disagree",
+			recipient: localRecipient,
+			manifest: Manifest{
+				Version:       ManifestVersion,
+				WorkspaceRoot: "/tmp/workspace",
+				Projects: []Project{
+					baseProject,
+					{ID: "project-web", Name: "web", Path: "apps/web", Type: ProjectTypeLocal, HydrateMode: HydrateManual},
+				},
+				Users: []User{baseUser},
+				Teams: []Team{{
+					ID:        "team-platform",
+					Name:      "Platform",
+					Members:   []TeamMember{{UserID: baseUser.ID, Role: AccessRoleMaintainer, AddedAt: "now"}},
+					CreatedAt: "now",
+				}},
+				Access: []ProjectAccess{
+					{ProjectID: baseProject.ID, UserID: baseUser.ID, Role: AccessRoleViewer, AddedAt: "now"},
+					{ProjectID: "project-web", TeamID: "team-platform", Role: AccessRoleMaintainer, AddedAt: "now"},
+				},
+			},
+			wantRole:      AccessRoleMaintainer,
+			absentWarning: "direct and team grants disagree",
+			workspace:     true,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := effectiveRole(tc.manifest, baseProject.ID, tc.recipient)
+			var got effectiveRoleResult
+			if tc.workspace {
+				got = effectiveWorkspaceRole(tc.manifest, tc.recipient)
+			} else {
+				got = effectiveRole(tc.manifest, baseProject.ID, tc.recipient)
+			}
 			if got.Role != tc.wantRole {
 				t.Fatalf("role = %q, want %q; warnings=%v", got.Role, tc.wantRole, got.Warnings)
 			}
 			if tc.wantWarning == "" {
+				if tc.absentWarning != "" && strings.Contains(strings.Join(got.Warnings, "\n"), tc.absentWarning) {
+					t.Fatalf("warnings = %v, did not want substring %q", got.Warnings, tc.absentWarning)
+				}
 				return
 			}
 			if !strings.Contains(strings.Join(got.Warnings, "\n"), tc.wantWarning) {
@@ -136,6 +172,20 @@ func TestEffectiveRoleResolution(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWorkspacePushWithoutRoleMetadataEmitsNoAdvisory(t *testing.T) {
+	commandWorkspaceWithoutRoleMetadata(t)
+	remote := filepath.Join(t.TempDir(), "manifest.git")
+	if _, err := CreateLocalManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, err := executeCommand(t, "test", "workspace", "push")
+	if err != nil {
+		t.Fatalf("workspace push error: %v\nstdout:\n%s\nstderr:\n%s", err, stdout, stderr)
+	}
+	assertNoAccessWarning(t, stderr)
 }
 
 func TestWorkspacePushEmitsAccessRoleAdvisoryWarning(t *testing.T) {
@@ -163,6 +213,16 @@ func TestHostedPushEmitsAccessRoleAdvisoryWarningBeforeTransportError(t *testing
 		t.Fatalf("hosted push unexpectedly succeeded\nstdout:\n%s\nstderr:\n%s", stdout, stderr)
 	}
 	assertAccessWarning(t, stderr, "devspace hosted push")
+}
+
+func TestProjectRemoveWithoutRoleMetadataEmitsNoAdvisory(t *testing.T) {
+	_, project := commandWorkspaceWithoutRoleMetadata(t)
+
+	stdout, stderr, err := executeCommand(t, "test", "project", "remove", project.Name)
+	if err != nil {
+		t.Fatalf("project remove error: %v\nstdout:\n%s\nstderr:\n%s", err, stdout, stderr)
+	}
+	assertNoAccessWarning(t, stderr)
 }
 
 func TestProjectRemoveEmitsAccessRoleAdvisoryWarning(t *testing.T) {
@@ -228,6 +288,24 @@ func TestEnvRecipientChangesEmitAccessRoleAdvisoryWarnings(t *testing.T) {
 	})
 }
 
+func commandWorkspaceWithoutRoleMetadata(t *testing.T) (string, Project) {
+	t.Helper()
+	workspace := initCommandWorkspace(t)
+	project := hardeningProject("apps/api", ProjectTypeLocal, "")
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Projects = []Project{project}
+	m.Users = nil
+	m.Teams = nil
+	m.Access = nil
+	if err := SaveManifest(workspace, m); err != nil {
+		t.Fatal(err)
+	}
+	return workspace, project
+}
+
 func commandWorkspaceWithProjectRole(t *testing.T, role string) (string, Project) {
 	t.Helper()
 	workspace := initCommandWorkspace(t)
@@ -267,6 +345,13 @@ func setLocalProjectRole(t *testing.T, workspace, projectID, role string) {
 	})
 	if err := SaveManifest(workspace, m); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func assertNoAccessWarning(t *testing.T, stderr string) {
+	t.Helper()
+	if stderr != "" {
+		t.Fatalf("stderr = %q, want no advisories", stderr)
 	}
 }
 
