@@ -43,7 +43,7 @@ archives:
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - src: README.md
-      - src: docs/release.md
+      - src: docs/operations/release.md
         dst: RELEASE.md
 
 checksum:

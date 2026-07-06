@@ -32,6 +32,7 @@ type dashboardRow struct {
 type dashboardModel struct {
 	rows          []dashboardRow
 	summary       ScanSummary
+	syncStatus    dashboardSyncStatus
 	selected      int
 	events        []string
 	busy          bool
@@ -46,6 +47,25 @@ type dashboardModel struct {
 
 	watchCmdFactory func(string) tea.Cmd
 }
+
+type dashboardSyncStatus struct {
+	Configured         bool
+	LastSyncAt         string
+	LocalDiffers       bool
+	DiffAdded          int
+	DiffRemoved        int
+	DiffChanged        int
+	ReconcileSaved     bool
+	ConflictCount      int
+	GitDiffUnavailable string
+	UnavailableReason  string
+}
+
+const (
+	syncStatusRemoteNotConfigured = "remote not configured"
+	syncStatusLoading             = "loading"
+	syncStatusHostedUnavailable   = "unavailable-for-hosted"
+)
 
 type scanLoadedMsg struct {
 	rows    []dashboardRow
@@ -70,6 +90,10 @@ type watchRefreshMsg struct {
 	err     error
 }
 
+type syncStatusLoadedMsg struct {
+	status dashboardSyncStatus
+}
+
 type errMsg struct {
 	err error
 }
@@ -85,15 +109,21 @@ func newDashboardModel(noWatch bool) dashboardModel {
 		model.workspaceRoot = cfg.WorkspaceRoot
 		model.machineID = cfg.MachineID
 		model.machineName = cfg.MachineName
+		if cfg.ManifestRemote == "" && !hostedSyncConfigured(cfg) {
+			model.syncStatus.UnavailableReason = syncStatusRemoteNotConfigured
+		} else {
+			model.syncStatus.Configured = true
+			model.syncStatus.UnavailableReason = syncStatusLoading
+		}
 	}
 	return model
 }
 
 func (m dashboardModel) Init() tea.Cmd {
 	if m.noWatch {
-		return dashboardScanCmd()
+		return tea.Batch(dashboardScanCmd(), dashboardSyncStatusCmd())
 	}
-	return tea.Batch(dashboardScanCmd(), m.nextWatchCmd())
+	return tea.Batch(dashboardScanCmd(), dashboardSyncStatusCmd(), m.nextWatchCmd())
 }
 
 func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -112,7 +142,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rows = msg.rows
 		m.summary = msg.summary
 		m.clampSelected()
-		return m, nil
+		return m, dashboardSyncStatusCmd()
 	case actionResultMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -124,7 +154,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summary = msg.summary
 		m.prependEvent(fmt.Sprintf("%s complete", msg.label))
 		m.clampSelected()
-		return m, nil
+		return m, dashboardSyncStatusCmd()
 	case watchRefreshMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -143,6 +173,9 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.nextWatchCmd()
+	case syncStatusLoadedMsg:
+		m.syncStatus = msg.status
+		return m, nil
 	case errMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -164,7 +197,11 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "r":
-			return m.startAction("refresh", dashboardRefreshCmd(m.syncMode))
+			m, cmd := m.startAction("refresh", dashboardRefreshCmd(m.syncMode))
+			if cmd == nil {
+				return m, nil
+			}
+			return m, tea.Batch(cmd, dashboardSyncStatusCmd())
 		case "s":
 			return m.startAction("scan", dashboardScanCmd())
 		case "p":
@@ -190,6 +227,8 @@ func (m dashboardModel) View() tea.View {
 	b.WriteString("\n")
 	b.WriteString(m.renderSummary())
 	b.WriteString("\n\n")
+	b.WriteString(m.renderSyncStatus())
+	b.WriteString("\n\n")
 	b.WriteString(currentTheme.Header.Render("Events"))
 	b.WriteString("\n")
 	if len(m.events) == 0 {
@@ -213,6 +252,38 @@ func (m dashboardModel) View() tea.View {
 	view := tea.NewView(b.String())
 	view.AltScreen = true
 	return view
+}
+
+func (m dashboardModel) renderSyncStatus() string {
+	var b strings.Builder
+	b.WriteString(currentTheme.Header.Render("Sync Status"))
+	b.WriteString("\n")
+	status := m.syncStatus
+	if status.UnavailableReason != "" {
+		switch status.UnavailableReason {
+		case syncStatusRemoteNotConfigured:
+			b.WriteString(currentTheme.Muted.Render(syncStatusRemoteNotConfigured))
+		case syncStatusLoading:
+			b.WriteString(currentTheme.Muted.Render("loading..."))
+		default:
+			b.WriteString(currentTheme.Warn.Render("status unavailable: " + status.UnavailableReason))
+		}
+		return b.String()
+	}
+	fmt.Fprintf(&b, "Last sync/base: %s\n", valueOrDash(status.LastSyncAt))
+	if status.GitDiffUnavailable != "" {
+		fmt.Fprintf(&b, "Local differs from remote: %s\n", status.GitDiffUnavailable)
+		fmt.Fprintf(&b, "Remote diff: %s\n", status.GitDiffUnavailable)
+	} else {
+		fmt.Fprintf(&b, "Local differs from remote: %s\n", yesNo(status.LocalDiffers))
+		fmt.Fprintf(&b, "Remote diff: added=%d removed=%d changed=%d\n", status.DiffAdded, status.DiffRemoved, status.DiffChanged)
+	}
+	if status.ReconcileSaved {
+		fmt.Fprintf(&b, "Reconcile conflicts: %d", status.ConflictCount)
+	} else {
+		b.WriteString("Reconcile conflicts: -")
+	}
+	return b.String()
 }
 
 func (m dashboardModel) startAction(label string, cmd tea.Cmd) (dashboardModel, tea.Cmd) {
@@ -342,6 +413,13 @@ func valueOrDash(value string) string {
 		return "-"
 	}
 	return value
+}
+
+func yesNo(value bool) string {
+	if value {
+		return "yes"
+	}
+	return "no"
 }
 
 func truncateCell(value string, max int) string {

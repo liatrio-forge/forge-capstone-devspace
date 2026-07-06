@@ -7,9 +7,15 @@ DIST_DIR ?= dist
 GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 GOVULNCHECK ?= go run golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
-.PHONY: all test vet lint vulncheck build verify clean
+.PHONY: all fmt format fmt-check test vet lint vulncheck build verify precommit install-hooks clean
 
 all: verify
+
+fmt format:
+	gofmt -w cmd internal
+
+fmt-check:
+	test -z "$$(gofmt -l cmd internal)" || (gofmt -l cmd internal && exit 1)
 
 test:
 	go test ./...
@@ -17,9 +23,8 @@ test:
 vet:
 	go vet ./...
 
-lint:
+lint: fmt-check
 	$(GOLANGCI_LINT) run ./...
-	test -z "$$(gofmt -l cmd internal)" || (gofmt -l cmd internal && exit 1)
 
 vulncheck:
 	$(GOVULNCHECK) ./...
@@ -29,6 +34,12 @@ build:
 	go build -trimpath -o $(BIN_DIR)/$(BINARY_NAME) $(CMD_PATH)
 
 verify: test vet lint vulncheck build
+
+precommit: fmt lint test build
+
+install-hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-commit
 
 clean:
 	rm -rf $(BIN_DIR) $(DIST_DIR)

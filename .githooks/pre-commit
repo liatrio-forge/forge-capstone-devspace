@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+snapshot_before="$(mktemp)"
+snapshot_after="$(mktemp)"
+trap 'rm -f "$snapshot_before" "$snapshot_after"' EXIT
+
+git_local_env_vars="$(git rev-parse --local-env-vars)"
+
+without_git_env() (
+	for var in $git_local_env_vars; do
+		unset "$var"
+	done
+	unset GIT_AUTHOR_DATE GIT_AUTHOR_EMAIL GIT_AUTHOR_NAME
+	unset GIT_COMMITTER_DATE GIT_COMMITTER_EMAIL GIT_COMMITTER_NAME
+	unset EMAIL
+	"$@"
+)
+
+snapshot_go_files() {
+	find cmd internal -type f -name '*.go' -print | LC_ALL=C sort | while IFS= read -r file; do
+		printf '%s  %s\n' "$(git hash-object "$file")" "$file"
+	done
+}
+
+snapshot_go_files >"$snapshot_before"
+without_git_env make fmt
+snapshot_go_files >"$snapshot_after"
+
+if ! diff -u "$snapshot_before" "$snapshot_after" >/dev/null; then
+	echo "Problem: gofmt changed files" >&2
+	echo "Fix: stage formatted files and commit again" >&2
+	git diff --name-only -- cmd internal >&2
+	exit 1
+fi
+
+without_git_env make lint
+without_git_env make test
+without_git_env make build

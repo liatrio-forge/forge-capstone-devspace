@@ -179,9 +179,13 @@ func diffRecordOps[T any](kind string, local, merged []T, key func(T) string) []
 	return ops
 }
 
-func ReconcileWorkspaceManifest(force string, apply bool) (ReconcilePlan, error) {
+func ReconcileWorkspaceManifest(force string, apply bool, forceProjects ...map[string]string) (ReconcilePlan, error) {
 	if force != "" && force != "local" && force != "remote" {
 		return ReconcilePlan{}, fmt.Errorf("force must be one of: local, remote")
+	}
+	projectForces := mergeProjectForces(forceProjects...)
+	if err := validateForceDirections(projectForces); err != nil {
+		return ReconcilePlan{}, err
 	}
 	cfg, err := syncConfig()
 	if err != nil {
@@ -200,21 +204,23 @@ func ReconcileWorkspaceManifest(force string, apply bool) (ReconcilePlan, error)
 		return ReconcilePlan{}, err
 	}
 	source := reconcileGitRemoteSource(cfg)
-	if previous, ok := reusableReconcilePlan(local, "git", source); ok {
-		plan := ReconcilePlan{
-			Version:       1,
-			CreatedAt:     nowRFC3339(),
-			Backend:       "git",
-			ManifestHash:  hash,
-			RemoteSource:  source,
-			TwoWay:        previous.TwoWay,
-			Merged:        local,
-			WorkspaceRoot: cfg.WorkspaceRoot,
+	if force == "" && len(projectForces) == 0 {
+		if previous, ok := reusableReconcilePlan(local, "git", source); ok {
+			plan := ReconcilePlan{
+				Version:       1,
+				CreatedAt:     nowRFC3339(),
+				Backend:       "git",
+				ManifestHash:  hash,
+				RemoteSource:  source,
+				TwoWay:        previous.TwoWay,
+				Merged:        local,
+				WorkspaceRoot: cfg.WorkspaceRoot,
+			}
+			if err := SaveReconcilePlan(plan); err != nil {
+				return ReconcilePlan{}, err
+			}
+			return plan, nil
 		}
-		if err := SaveReconcilePlan(plan); err != nil {
-			return ReconcilePlan{}, err
-		}
-		return plan, nil
 	}
 	baseManifest, hasBase, err := loadBaseManifest()
 	if err != nil {
@@ -228,9 +234,12 @@ func ReconcileWorkspaceManifest(force string, apply bool) (ReconcilePlan, error)
 	if err != nil {
 		return ReconcilePlan{}, err
 	}
-	if force != "" && len(result.Conflicts) > 0 {
-		result.Merged = forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, force)
-		result.Conflicts = nil
+	if err := validateProjectForces(result.Conflicts, local, remote, projectForces); err != nil {
+		return ReconcilePlan{}, err
+	}
+	if (force != "" || len(projectForces) > 0) && len(result.Conflicts) > 0 {
+		result.Merged = forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, force, projectForces)
+		result.Conflicts = unresolvedReconcileConflicts(result.Conflicts, local, remote, force, projectForces)
 		if err := ValidateManifest(result.Merged); err != nil {
 			return ReconcilePlan{}, fmt.Errorf("forced merged manifest failed validation: %w", err)
 		}
@@ -281,9 +290,13 @@ func ReconcileWorkspaceManifest(force string, apply bool) (ReconcilePlan, error)
 	return plan, nil
 }
 
-func ReconcileHostedManifest(force string, apply bool) (ReconcilePlan, error) {
+func ReconcileHostedManifest(force string, apply bool, forceProjects ...map[string]string) (ReconcilePlan, error) {
 	if force != "" && force != "local" && force != "remote" {
 		return ReconcilePlan{}, fmt.Errorf("force must be one of: local, remote")
+	}
+	projectForces := mergeProjectForces(forceProjects...)
+	if err := validateForceDirections(projectForces); err != nil {
+		return ReconcilePlan{}, err
 	}
 	cfg, err := GetHostedSync()
 	if err != nil {
@@ -313,21 +326,23 @@ func ReconcileHostedManifest(force string, apply bool) (ReconcilePlan, error) {
 		Endpoint: redactRemote(cfg.HostedSyncEndpoint),
 		Version:  envelope.Version,
 	}
-	if previous, ok := reusableReconcilePlan(local, "hosted", source); ok {
-		plan := ReconcilePlan{
-			Version:       1,
-			CreatedAt:     nowRFC3339(),
-			Backend:       "hosted",
-			ManifestHash:  hash,
-			RemoteSource:  source,
-			TwoWay:        previous.TwoWay,
-			Merged:        local,
-			WorkspaceRoot: cfg.WorkspaceRoot,
+	if force == "" && len(projectForces) == 0 {
+		if previous, ok := reusableReconcilePlan(local, "hosted", source); ok {
+			plan := ReconcilePlan{
+				Version:       1,
+				CreatedAt:     nowRFC3339(),
+				Backend:       "hosted",
+				ManifestHash:  hash,
+				RemoteSource:  source,
+				TwoWay:        previous.TwoWay,
+				Merged:        local,
+				WorkspaceRoot: cfg.WorkspaceRoot,
+			}
+			if err := SaveReconcilePlan(plan); err != nil {
+				return ReconcilePlan{}, err
+			}
+			return plan, nil
 		}
-		if err := SaveReconcilePlan(plan); err != nil {
-			return ReconcilePlan{}, err
-		}
-		return plan, nil
 	}
 	baseManifest, hasBase, err := loadBaseManifest()
 	if err != nil {
@@ -341,9 +356,12 @@ func ReconcileHostedManifest(force string, apply bool) (ReconcilePlan, error) {
 	if err != nil {
 		return ReconcilePlan{}, err
 	}
-	if force != "" && len(result.Conflicts) > 0 {
-		result.Merged = forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, force)
-		result.Conflicts = nil
+	if err := validateProjectForces(result.Conflicts, local, remote, projectForces); err != nil {
+		return ReconcilePlan{}, err
+	}
+	if (force != "" || len(projectForces) > 0) && len(result.Conflicts) > 0 {
+		result.Merged = forceReconcileConflicts(result.Merged, result.Conflicts, local, remote, force, projectForces)
+		result.Conflicts = unresolvedReconcileConflicts(result.Conflicts, local, remote, force, projectForces)
 		if err := ValidateManifest(result.Merged); err != nil {
 			return ReconcilePlan{}, fmt.Errorf("forced merged manifest failed validation: %w", err)
 		}
@@ -447,21 +465,26 @@ func reconcileGitRemoteSource(cfg Config) ReconcileRemoteSource {
 	return source
 }
 
-func forceReconcileConflicts(merged Manifest, conflicts []MergeConflict, local, remote Manifest, force string) Manifest {
+func forceReconcileConflicts(merged Manifest, conflicts []MergeConflict, local, remote Manifest, force string, forceProjects ...map[string]string) Manifest {
+	projectForces := mergeProjectForces(forceProjects...)
 	projects := projectByPath(merged.Projects)
 	access := accessByKey(merged.Access)
 	users := recordsByKey(merged.Users, userID)
 	teams := recordsByKey(merged.Teams, teamID)
 	for _, conflict := range conflicts {
+		conflictForce := forceForConflict(conflict, local, remote, force, projectForces)
+		if conflictForce == "" {
+			continue
+		}
 		switch conflict.Entity {
 		case "project":
-			forceResolveRecord(projects, projectByPath(local.Projects), projectByPath(remote.Projects), conflict.Key, force)
+			forceResolveRecord(projects, projectByPath(local.Projects), projectByPath(remote.Projects), conflict.Key, conflictForce)
 		case "access":
-			forceResolveRecord(access, accessByKey(local.Access), accessByKey(remote.Access), conflict.Key, force)
+			forceResolveRecord(access, accessByKey(local.Access), accessByKey(remote.Access), conflict.Key, conflictForce)
 		case "user":
-			forceResolveRecord(users, recordsByKey(local.Users, userID), recordsByKey(remote.Users, userID), conflict.Key, force)
+			forceResolveRecord(users, recordsByKey(local.Users, userID), recordsByKey(remote.Users, userID), conflict.Key, conflictForce)
 		case "team":
-			forceResolveRecord(teams, recordsByKey(local.Teams, teamID), recordsByKey(remote.Teams, teamID), conflict.Key, force)
+			forceResolveRecord(teams, recordsByKey(local.Teams, teamID), recordsByKey(remote.Teams, teamID), conflict.Key, conflictForce)
 		}
 	}
 	merged.Projects = sortedRecordSlice(projects, projectPath)
@@ -469,6 +492,103 @@ func forceReconcileConflicts(merged Manifest, conflicts []MergeConflict, local, 
 	merged.Users = sortedRecordSlice(users, userID)
 	merged.Teams = sortedRecordSlice(teams, teamID)
 	return merged
+}
+
+func mergeProjectForces(forces ...map[string]string) map[string]string {
+	merged := map[string]string{}
+	for _, force := range forces {
+		for projectID, direction := range force {
+			merged[projectID] = direction
+		}
+	}
+	return merged
+}
+
+func validateForceDirections(projectForces map[string]string) error {
+	for projectID, direction := range projectForces {
+		if direction != "local" && direction != "remote" {
+			return fmt.Errorf("--force-project %s must resolve to local or remote", projectID)
+		}
+	}
+	return nil
+}
+
+func validateProjectForces(conflicts []MergeConflict, local, remote Manifest, projectForces map[string]string) error {
+	if len(projectForces) == 0 {
+		return nil
+	}
+	conflicted := map[string]bool{}
+	projectIDs := allProjectIDs(local, remote)
+	localProjects := projectByPath(local.Projects)
+	remoteProjects := projectByPath(remote.Projects)
+	for _, conflict := range conflicts {
+		if conflict.Entity != "project" {
+			continue
+		}
+		localProject, hasLocal := localProjects[conflict.Key]
+		remoteProject, hasRemote := remoteProjects[conflict.Key]
+		if hasLocal {
+			conflicted[localProject.ID] = true
+		}
+		if hasRemote {
+			conflicted[remoteProject.ID] = true
+		}
+		if hasLocal && hasRemote && localProject.ID != remoteProject.ID {
+			localDirection, hasLocalForce := projectForces[localProject.ID]
+			remoteDirection, hasRemoteForce := projectForces[remoteProject.ID]
+			if hasLocalForce && hasRemoteForce && localDirection != remoteDirection {
+				return fmt.Errorf("conflicting --force-project directives for %s: %s=%s vs %s=%s", conflict.Key, localProject.ID, localDirection, remoteProject.ID, remoteDirection)
+			}
+		}
+	}
+	for projectID := range projectForces {
+		if !conflicted[projectID] {
+			if !projectIDs[projectID] {
+				return fmt.Errorf("--force-project %s: unknown project", projectID)
+			}
+			return fmt.Errorf("--force-project %s has no reconcile conflict", projectID)
+		}
+	}
+	return nil
+}
+
+func allProjectIDs(local, remote Manifest) map[string]bool {
+	ids := map[string]bool{}
+	for _, project := range local.Projects {
+		ids[project.ID] = true
+	}
+	for _, project := range remote.Projects {
+		ids[project.ID] = true
+	}
+	return ids
+}
+
+func unresolvedReconcileConflicts(conflicts []MergeConflict, local, remote Manifest, force string, projectForces map[string]string) []MergeConflict {
+	var unresolved []MergeConflict
+	for _, conflict := range conflicts {
+		if forceForConflict(conflict, local, remote, force, projectForces) == "" {
+			unresolved = append(unresolved, conflict)
+		}
+	}
+	return unresolved
+}
+
+func forceForConflict(conflict MergeConflict, local, remote Manifest, force string, projectForces map[string]string) string {
+	if conflict.Entity == "project" {
+		localProjects := projectByPath(local.Projects)
+		remoteProjects := projectByPath(remote.Projects)
+		if project, ok := localProjects[conflict.Key]; ok {
+			if direction, ok := projectForces[project.ID]; ok {
+				return direction
+			}
+		}
+		if project, ok := remoteProjects[conflict.Key]; ok {
+			if direction, ok := projectForces[project.ID]; ok {
+				return direction
+			}
+		}
+	}
+	return force
 }
 
 func forceResolveRecord[T any](records, localRecords, remoteRecords map[string]T, key, force string) {

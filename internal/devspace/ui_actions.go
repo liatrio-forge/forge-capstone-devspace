@@ -1,7 +1,9 @@
 package devspace
 
 import (
+	"os"
 	"sort"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -121,6 +123,75 @@ func dashboardRefreshCmd(syncMode string) tea.Cmd {
 		}
 		return actionResultMsg{label: "refresh", rows: rows, summary: refresh.Summary, refresh: refresh}
 	}
+}
+
+func dashboardSyncStatusCmd() tea.Cmd {
+	return func() tea.Msg {
+		var status dashboardSyncStatus
+		var cfg Config
+		err := runLocked(func() error {
+			var err error
+			cfg, err = LoadConfig()
+			if err != nil {
+				return err
+			}
+			status.Configured = cfg.ManifestRemote != "" || hostedSyncConfigured(cfg)
+			st, err := LoadState()
+			if err != nil && !missing(err) {
+				return err
+			}
+			status.LastSyncAt = st.LastSyncAt
+			plan, err := LoadReconcilePlan()
+			if err == nil && plan.WorkspaceRoot == cfg.WorkspaceRoot {
+				status.ReconcileSaved = true
+				status.ConflictCount = len(plan.Conflicts)
+			} else if err != nil && !missing(err) {
+				return err
+			}
+			if !status.Configured {
+				status.UnavailableReason = syncStatusRemoteNotConfigured
+				return nil
+			}
+			if status.LastSyncAt == "" {
+				status.LastSyncAt = baseManifestTimestamp()
+			}
+			if cfg.ManifestRemote == "" {
+				status.GitDiffUnavailable = syncStatusHostedUnavailable
+				return nil
+			}
+			return nil
+		})
+		if err != nil {
+			status.UnavailableReason = err.Error()
+		} else if cfg.ManifestRemote != "" {
+			diff, err := DiffWorkspaceManifest()
+			if err != nil {
+				status.UnavailableReason = err.Error()
+			} else {
+				status.DiffAdded = len(diff.Added)
+				status.DiffRemoved = len(diff.Removed)
+				status.DiffChanged = len(diff.Changed)
+				status.LocalDiffers = status.DiffAdded+status.DiffRemoved+status.DiffChanged > 0
+			}
+		}
+		return syncStatusLoadedMsg{status: status}
+	}
+}
+
+func hostedSyncConfigured(cfg Config) bool {
+	return strings.TrimSpace(cfg.HostedSyncEndpoint) != ""
+}
+
+func baseManifestTimestamp() string {
+	path, err := baseManifestPath()
+	if err != nil {
+		return ""
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return ""
+	}
+	return info.ModTime().UTC().Format(time.RFC3339)
 }
 
 func dashboardWatchCmd(syncMode string) tea.Cmd {

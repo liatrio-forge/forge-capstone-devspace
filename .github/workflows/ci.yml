@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -20,28 +25,11 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
-      - name: Test
-        run: go test ./...
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          # v2.1.x builds (including v2.1.6) were built with a Go toolchain
-          # older than this repo's go 1.26 target and refuse to run
-          # ("Go language version used to build golangci-lint is lower than
-          # the targeted Go version"). v2.12.2 is confirmed built with go1.26.4.
-          version: v2.12.2
-          args: --timeout 5m
-
-      - name: Vulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
-
-      - name: Build
-        run: go build -trimpath -o bin/devspace ./cmd/devspace
+      - name: Verify
+        run: make verify
 
   mount-integration:
     runs-on: ubuntu-latest
@@ -54,6 +42,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Install FUSE
         run: |

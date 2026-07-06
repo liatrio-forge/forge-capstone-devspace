@@ -26,8 +26,8 @@ func TestDashboardInitialModelRendersScan(t *testing.T) {
 
 	model := newDashboardModel(true)
 	updated, cmd := model.Update(scanLoadedMsg{rows: rows, summary: summary})
-	if cmd != nil {
-		t.Fatal("scanLoadedMsg returned a command")
+	if cmd == nil {
+		t.Fatal("scanLoadedMsg returned nil command")
 	}
 	got := updated.(dashboardModel)
 	if len(got.rows) != 3 {
@@ -41,6 +41,194 @@ func TestDashboardInitialModelRendersScan(t *testing.T) {
 	}
 	if got.workspaceRoot != workspace {
 		t.Fatalf("workspaceRoot = %q, want %q", got.workspaceRoot, workspace)
+	}
+}
+
+func TestDashboardSyncStatusRendersRemoteState(t *testing.T) {
+	dashboardSeedWorkspace(t)
+	model := newDashboardModel(true)
+	model.syncStatus = dashboardSyncStatus{
+		Configured:     true,
+		LastSyncAt:     "2026-07-06T12:00:00Z",
+		LocalDiffers:   true,
+		DiffAdded:      1,
+		DiffRemoved:    2,
+		DiffChanged:    3,
+		ConflictCount:  4,
+		ReconcileSaved: true,
+	}
+
+	content := model.View().Content
+	for _, want := range []string{
+		"Sync Status",
+		"Last sync/base: 2026-07-06T12:00:00Z",
+		"Local differs from remote: yes",
+		"Remote diff: added=1 removed=2 changed=3",
+		"Reconcile conflicts: 4",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("view missing %q:\n%s", want, content)
+		}
+	}
+}
+
+func TestDashboardSyncStatusRendersDegradedStates(t *testing.T) {
+	model := dashboardModel{syncStatus: dashboardSyncStatus{UnavailableReason: "remote not configured"}}
+	if content := model.renderSyncStatus(); !strings.Contains(content, "remote not configured") {
+		t.Fatalf("content = %q, want remote not configured", content)
+	}
+
+	model.syncStatus = dashboardSyncStatus{Configured: true, UnavailableReason: syncStatusLoading}
+	if content := model.renderSyncStatus(); !strings.Contains(content, currentTheme.Muted.Render("loading...")) || strings.Contains(content, currentTheme.Warn.Render("status unavailable: "+syncStatusLoading)) {
+		t.Fatalf("content = %q, want muted loading message without warning", content)
+	}
+
+	model.syncStatus = dashboardSyncStatus{UnavailableReason: "no manifest remote configured"}
+	if content := model.renderSyncStatus(); !strings.Contains(content, "status unavailable: no manifest remote configured") {
+		t.Fatalf("content = %q, want unavailable reason", content)
+	}
+
+	model.syncStatus = dashboardSyncStatus{Configured: true, UnavailableReason: "boom"}
+	if content := model.renderSyncStatus(); !strings.Contains(content, "status unavailable: boom") {
+		t.Fatalf("content = %q, want unavailable reason", content)
+	}
+}
+
+func TestDashboardSyncStatusMessageUpdatesModel(t *testing.T) {
+	model := dashboardModel{}
+	status := dashboardSyncStatus{Configured: true, LastSyncAt: "2026-07-06T12:00:00Z"}
+	updated, cmd := model.Update(syncStatusLoadedMsg{status: status})
+	if cmd != nil {
+		t.Fatal("sync status message returned command")
+	}
+	got := updated.(dashboardModel)
+	if got.syncStatus.LastSyncAt != status.LastSyncAt || !got.syncStatus.Configured {
+		t.Fatalf("syncStatus = %+v, want %+v", got.syncStatus, status)
+	}
+}
+
+func dashboardSyncStatusTestWorkspace(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	home := filepath.Join(root, "home")
+	workspace := filepath.Join(root, "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	return workspace
+}
+
+func TestDashboardSyncStatusCmdUsesDiffAndSavedReconcilePlan(t *testing.T) {
+	workspace := dashboardSyncStatusTestWorkspace(t)
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	project := hardeningProject("apps/app", ProjectTypeLocal, "")
+	manifest := Manifest{Version: ManifestVersion, WorkspaceRoot: workspace, Projects: []Project{project}}
+	if err := SaveManifest(workspace, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Projects[0].Name = "local-app"
+	if err := SaveManifest(workspace, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveReconcilePlan(ReconcilePlan{
+		Version:       1,
+		WorkspaceRoot: workspace,
+		Conflicts: []MergeConflict{
+			{Entity: "project", Key: "apps/app", Field: "*"},
+			{Entity: "project", Key: "apps/worker", Field: "*"},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := dashboardSyncStatusCmd()()
+	loaded, ok := msg.(syncStatusLoadedMsg)
+	if !ok {
+		t.Fatalf("msg = %T, want syncStatusLoadedMsg", msg)
+	}
+	status := loaded.status
+	if !status.Configured || !status.LocalDiffers || status.DiffChanged != 1 {
+		t.Fatalf("status diff = %+v, want configured changed diff", status)
+	}
+	if status.ConflictCount != 2 || !status.ReconcileSaved {
+		t.Fatalf("status conflicts = %+v, want saved conflicts", status)
+	}
+	if status.LastSyncAt == "" {
+		t.Fatalf("status LastSyncAt missing: %+v", status)
+	}
+}
+
+func TestDashboardSyncStatusCmdUsesHostedStateAndSavedPlan(t *testing.T) {
+	workspace := dashboardSyncStatusTestWorkspace(t)
+	if _, err := SetHostedSync("http://127.0.0.1:8787", "test-token", "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveState(State{
+		WorkspaceRoot: workspace,
+		LastSyncAt:    "2026-07-06T12:00:00Z",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveReconcilePlan(ReconcilePlan{
+		Version:       1,
+		WorkspaceRoot: workspace,
+		Conflicts: []MergeConflict{
+			{Entity: "project", Key: "apps/app", Field: "*"},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := dashboardSyncStatusCmd()()
+	loaded, ok := msg.(syncStatusLoadedMsg)
+	if !ok {
+		t.Fatalf("msg = %T, want syncStatusLoadedMsg", msg)
+	}
+	status := loaded.status
+	if !status.Configured || status.UnavailableReason != "" {
+		t.Fatalf("status availability = %+v, want hosted configured", status)
+	}
+	if status.LastSyncAt != "2026-07-06T12:00:00Z" || !status.ReconcileSaved || status.ConflictCount != 1 {
+		t.Fatalf("status state = %+v, want hosted last sync and saved conflict", status)
+	}
+	if status.GitDiffUnavailable != "unavailable-for-hosted" {
+		t.Fatalf("GitDiffUnavailable = %q, want unavailable-for-hosted", status.GitDiffUnavailable)
+	}
+	if content := (dashboardModel{syncStatus: status}).renderSyncStatus(); !strings.Contains(content, "Remote diff: unavailable-for-hosted") {
+		t.Fatalf("content = %q, want hosted diff unavailable", content)
+	}
+}
+
+func TestDashboardRefreshesSyncStatusAfterUpdates(t *testing.T) {
+	t.Setenv(envHome, t.TempDir())
+	if _, err := InitWorkspace(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+
+	model := dashboardModel{}
+	updated, cmd := model.Update(scanLoadedMsg{})
+	if cmd == nil {
+		t.Fatal("scanLoadedMsg returned nil command")
+	}
+	msg := cmd()
+	if _, ok := msg.(syncStatusLoadedMsg); !ok {
+		t.Fatalf("scanLoadedMsg command = %T, want syncStatusLoadedMsg", msg)
+	}
+
+	_, cmd = updated.(dashboardModel).Update(actionResultMsg{label: "refresh"})
+	if cmd == nil {
+		t.Fatal("actionResultMsg returned nil command")
+	}
+	msg = cmd()
+	if _, ok := msg.(syncStatusLoadedMsg); !ok {
+		t.Fatalf("actionResultMsg command = %T, want syncStatusLoadedMsg", msg)
 	}
 }
 

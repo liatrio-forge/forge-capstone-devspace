@@ -9,9 +9,14 @@ permissions:
   pull-requests: write
   issues: write
 
+concurrency:
+  group: ${{ github.workflow }}-main
+  cancel-in-progress: true
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # RELEASE_PLEASE_TOKEN must be a fine-grained PAT (Contents + Pull requests
       # write) or a GitHub App token — NOT the default GITHUB_TOKEN. A tag pushed
