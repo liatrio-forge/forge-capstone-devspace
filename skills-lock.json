@@ -12,6 +12,12 @@
       "sourceType": "github",
       "skillPath": "skill/SKILL.md",
       "computedHash": "ac98d6be092326807be1160e0696cd35a3a428671ccde3cd22e58f07851581e3"
+    },
+    "vhs": {
+      "source": "HexSleeves/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vhs/SKILL.md",
+      "computedHash": "b2d8cebef3cc7eadc1a3dd6e9ba3cdbaec8c4f9ad384a52587e647733e86e625"
     }
   }
 }
