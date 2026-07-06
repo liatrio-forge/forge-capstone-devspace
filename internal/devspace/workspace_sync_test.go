@@ -464,6 +464,77 @@ func TestWorkspacePullAllowsFastForwardWhenLocalMatchesPreviousRemoteManifest(t 
 	}
 }
 
+func TestWorkspacePullSucceedsAfterDiffWhenLocalHasNoUnpushedChanges(t *testing.T) {
+	root := t.TempDir()
+	remote := workspaceSyncBareRepo(t)
+	workspaceA := filepath.Join(root, "a")
+	workspaceB := filepath.Join(root, "b")
+
+	// Machine A publishes the initial manifest.
+	t.Setenv(envHome, filepath.Join(root, "home-a"))
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspaceA, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspaceA,
+		Projects:      []Project{hardeningProject("apps/one", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Machine B pulls, adds a project, and pushes.
+	t.Setenv(envHome, filepath.Join(root, "home-b"))
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PullWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated.Projects = append(updated.Projects, hardeningProject("apps/two", ProjectTypeLocal, ""))
+	if err := SaveManifest(workspaceB, updated); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Machine A runs diff first — this fast-forwards the cached manifest
+	// clone — then pulls. Machine A has no unpushed local changes, so the
+	// pull must fast-forward, not refuse.
+	t.Setenv(envHome, filepath.Join(root, "home-a"))
+	if _, err := DiffWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := PullWorkspaceManifest()
+	if err != nil {
+		t.Fatalf("pull after diff failed: %v", err)
+	}
+	if !changed {
+		t.Fatal("pull after diff reported no change")
+	}
+	pulled, err := LoadManifest(workspaceA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(pulled, "apps/two"); !ok {
+		t.Fatalf("pull after diff missing project: %+v", pulled.Projects)
+	}
+}
+
 func TestWorkspaceDiffReportsRemoteChangesWithoutReplacingLocalManifest(t *testing.T) {
 	root := t.TempDir()
 	manifestRemote := workspaceSyncBareRepo(t)

@@ -189,6 +189,17 @@ func PullWorkspaceManifest() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	// The clone's pre-pull contents are only a proxy for the last synced
+	// state and go stale whenever something else advances the cache (e.g.
+	// `workspace diff` fast-forwards the same clone). Prefer the base
+	// snapshot recorded on every push/pull/reconcile when one exists.
+	base, hasBase, err := loadBaseManifest()
+	if err != nil {
+		return false, err
+	}
+	if hasBase {
+		previousRemote, hasPreviousRemote = base, true
+	}
 	if err := pullManifestRepo(repo, cfg.ManifestRemote); err != nil {
 		return false, err
 	}
