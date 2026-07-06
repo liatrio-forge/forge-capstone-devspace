@@ -390,7 +390,7 @@ On first run, an existing `~/.devdrop` application home is automatically migrate
 
 ## 🗺️ Roadmap
 
-- Per-project conflict choices in `workspace reconcile` (global resolution and `--force` shipped).
+- Per-project conflict choices in `workspace reconcile` (global resolution and `--force-local` / `--force-remote` shipped).
 - Hosted sync: grow the shipped prototype into a managed service.
 - Daemon process management for running watch mode outside a terminal.
 - FUSE lazy mount: grow the shipped prototype into a supported feature (macOS local proof pending).

@@ -53,5 +53,4 @@ encrypted locally.
 5. Add the personal reflection after demo feedback is received.
 
 Done and verified: the v0.1.0 tagged release shipped with GitHub Release
-assets (see [proof-artifacts.md](proof-artifacts.md)), and on-disk paths and
-config directories migrated to `.devspace`.
+assets (see [proof-artifacts.md](proof-artifacts.md)).
