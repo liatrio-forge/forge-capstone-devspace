@@ -512,6 +512,9 @@ func parseForceProjectFlags(values []string) (map[string]string, error) {
 		if direction != "local" && direction != "remote" {
 			return nil, fmt.Errorf("--force-project %s must resolve to local or remote", projectID)
 		}
+		if _, ok := forces[projectID]; ok {
+			return nil, fmt.Errorf("duplicate --force-project for %s", projectID)
+		}
 		forces[projectID] = direction
 	}
 	return forces, nil

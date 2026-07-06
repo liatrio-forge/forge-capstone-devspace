@@ -407,6 +407,112 @@ func TestWorkspaceReconcileConflictBlocksApply(t *testing.T) {
 	}
 }
 
+func TestWorkspaceReconcileForceProjectFlagsResolveMultipleConflicts(t *testing.T) {
+	workspace, projects := setupWorkspaceReconcileProjectConflicts(t)
+
+	if _, _, err := executeCommand(t, "test",
+		"workspace", "reconcile", "--apply",
+		"--force-project", projects[0].ID+"=remote",
+		"--force-project", projects[1].ID+"=local",
+	); err != nil {
+		t.Fatalf("reconcile --force-project multiple error: %v", err)
+	}
+	applied, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if project, _ := findProject(applied, projects[0].ID); project.Name != "remote-one" {
+		t.Fatalf("%s name = %q, want remote-one", projects[0].ID, project.Name)
+	}
+	if project, _ := findProject(applied, projects[1].ID); project.Name != "local-two" {
+		t.Fatalf("%s name = %q, want local-two", projects[1].ID, project.Name)
+	}
+}
+
+func TestWorkspaceReconcileForceProjectOverridesGlobalForce(t *testing.T) {
+	workspace, projects := setupWorkspaceReconcileProjectConflicts(t)
+
+	if _, _, err := executeCommand(t, "test",
+		"workspace", "reconcile", "--apply", "--force-local",
+		"--force-project", projects[0].ID+"=remote",
+	); err != nil {
+		t.Fatalf("reconcile --force-local --force-project error: %v", err)
+	}
+	applied, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if project, _ := findProject(applied, projects[0].ID); project.Name != "remote-one" {
+		t.Fatalf("%s name = %q, want remote-one", projects[0].ID, project.Name)
+	}
+	if project, _ := findProject(applied, projects[1].ID); project.Name != "local-two" {
+		t.Fatalf("%s name = %q, want local-two", projects[1].ID, project.Name)
+	}
+}
+
+func setupWorkspaceReconcileProjectConflicts(t *testing.T) (string, []Project) {
+	t.Helper()
+	root := t.TempDir()
+	remote := workspaceSyncBareRepo(t)
+	workspaceA := filepath.Join(root, "machine-a", "code")
+	workspaceB := filepath.Join(root, "machine-b", "code")
+	homeA := filepath.Join(root, "home-a")
+	homeB := filepath.Join(root, "home-b")
+	projects := []Project{
+		hardeningProject("apps/one", ProjectTypeLocal, ""),
+		hardeningProject("apps/two", ProjectTypeLocal, ""),
+	}
+
+	t.Setenv(envHome, homeA)
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspaceA, Manifest{Version: ManifestVersion, WorkspaceRoot: workspaceA, Projects: projects}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeB)
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PullWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+	remoteManifest, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	remoteManifest.Projects[0].Name = "remote-one"
+	remoteManifest.Projects[1].Name = "remote-two"
+	if err := SaveManifest(workspaceB, remoteManifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeA)
+	localManifest, err := LoadManifest(workspaceA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	localManifest.Projects[0].Name = "local-one"
+	localManifest.Projects[1].Name = "local-two"
+	if err := SaveManifest(workspaceA, localManifest); err != nil {
+		t.Fatal(err)
+	}
+	return workspaceA, projects
+}
+
 func TestReconcileSamePathDifferentIDConflict(t *testing.T) {
 	user := reconcileUser()
 	localProject := testMergeProject("project_local", "apps/app")
@@ -731,6 +837,18 @@ func TestReconcileForceProjectFlagRejectsBadDirection(t *testing.T) {
 	} {
 		if _, _, err := executeCommand(t, "test", args...); err == nil || !strings.Contains(err.Error(), "local or remote") {
 			t.Fatalf("%v error = %v, want direction error", args, err)
+		}
+	}
+}
+
+func TestReconcileForceProjectFlagRejectsDuplicateProject(t *testing.T) {
+	t.Setenv(envHome, t.TempDir())
+	for _, args := range [][]string{
+		{"workspace", "reconcile", "--force-project", "project_app=local", "--force-project", "project_app=remote"},
+		{"hosted", "reconcile", "--force-project", "project_app=local", "--force-project", "project_app=remote"},
+	} {
+		if _, _, err := executeCommand(t, "test", args...); err == nil || !strings.Contains(err.Error(), "duplicate --force-project for project_app") {
+			t.Fatalf("%v error = %v, want duplicate force-project error", args, err)
 		}
 	}
 }

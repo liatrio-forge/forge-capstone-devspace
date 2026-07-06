@@ -49,15 +49,16 @@ type dashboardModel struct {
 }
 
 type dashboardSyncStatus struct {
-	Configured        bool
-	LastSyncAt        string
-	LocalDiffers      bool
-	DiffAdded         int
-	DiffRemoved       int
-	DiffChanged       int
-	ReconcileSaved    bool
-	ConflictCount     int
-	UnavailableReason string
+	Configured         bool
+	LastSyncAt         string
+	LocalDiffers       bool
+	DiffAdded          int
+	DiffRemoved        int
+	DiffChanged        int
+	ReconcileSaved     bool
+	ConflictCount      int
+	GitDiffUnavailable string
+	UnavailableReason  string
 }
 
 type scanLoadedMsg struct {
@@ -102,7 +103,7 @@ func newDashboardModel(noWatch bool) dashboardModel {
 		model.workspaceRoot = cfg.WorkspaceRoot
 		model.machineID = cfg.MachineID
 		model.machineName = cfg.MachineName
-		if cfg.ManifestRemote == "" {
+		if cfg.ManifestRemote == "" && !hostedSyncConfigured(cfg) {
 			model.syncStatus.UnavailableReason = "remote not configured"
 		} else {
 			model.syncStatus.Configured = true
@@ -135,7 +136,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rows = msg.rows
 		m.summary = msg.summary
 		m.clampSelected()
-		return m, nil
+		return m, dashboardSyncStatusCmd()
 	case actionResultMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -147,7 +148,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summary = msg.summary
 		m.prependEvent(fmt.Sprintf("%s complete", msg.label))
 		m.clampSelected()
-		return m, nil
+		return m, dashboardSyncStatusCmd()
 	case watchRefreshMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -190,7 +191,11 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "r":
-			return m.startAction("refresh", dashboardRefreshCmd(m.syncMode))
+			m, cmd := m.startAction("refresh", dashboardRefreshCmd(m.syncMode))
+			if cmd == nil {
+				return m, nil
+			}
+			return m, tea.Batch(cmd, dashboardSyncStatusCmd())
 		case "s":
 			return m.startAction("scan", dashboardScanCmd())
 		case "p":
@@ -257,8 +262,13 @@ func (m dashboardModel) renderSyncStatus() string {
 		return b.String()
 	}
 	fmt.Fprintf(&b, "Last sync/base: %s\n", valueOrDash(status.LastSyncAt))
-	fmt.Fprintf(&b, "Local differs from remote: %s\n", yesNo(status.LocalDiffers))
-	fmt.Fprintf(&b, "Remote diff: added=%d removed=%d changed=%d\n", status.DiffAdded, status.DiffRemoved, status.DiffChanged)
+	if status.GitDiffUnavailable != "" {
+		fmt.Fprintf(&b, "Local differs from remote: %s\n", status.GitDiffUnavailable)
+		fmt.Fprintf(&b, "Remote diff: %s\n", status.GitDiffUnavailable)
+	} else {
+		fmt.Fprintf(&b, "Local differs from remote: %s\n", yesNo(status.LocalDiffers))
+		fmt.Fprintf(&b, "Remote diff: added=%d removed=%d changed=%d\n", status.DiffAdded, status.DiffRemoved, status.DiffChanged)
+	}
 	if status.ReconcileSaved {
 		fmt.Fprintf(&b, "Reconcile conflicts: %d", status.ConflictCount)
 	} else {

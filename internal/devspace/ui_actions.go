@@ -3,6 +3,7 @@ package devspace
 import (
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -132,19 +133,31 @@ func dashboardSyncStatusCmd() tea.Cmd {
 			if err != nil {
 				return err
 			}
-			if cfg.ManifestRemote == "" {
-				status.UnavailableReason = "remote not configured"
-				return nil
-			}
-			status.Configured = true
+			status.Configured = cfg.ManifestRemote != "" || hostedSyncConfigured(cfg)
 			st, err := LoadState()
 			if err != nil && !missing(err) {
 				return err
 			}
 			status.LastSyncAt = st.LastSyncAt
+			plan, err := LoadReconcilePlan()
+			if err == nil && plan.WorkspaceRoot == cfg.WorkspaceRoot {
+				status.ReconcileSaved = true
+				status.ConflictCount = len(plan.Conflicts)
+			} else if err != nil && !missing(err) {
+				return err
+			}
+			if !status.Configured {
+				status.UnavailableReason = "remote not configured"
+				return nil
+			}
 			if status.LastSyncAt == "" {
 				status.LastSyncAt = baseManifestTimestamp()
 			}
+			if cfg.ManifestRemote == "" {
+				status.GitDiffUnavailable = "unavailable-for-hosted"
+				return nil
+			}
+			// DiffWorkspaceManifest can hold the dashboard lock for up to about a minute against a slow remote.
 			diff, err := DiffWorkspaceManifest()
 			if err != nil {
 				return err
@@ -153,13 +166,6 @@ func dashboardSyncStatusCmd() tea.Cmd {
 			status.DiffRemoved = len(diff.Removed)
 			status.DiffChanged = len(diff.Changed)
 			status.LocalDiffers = status.DiffAdded+status.DiffRemoved+status.DiffChanged > 0
-			plan, err := LoadReconcilePlan()
-			if err == nil && plan.WorkspaceRoot == cfg.WorkspaceRoot {
-				status.ReconcileSaved = true
-				status.ConflictCount = len(plan.Conflicts)
-			} else if err != nil && !missing(err) {
-				return err
-			}
 			return nil
 		})
 		if err != nil {
@@ -168,6 +174,10 @@ func dashboardSyncStatusCmd() tea.Cmd {
 		}
 		return syncStatusLoadedMsg{status: status}
 	}
+}
+
+func hostedSyncConfigured(cfg Config) bool {
+	return strings.TrimSpace(cfg.HostedSyncEndpoint) != ""
 }
 
 func baseManifestTimestamp() string {
