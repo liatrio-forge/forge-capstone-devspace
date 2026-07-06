@@ -99,7 +99,7 @@ developer path is documented.
 | Platform | Status | Guidance |
 | -------- | ------ | -------- |
 | Linux `ubuntu-latest` | GO | Permanent coverage lives in the `mount-integration` job. It installs FUSE support, checks `/dev/fuse`, and runs `go test ./internal/devspace -tags fusetest -v`. |
-| macOS local developer machines | PENDING LOCAL PROOF | Product direction is macOS-first. A real mount proof waits for a developer Mac with macFUSE installed and approved. |
+| macOS local developer machines | GO | Real mount smoke test passed on a developer Mac (macOS 26.6, macFUSE installed and approved): attach, `mount`/`ls`/file-read, and clean unmount all succeeded. See `docs/specs/03-spec-fuse-lazy-mount/03-proofs/03-macos-local-mount-proof.md`. |
 | macOS hosted runners | DEFERRED | Hosted macOS FUSE CI is not the first target. macFUSE approval and kernel/system extension loading are not reliable assumptions on ephemeral hosted runners. |
 
 The temporary probe workflow was removed after the Linux GO result was recorded.

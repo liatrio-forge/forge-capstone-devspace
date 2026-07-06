@@ -2,7 +2,7 @@
 
 This worksheet records the evidence from a local macOS FUSE mount smoke test run. When complete, it closes only the PENDING local-proof marker in `docs/architecture/fuse-lazy-mount.md`, confirming that `devspace mount` operates correctly on macOS with macFUSE installed. The spec-02 Plan 015 validation gap stays separate because it requires GitHub Actions FUSE probe evidence.
 
-Status: AWAITING RUN
+Status: COMPLETE 2026-07-06
 
 ## Build
 
@@ -24,7 +24,9 @@ sw_vers
 Output:
 
 ```text
-paste output here
+ProductName:    macOS
+ProductVersion: 26.6
+BuildVersion:   25G5052e
 ```
 
 ## macFUSE Readiness Check
@@ -39,7 +41,8 @@ test -x /Library/Filesystems/macfuse.fs/Contents/Resources/mount_macfuse && echo
 Output:
 
 ```text
-paste output here
+macFUSE present
+mount_macfuse present
 ```
 
 ## FUSE-Free Preview
@@ -78,7 +81,14 @@ mkdir -p /tmp/devspace-mount-smoke
 Output:
 
 ```text
-paste output here
+DevSpace lazy mount preview
+FUSE library: github.com/hanwen/go-fuse/v2/fs
+
+┌───────────┬───────┬──────────────┬────────┬───────┬───────┬────────┐
+│ PATH      │ TYPE  │ HYDRATE MODE │ STATUS │ DIRTY │ ENV   │ REASON │
+├───────────┼───────┼──────────────┼────────┼───────┼───────┼────────┤
+│ apps/demo │ local │ manual       │ local  │ false │ false │        │
+└───────────┴───────┴──────────────┴────────┴───────┴───────┴────────┘
 ```
 
 ## Real Mount: Attachment and File Access
@@ -93,7 +103,9 @@ PATH="/Library/Filesystems/macfuse.fs/Contents/Resources:$PATH" \
 Terminal 1 Output (should show mount starting):
 
 ```text
-paste output here
+time="2026/07/06 15:44:29" level=info msg="mounted workspace" mountpoint=/tmp/devspace-mount-smoke
+time="2026/07/06 15:44:29" level=info msg="accessing an on-demand Git project through the mount triggers `devspace project hydrate` safety checks"
+time="2026/07/06 15:44:29" level=info msg="press ctrl-c to unmount"
 ```
 
 In Terminal 2, verify the mount and read files:
@@ -107,7 +119,14 @@ cat /tmp/devspace-mount-smoke/apps/demo/README.md
 Terminal 2 Output:
 
 ```text
-paste output here
+/var/folders/cn/2ck5t0pd23gc7324cjxtc76m0000gn/T/tmp.aE1cMEo875/workspace on /private/tmp/devspace-mount-smoke (macfuse, nodev, nosuid, read-only, synchronous, mounted by lecoqjacob)
+
+total 0
+drwxr-xr-x    0 root  wheel      0 Dec 31  1969 .
+drwxrwxrwt  320 root  wheel  10240 Jul  6 15:45 ..
+drwxr-xr-x    0 root  wheel      0 Dec 31  1969 apps
+
+hello from devspace
 ```
 
 ## Unmount
@@ -123,12 +142,20 @@ mount | grep devspace-mount-smoke || echo "unmounted"
 Unmount Output:
 
 ```text
-paste output here
+unmounted
 ```
+
+Sent `SIGINT` (`kill -INT <pid>`) to the foreground mount process instead of an
+interactive `Ctrl-C` (run non-interactively via an agent shell); the mount
+process handled it identically and exited cleanly. `pgrep -af` briefly
+matched the exiting PID immediately after the signal, but `ps -p <pid>`
+confirmed the process was already gone — no stuck process, no `kill -9`
+needed.
 
 ## Troubleshooting Observed
 
-(Optional; record any issues encountered and how they were resolved.)
+None. The run followed the playbook exactly with no deviations beyond the
+`SIGINT` note above.
 
 ## After the Run
 
