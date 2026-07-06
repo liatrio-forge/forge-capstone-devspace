@@ -1,159 +1,589 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>06-validation-manifest-reconciliation</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
-    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
-  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
-  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
-  h1 { margin: .25rem 0; font-size:1.6rem; }
-  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
-  .meta { color:var(--muted); font-size:.9rem; }
-  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
-  .badge-type { background:var(--accent); color:#fff; }
-  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
-  .status-fail, .status-failed { background:var(--fail); color:#fff; }
-  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
-  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
-  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
-  th { background:var(--card); }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
-  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
-  .task-list { list-style:none; padding-left:0; }
-  .task { padding:.35rem 0; }
-  .task[data-status="done"] .task-label::before { content: "\2611 "; }
-  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
-  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
-  figure { margin: 1rem 0; }
-  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
-  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
-  .metric-list { list-style:none; padding-left:0; }
-  .metric-list li { padding:.25rem 0; }
-  .gate-list { margin:.5rem 0; }
-  code { overflow-wrap: anywhere; }
-</style>
-</head>
-<body data-overall-status="PASS">
-<div class="doc">
-  <header class="doc-header">
-    <span class="badge badge-type">Validation</span>
-    <h1>06-validation-manifest-reconciliation</h1>
-    <p class="meta">Sequence 06 · Feature: manifest-reconciliation · Phase 4</p>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>06-validation-manifest-reconciliation</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1a1a2e;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --card: #f9fafb;
+        --accent: #4f46e5;
+        --pass: #059669;
+        --fail: #dc2626;
+        --warn: #d97706;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1117;
+          --fg: #e6e6ef;
+          --muted: #9ca3af;
+          --border: #262a35;
+          --card: #161922;
+          --accent: #818cf8;
+          --pass: #34d399;
+          --fail: #f87171;
+          --warn: #fbbf24;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+      .doc {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 4rem;
+      }
+      header.doc-header {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+      }
+      h1 {
+        margin: 0.25rem 0;
+        font-size: 1.6rem;
+      }
+      h2 {
+        margin-top: 2rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.35rem;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 0.25rem 0.6rem;
+        border-radius: 999px;
+      }
+      .badge-type {
+        background: var(--accent);
+        color: #fff;
+      }
+      .status-pass,
+      .status-done,
+      .status-verified {
+        background: var(--pass);
+        color: #fff;
+      }
+      .status-fail,
+      .status-failed {
+        background: var(--fail);
+        color: #fff;
+      }
+      .status-flag,
+      .status-pending,
+      .status-unknown,
+      .status-in-progress {
+        background: var(--warn);
+        color: #111;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--card);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+      }
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      pre {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        overflow-x: auto;
+      }
+      .task-list {
+        list-style: none;
+        padding-left: 0;
+      }
+      .task {
+        padding: 0.35rem 0;
+      }
+      .task[data-status="done"] .task-label::before {
+        content: "\2611 ";
+      }
+      .task[data-status="pending"] .task-label::before {
+        content: "\2610 ";
+      }
+      .task[data-status="in-progress"] .task-label::before {
+        content: "\25D1 ";
+      }
+      figure {
+        margin: 1rem 0;
+      }
+      figure img {
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 0.35rem;
+      }
+      .metric-list {
+        list-style: none;
+        padding-left: 0;
+      }
+      .metric-list li {
+        padding: 0.25rem 0;
+      }
+      .gate-list {
+        margin: 0.5rem 0;
+      }
+      code {
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body data-overall-status="PASS">
+    <div class="doc">
+      <header class="doc-header">
+        <span class="badge badge-type">Validation</span>
+        <h1>06-validation-manifest-reconciliation</h1>
+        <p class="meta">
+          Sequence 06 · Feature: manifest-reconciliation · Phase 4
+        </p>
+      </header>
 
-  <section id="executive-summary">
-    <h2>1) Executive Summary</h2>
-    <div class="card">
-      <p><strong>Overall:</strong> <span class="badge status-pass" data-role="overall-status">PASS</span></p>
-      <p><strong>Gates tripped:</strong></p>
-      <ul class="gate-list">
-        <li>None — all gates passed. (A: no CRITICAL/HIGH issues; B: zero Unknown FR rows; C: all proof artifacts re-executed successfully; D: every changed core file maps to a task/requirement; E: repository standards followed, <code>make verify</code> green; F: no credentials in proof artifacts.)</li>
-      </ul>
-      <p><strong>Implementation Ready:</strong> Yes — all 11 functional requirements are verified by re-executed tests and a live CLI demo, the full local gate passes, and every change is traceable to a spec task.</p>
-      <p><strong>Key metrics:</strong></p>
-      <ul class="metric-list">
-        <li>Requirements Verified: 100% (11/11)</li>
-        <li>Proof Artifacts Working: 100% (14/14)</li>
-        <li>Files Changed vs Expected: 22 changed / 15 planned entries (all deltas are supporting files with commit-message linkage; 4 planned entries validated as not requiring modification)</li>
-      </ul>
-    </div>
-  </section>
+      <section id="executive-summary">
+        <h2>1) Executive Summary</h2>
+        <div class="card">
+          <p>
+            <strong>Overall:</strong>
+            <span class="badge status-pass" data-role="overall-status"
+              >PASS</span
+            >
+          </p>
+          <p><strong>Gates tripped:</strong></p>
+          <ul class="gate-list">
+            <li>
+              None — all gates passed. (A: no CRITICAL/HIGH issues; B: zero
+              Unknown FR rows; C: all proof artifacts re-executed successfully;
+              D: every changed core file maps to a task/requirement; E:
+              repository standards followed, <code>make verify</code> green; F:
+              no credentials in proof artifacts.)
+            </li>
+          </ul>
+          <p>
+            <strong>Implementation Ready:</strong> Yes — all 11 functional
+            requirements are verified by re-executed tests and a live CLI demo,
+            the full local gate passes, and every change is traceable to a spec
+            task.
+          </p>
+          <p><strong>Key metrics:</strong></p>
+          <ul class="metric-list">
+            <li>Requirements Verified: 100% (11/11)</li>
+            <li>Proof Artifacts Working: 100% (14/14)</li>
+            <li>
+              Files Changed vs Expected: 22 changed / 15 planned entries (all
+              deltas are supporting files with commit-message linkage; 4 planned
+              entries validated as not requiring modification)
+            </li>
+          </ul>
+        </div>
+      </section>
 
-  <section id="coverage-matrix">
-    <h2>2) Coverage Matrix</h2>
+      <section id="coverage-matrix">
+        <h2>2) Coverage Matrix</h2>
 
-    <h3>Functional Requirements</h3>
-    <table>
-      <thead>
-        <tr><th>Requirement ID/Name</th><th>Status</th><th>Evidence (file:lines, commit, or artifact)</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>U1-FR1 — Base snapshot persisted after every successful git/hosted pull+push (atomic, app-home perms)</td><td><span class="badge status-verified">Verified</span></td><td><code>TestSyncRecordsBaseManifest</code>, <code>TestHostedSyncRecordsBaseManifest</code> PASS (re-run at validation); hooks in <code>workspace_sync.go</code>/<code>hosted_sync.go</code>; commit <code>0252e90</code></td></tr>
-        <tr><td>U1-FR2 — Loader with clear "no base recorded" signal</td><td><span class="badge status-verified">Verified</span></td><td><code>TestBaseManifestAbsentIsDetectable</code> PASS; <code>loadBaseManifest</code> in <code>base_manifest.go</code></td></tr>
-        <tr><td>U1-FR3 — Snapshot contains manifest metadata only (no secrets/machine-local paths)</td><td><span class="badge status-verified">Verified</span></td><td>Snapshot content asserted equal to the synced (normalized/localized) manifest, which sync already sanitizes; proof file security scan clean</td></tr>
-        <tr><td>U2-FR1 — Backend-agnostic three-way merge; conflicts never auto-resolved</td><td><span class="badge status-verified">Verified</span></td><td><code>TestReconcileMergeCases</code> (9 cases) PASS; <code>reconcileManifests</code> wraps existing <code>mergeManifests</code>; commit <code>a03be9a</code></td></tr>
-        <tr><td>U2-FR2 — <code>workspace reconcile</code> command with review-first plan artifact and <code>--json</code></td><td><span class="badge status-verified">Verified</span></td><td><code>TestWorkspaceReconcileNonConflicting</code> PASS; demo transcript stages 5–6; plan written to <code>last-reconcile.json</code>; <code>--help</code>/<code>--json</code> exercised</td></tr>
-        <tr><td>U2-FR3 — Conflicts stop the command; resolved only via explicit <code>--force-local</code>/<code>--force-remote</code></td><td><span class="badge status-verified">Verified</span></td><td><code>TestWorkspaceReconcileConflictBlocksApply</code> PASS; demo transcript shows blocked apply (exit 1) then <code>--force-remote --apply</code></td></tr>
-        <tr><td>U2-FR4 — Backup to app home + hash-guarded, lock-held, safe-path atomic apply</td><td><span class="badge status-verified">Verified</span></td><td><code>TestWorkspaceReconcileNonConflicting</code> asserts backup + guard; <code>withAppLock</code> at command boundary (<code>commands.go</code>); writes via <code>SaveManifest</code>/<code>writeJSON</code></td></tr>
-        <tr><td>U2-FR5 — Documented two-way fallback when no base exists (never silent overwrite)</td><td><span class="badge status-verified">Verified</span></td><td><code>TestReconcileMergeCases</code> nil-base cases PASS; CLI prints a two-way-mode notice; documented in <code>--help</code> and README</td></tr>
-        <tr><td>U3-FR1 — Hosted version conflict → same engine + same review artifact</td><td><span class="badge status-verified">Verified</span></td><td><code>TestHostedReconcileResolvesVersionConflict</code> PASS against in-process hardened server; commit <code>5be48e9</code></td></tr>
-        <tr><td>U3-FR2 — Apply pushes with correct updated version/hash baseline, then updates base snapshot</td><td><span class="badge status-verified">Verified</span></td><td><code>client.put(ctx, envelope.Version, …)</code> push-first sequence; <code>TestHostedReconcileUpdatesBaseOnSuccess</code> PASS</td></tr>
-        <tr><td>U3-FR3 — Conflict handling/backup/review identical to git path (shared engine + artifact)</td><td><span class="badge status-verified">Verified</span></td><td><code>TestHostedReconcileConflictBlocksPush</code> PASS; shared <code>reconcileManifests</code>/<code>ReconcilePlan</code>/<code>forceReconcileConflicts</code> code paths</td></tr>
-      </tbody>
-    </table>
+        <h3>Functional Requirements</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Requirement ID/Name</th>
+              <th>Status</th>
+              <th>Evidence (file:lines, commit, or artifact)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                U1-FR1 — Base snapshot persisted after every successful
+                git/hosted pull+push (atomic, app-home perms)
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestSyncRecordsBaseManifest</code>,
+                <code>TestHostedSyncRecordsBaseManifest</code> PASS (re-run at
+                validation); hooks in
+                <code>workspace_sync.go</code>/<code>hosted_sync.go</code>;
+                commit <code>0252e90</code>
+              </td>
+            </tr>
+            <tr>
+              <td>U1-FR2 — Loader with clear "no base recorded" signal</td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestBaseManifestAbsentIsDetectable</code> PASS;
+                <code>loadBaseManifest</code> in <code>base_manifest.go</code>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U1-FR3 — Snapshot contains manifest metadata only (no
+                secrets/machine-local paths)
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                Snapshot content asserted equal to the synced
+                (normalized/localized) manifest, which sync already sanitizes;
+                proof file security scan clean
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U2-FR1 — Backend-agnostic three-way merge; conflicts never
+                auto-resolved
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestReconcileMergeCases</code> (9 cases) PASS;
+                <code>reconcileManifests</code> wraps existing
+                <code>mergeManifests</code>; commit <code>a03be9a</code>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U2-FR2 — <code>workspace reconcile</code> command with
+                review-first plan artifact and <code>--json</code>
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestWorkspaceReconcileNonConflicting</code> PASS; demo
+                transcript stages 5–6; plan written to
+                <code>last-reconcile.json</code>; <code>--help</code>/<code
+                  >--json</code
+                >
+                exercised
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U2-FR3 — Conflicts stop the command; resolved only via explicit
+                <code>--force-local</code>/<code>--force-remote</code>
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestWorkspaceReconcileConflictBlocksApply</code> PASS;
+                demo transcript shows blocked apply (exit 1) then
+                <code>--force-remote --apply</code>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U2-FR4 — Backup to app home + hash-guarded, lock-held, safe-path
+                atomic apply
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestWorkspaceReconcileNonConflicting</code> asserts backup
+                + guard; <code>withAppLock</code> at command boundary
+                (<code>commands.go</code>); writes via
+                <code>SaveManifest</code>/<code>writeJSON</code>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U2-FR5 — Documented two-way fallback when no base exists (never
+                silent overwrite)
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestReconcileMergeCases</code> nil-base cases PASS; CLI
+                prints a two-way-mode notice; documented in
+                <code>--help</code> and README
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U3-FR1 — Hosted version conflict → same engine + same review
+                artifact
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestHostedReconcileResolvesVersionConflict</code> PASS
+                against in-process hardened server; commit <code>5be48e9</code>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U3-FR2 — Apply pushes with correct updated version/hash
+                baseline, then updates base snapshot
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>client.put(ctx, envelope.Version, …)</code> push-first
+                sequence;
+                <code>TestHostedReconcileUpdatesBaseOnSuccess</code> PASS
+              </td>
+            </tr>
+            <tr>
+              <td>
+                U3-FR3 — Conflict handling/backup/review identical to git path
+                (shared engine + artifact)
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>TestHostedReconcileConflictBlocksPush</code> PASS; shared
+                <code>reconcileManifests</code>/<code>ReconcilePlan</code>/<code
+                  >forceReconcileConflicts</code
+                >
+                code paths
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-    <h3>Repository Standards</h3>
-    <table>
-      <thead>
-        <tr><th>Standard Area</th><th>Status</th><th>Evidence &amp; Compliance Notes</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Coding Standards (gofmt, single package, explicit errors)</td><td><span class="badge status-verified">Verified</span></td><td><code>gofmt -l cmd internal</code> empty; all code in <code>internal/devspace</code>; user-facing errors name the recovery command</td></tr>
-        <tr><td>Testing Patterns (<code>DEVSPACE_HOME</code> isolation, behavior-named tests beside code)</td><td><span class="badge status-verified">Verified</span></td><td>All 8 new tests use <code>t.Setenv(envHome, t.TempDir())</code> + temp workspaces; names like <code>TestWorkspaceReconcileConflictBlocksApply</code></td></tr>
-        <tr><td>Quality Gates (<code>make verify</code>)</td><td><span class="badge status-verified">Verified</span></td><td>test (232) + vet + golangci-lint incl. gosec (0 issues) + gofmt + govulncheck (0 affecting) + build all pass — see Task 04 proofs</td></tr>
-        <tr><td>Invariants (safe paths, non-destructive, idempotent, lock discipline)</td><td><span class="badge status-verified">Verified</span></td><td>Manifest writes via <code>SaveManifest</code>; backup + hash guard before overwrite; idempotent re-reconcile tested; <code>withAppLock</code> only at command boundaries</td></tr>
-        <tr><td>Commit &amp; Documentation Conventions</td><td><span class="badge status-verified">Verified</span></td><td>Conventional Commits with "Related to TN.0 in Spec 06" trailers; README "Supported Commands" documents both new commands</td></tr>
-      </tbody>
-    </table>
+        <h3>Repository Standards</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Standard Area</th>
+              <th>Status</th>
+              <th>Evidence &amp; Compliance Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Coding Standards (gofmt, single package, explicit errors)</td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>gofmt -l cmd internal</code> empty; all code in
+                <code>internal/devspace</code>; user-facing errors name the
+                recovery command
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Testing Patterns (<code>DEVSPACE_HOME</code> isolation,
+                behavior-named tests beside code)
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                All 8 new tests use
+                <code>t.Setenv(envHome, t.TempDir())</code> + temp workspaces;
+                names like
+                <code>TestWorkspaceReconcileConflictBlocksApply</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Quality Gates (<code>make verify</code>)</td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                test (232) + vet + golangci-lint incl. gosec (0 issues) + gofmt
+                + govulncheck (0 affecting) + build all pass — see Task 04
+                proofs
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Invariants (safe paths, non-destructive, idempotent, lock
+                discipline)
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                Manifest writes via <code>SaveManifest</code>; backup + hash
+                guard before overwrite; idempotent re-reconcile tested;
+                <code>withAppLock</code> only at command boundaries
+              </td>
+            </tr>
+            <tr>
+              <td>Commit &amp; Documentation Conventions</td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                Conventional Commits with "Related to TN.0 in Spec 06" trailers;
+                README "Supported Commands" documents both new commands
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-    <h3>Proof Artifacts</h3>
-    <table>
-      <thead>
-        <tr><th>Unit/Task</th><th>Proof Artifact</th><th>Status</th><th>Verification Result</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Task 1.0</td><td>Tests: <code>TestSyncRecordsBaseManifest</code>, <code>TestHostedSyncRecordsBaseManifest</code>, <code>TestBaseManifestAbsentIsDetectable</code></td><td><span class="badge status-verified">Verified</span></td><td>All PASS on re-execution at validation time (0.50s/0.17s/0.00s)</td></tr>
-        <tr><td>Task 1.0</td><td>Artifact: <code>last-synced-manifest.json</code> atomic, 0600, metadata-only</td><td><span class="badge status-verified">Verified</span></td><td>Perms + content-equality asserted in tests; written via <code>writeJSON</code></td></tr>
-        <tr><td>Task 2.0</td><td>Tests: <code>TestReconcileMergeCases</code>, <code>TestWorkspaceReconcileNonConflicting</code>, <code>TestWorkspaceReconcileConflictBlocksApply</code></td><td><span class="badge status-verified">Verified</span></td><td>All PASS on re-execution (9 merge cases; end-to-end vs local bare remote)</td></tr>
-        <tr><td>Task 2.0</td><td>CLI: <code>workspace reconcile --json</code> / <code>--help</code></td><td><span class="badge status-verified">Verified</span></td><td>Help documents full safety contract; JSON path exercised in tests; demo shows plan output</td></tr>
-        <tr><td>Task 3.0</td><td>Tests: <code>TestHostedReconcileResolvesVersionConflict</code>, <code>TestHostedReconcileConflictBlocksPush</code>, <code>TestHostedReconcileUpdatesBaseOnSuccess</code></td><td><span class="badge status-verified">Verified</span></td><td>All PASS on re-execution against the in-process hardened hosted server</td></tr>
-        <tr><td>Task 4.0</td><td>Demo transcript: two-machine divergence → reconcile → forced conflict resolution</td><td><span class="badge status-verified">Verified</span></td><td><code>06-task-04-demo-transcript.txt</code> (157 lines) shows dead-end errors, auto-merge (union), blocked apply (exit 1), <code>--force-remote</code> resolution</td></tr>
-        <tr><td>Task 4.0</td><td><code>make verify</code> output green</td><td><span class="badge status-verified">Verified</span></td><td>All six gate steps pass; captured in <code>06-task-04-proofs.html</code></td></tr>
-        <tr><td>Task 4.0</td><td>README "Supported Commands" diff</td><td><span class="badge status-verified">Verified</span></td><td><code>README.md:225</code> (workspace reconcile) and <code>:254</code> (hosted reconcile) present in commit <code>9c6318d</code></td></tr>
-      </tbody>
-    </table>
-  </section>
+        <h3>Proof Artifacts</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Unit/Task</th>
+              <th>Proof Artifact</th>
+              <th>Status</th>
+              <th>Verification Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Task 1.0</td>
+              <td>
+                Tests: <code>TestSyncRecordsBaseManifest</code>,
+                <code>TestHostedSyncRecordsBaseManifest</code>,
+                <code>TestBaseManifestAbsentIsDetectable</code>
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                All PASS on re-execution at validation time (0.50s/0.17s/0.00s)
+              </td>
+            </tr>
+            <tr>
+              <td>Task 1.0</td>
+              <td>
+                Artifact: <code>last-synced-manifest.json</code> atomic, 0600,
+                metadata-only
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                Perms + content-equality asserted in tests; written via
+                <code>writeJSON</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Task 2.0</td>
+              <td>
+                Tests: <code>TestReconcileMergeCases</code>,
+                <code>TestWorkspaceReconcileNonConflicting</code>,
+                <code>TestWorkspaceReconcileConflictBlocksApply</code>
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                All PASS on re-execution (9 merge cases; end-to-end vs local
+                bare remote)
+              </td>
+            </tr>
+            <tr>
+              <td>Task 2.0</td>
+              <td>
+                CLI: <code>workspace reconcile --json</code> /
+                <code>--help</code>
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                Help documents full safety contract; JSON path exercised in
+                tests; demo shows plan output
+              </td>
+            </tr>
+            <tr>
+              <td>Task 3.0</td>
+              <td>
+                Tests: <code>TestHostedReconcileResolvesVersionConflict</code>,
+                <code>TestHostedReconcileConflictBlocksPush</code>,
+                <code>TestHostedReconcileUpdatesBaseOnSuccess</code>
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                All PASS on re-execution against the in-process hardened hosted
+                server
+              </td>
+            </tr>
+            <tr>
+              <td>Task 4.0</td>
+              <td>
+                Demo transcript: two-machine divergence → reconcile → forced
+                conflict resolution
+              </td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>06-task-04-demo-transcript.txt</code> (157 lines) shows
+                dead-end errors, auto-merge (union), blocked apply (exit 1),
+                <code>--force-remote</code> resolution
+              </td>
+            </tr>
+            <tr>
+              <td>Task 4.0</td>
+              <td><code>make verify</code> output green</td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                All six gate steps pass; captured in
+                <code>06-task-04-proofs.html</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Task 4.0</td>
+              <td>README "Supported Commands" diff</td>
+              <td><span class="badge status-verified">Verified</span></td>
+              <td>
+                <code>README.md:225</code> (workspace reconcile) and
+                <code>:254</code> (hosted reconcile) present in commit
+                <code>9c6318d</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
-  <section id="validation-issues">
-    <h2>3) Validation Issues</h2>
-    <p>Issues found during validation that prevent verification or indicate problems, drawn from Coverage Matrix "Failed"/"Unknown" rows and any Red Flags encountered.</p>
-    <table>
-      <thead>
-        <tr><th>Severity</th><th>Issue</th><th>Impact</th><th>Recommendation</th></tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="4">No issues found.</td></tr>
-      </tbody>
-    </table>
-  </section>
+      <section id="validation-issues">
+        <h2>3) Validation Issues</h2>
+        <p>
+          Issues found during validation that prevent verification or indicate
+          problems, drawn from Coverage Matrix "Failed"/"Unknown" rows and any
+          Red Flags encountered.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Issue</th>
+              <th>Impact</th>
+              <th>Recommendation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="4">No issues found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
 
-  <section id="evidence-appendix">
-    <h2>4) Evidence Appendix</h2>
+      <section id="evidence-appendix">
+        <h2>4) Evidence Appendix</h2>
 
-    <h3>Git Commits Analyzed</h3>
-    <pre><code>9c6318d docs: reconcile demo transcript, README entries, verify gate proof   (T4.0 — README.md, demo transcript, task-04 proofs, tasks html)
+        <h3>Git Commits Analyzed</h3>
+        <pre><code>9c6318d docs: reconcile demo transcript, README entries, verify gate proof   (T4.0 — README.md, demo transcript, task-04 proofs, tasks html)
 5be48e9 feat: hosted-backend reconciliation via shared reconcile engine       (T3.0 — reconcile.go, commands.go, reconcile_hosted_test.go, task-03 proofs)
 a03be9a feat: three-way reconcile engine and workspace reconcile command      (T2.0 — reconcile.go, manifest_merge.go(+test), workspace_sync.go, commands.go, output.go, paths.go, reconcile_test.go, task-02 proofs)
 0252e90 feat: track last-synced base manifest for reconciliation             (T1.0 — base_manifest.go(+test), paths.go, workspace_sync.go, hosted_sync.go, task-01 proofs)
 7aeb661 docs: spec 06 manifest reconciliation planning artifacts             (Phase 1-2 artifacts)</code></pre>
 
-    <h3>Proof Artifact Test Results</h3>
-    <ul>
-      <li>All named proof tests re-executed at validation time in one run:</li>
-    </ul>
-    <pre><code>$ go test ./internal/devspace -run 'TestSyncRecordsBaseManifest|TestHostedSyncRecordsBaseManifest|TestBaseManifestAbsentIsDetectable|TestReconcileMergeCases|TestWorkspaceReconcileNonConflicting|TestWorkspaceReconcileConflictBlocksApply|TestHostedReconcile' -v
+        <h3>Proof Artifact Test Results</h3>
+        <ul>
+          <li>
+            All named proof tests re-executed at validation time in one run:
+          </li>
+        </ul>
+        <pre><code>$ go test ./internal/devspace -run 'TestSyncRecordsBaseManifest|TestHostedSyncRecordsBaseManifest|TestBaseManifestAbsentIsDetectable|TestReconcileMergeCases|TestWorkspaceReconcileNonConflicting|TestWorkspaceReconcileConflictBlocksApply|TestHostedReconcile' -v
 --- PASS: TestSyncRecordsBaseManifest (0.50s)
 --- PASS: TestHostedSyncRecordsBaseManifest (0.17s)
 --- PASS: TestBaseManifestAbsentIsDetectable (0.00s)
@@ -165,8 +595,8 @@ a03be9a feat: three-way reconcile engine and workspace reconcile command      (T
 --- PASS: TestWorkspaceReconcileConflictBlocksApply (1.61s)
 ok  	github.com/liatrio-forge/devdrop-capstone/internal/devspace	4.799s</code></pre>
 
-    <h3>File Comparison Results</h3>
-    <pre><code>Planned (Relevant Files) and CHANGED (core):
+        <h3>File Comparison Results</h3>
+        <pre><code>Planned (Relevant Files) and CHANGED (core):
   paths.go, base_manifest.go (new), manifest_merge.go, reconcile.go (new),
   workspace_sync.go, hosted_sync.go, commands.go, README.md
 Changed core NOT in the planned table:
@@ -182,8 +612,8 @@ Planned but UNCHANGED (validated as not requiring modification):
   --help exercised in demo and verify
   manifest_merge_test.go — actually changed (delete-vs-modify case updated)</code></pre>
 
-    <h3>Commands Executed</h3>
-    <pre><code>$ make verify
+        <h3>Commands Executed</h3>
+        <pre><code>$ make verify
 ok   github.com/liatrio-forge/devdrop-capstone/internal/devspace   22.011s
 go vet ./...                          → clean
 golangci-lint run ./...               → 0 issues.
@@ -195,13 +625,17 @@ $ grep -riE 'token…|api[_-]?key|password|secret|AKIA|ghp_|xox' docs/specs/06-s
 no credential-like strings found       → GATE F satisfied
 
 $ bash demo-reconcile.sh > 06-task-04-demo-transcript.txt   (exit 0; temp state removed)</code></pre>
-  </section>
+      </section>
 
-  <section id="validation-metadata">
-    <h2>Validation Metadata</h2>
-    <p><strong>Validation Completed:</strong> 2026-07-05</p>
-    <p><strong>Validation Performed By:</strong> Claude Fable 5 (claude-fable-5), with implementation typing delegated to Codex CLI under bounded specs</p>
-  </section>
-</div>
-</body>
+      <section id="validation-metadata">
+        <h2>Validation Metadata</h2>
+        <p><strong>Validation Completed:</strong> 2026-07-05</p>
+        <p>
+          <strong>Validation Performed By:</strong> Claude Fable 5
+          (claude-fable-5), with implementation typing delegated to Codex CLI
+          under bounded specs
+        </p>
+      </section>
+    </div>
+  </body>
 </html>
