@@ -78,6 +78,11 @@ func TestDashboardSyncStatusRendersDegradedStates(t *testing.T) {
 		t.Fatalf("content = %q, want remote not configured", content)
 	}
 
+	model.syncStatus = dashboardSyncStatus{Configured: true, UnavailableReason: syncStatusLoading}
+	if content := model.renderSyncStatus(); !strings.Contains(content, currentTheme.Muted.Render("loading...")) || strings.Contains(content, currentTheme.Warn.Render("status unavailable: "+syncStatusLoading)) {
+		t.Fatalf("content = %q, want muted loading message without warning", content)
+	}
+
 	model.syncStatus = dashboardSyncStatus{UnavailableReason: "no manifest remote configured"}
 	if content := model.renderSyncStatus(); !strings.Contains(content, "status unavailable: no manifest remote configured") {
 		t.Fatalf("content = %q, want unavailable reason", content)

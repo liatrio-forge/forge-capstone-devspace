@@ -518,6 +518,7 @@ func validateProjectForces(conflicts []MergeConflict, local, remote Manifest, pr
 		return nil
 	}
 	conflicted := map[string]bool{}
+	projectIDs := allProjectIDs(local, remote)
 	localProjects := projectByPath(local.Projects)
 	remoteProjects := projectByPath(remote.Projects)
 	for _, conflict := range conflicts {
@@ -542,10 +543,24 @@ func validateProjectForces(conflicts []MergeConflict, local, remote Manifest, pr
 	}
 	for projectID := range projectForces {
 		if !conflicted[projectID] {
+			if !projectIDs[projectID] {
+				return fmt.Errorf("--force-project %s: unknown project", projectID)
+			}
 			return fmt.Errorf("--force-project %s has no reconcile conflict", projectID)
 		}
 	}
 	return nil
+}
+
+func allProjectIDs(local, remote Manifest) map[string]bool {
+	ids := map[string]bool{}
+	for _, project := range local.Projects {
+		ids[project.ID] = true
+	}
+	for _, project := range remote.Projects {
+		ids[project.ID] = true
+	}
+	return ids
 }
 
 func unresolvedReconcileConflicts(conflicts []MergeConflict, local, remote Manifest, force string, projectForces map[string]string) []MergeConflict {

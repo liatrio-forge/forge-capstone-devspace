@@ -810,6 +810,23 @@ func TestValidateProjectForcesRejectsNonConflictingProject(t *testing.T) {
 	}
 }
 
+func TestValidateProjectForcesRejectsUnknownProject(t *testing.T) {
+	user := reconcileUser()
+	app := testMergeProject("project_app", "apps/app")
+	base := testMergeManifest(user, []Project{app}, nil)
+	local := testMergeManifest(user, []Project{withMergeName(app, "local-app")}, nil)
+	remote := testMergeManifest(user, []Project{withMergeName(app, "remote-app")}, nil)
+
+	result, err := reconcileManifests(&base, local, remote)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = validateProjectForces(result.Conflicts, local, remote, map[string]string{"project_typo": "remote"})
+	if err == nil || !strings.Contains(err.Error(), "--force-project project_typo: unknown project") {
+		t.Fatalf("error = %v, want unknown project error", err)
+	}
+}
+
 func TestReconcileTwoWayUserConflict(t *testing.T) {
 	user := reconcileUser()
 	remoteUser := user

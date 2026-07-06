@@ -260,9 +260,12 @@ func (m dashboardModel) renderSyncStatus() string {
 	b.WriteString("\n")
 	status := m.syncStatus
 	if status.UnavailableReason != "" {
-		if status.UnavailableReason == syncStatusRemoteNotConfigured {
+		switch status.UnavailableReason {
+		case syncStatusRemoteNotConfigured:
 			b.WriteString(currentTheme.Muted.Render(syncStatusRemoteNotConfigured))
-		} else {
+		case syncStatusLoading:
+			b.WriteString(currentTheme.Muted.Render("loading..."))
+		default:
 			b.WriteString(currentTheme.Warn.Render("status unavailable: " + status.UnavailableReason))
 		}
 		return b.String()
