@@ -278,9 +278,6 @@ func ReconcileWorkspaceManifest(force string, apply bool) (ReconcilePlan, error)
 	if err := SaveManifest(cfg.WorkspaceRoot, plan.Merged); err != nil {
 		return ReconcilePlan{}, err
 	}
-	if err := recordBaseManifest(manifestForSync(plan.Merged)); err != nil {
-		return ReconcilePlan{}, err
-	}
 	return plan, nil
 }
 
@@ -405,9 +402,7 @@ func ReconcileHostedManifest(force string, apply bool) (ReconcilePlan, error) {
 	if err := recordHostedSync(updated.Version, updated.ManifestHash); err != nil {
 		return ReconcilePlan{}, err
 	}
-	if err := recordBaseManifest(normalized); err != nil {
-		return ReconcilePlan{}, err
-	}
+	recordBaseManifestAfterSync(normalized)
 	return plan, nil
 }
 

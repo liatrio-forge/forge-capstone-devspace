@@ -16,7 +16,9 @@ Type "export CLICOLOR_FORCE=1"
 Enter
 Type "export DEVSPACE_HOSTED_TOKEN=demo-token"
 Enter
-Type "export PATH=/Users/lecoqjacob/Projects/personal/devdrop/bin:$PATH"
+Type "export REPO_ROOT=$(git rev-parse --show-toplevel)"
+Enter
+Type 'export PATH="$REPO_ROOT/bin:$PATH"'
 Enter
 Type "export DEMO_WS=$(mktemp -d)/code"
 Enter
@@ -35,7 +37,7 @@ Sleep 500ms
 Type "devspace scan"
 Enter
 Sleep 500ms
-Type "bash hosted-sync-serve.sh"
+Type 'bash "$REPO_ROOT/docs/demos/hosted-sync-serve.sh"'
 Enter
 Sleep 2s
 Type "clear"
@@ -59,7 +61,11 @@ Enter
 Sleep 2s
 
 Hide
-Type "kill $(cat /tmp/devspace-hosted-demo.pid) 2>/dev/null"
+Type 'source "$DEMO_WS/hosted-sync-demo.env"'
+Enter
+Type 'kill "$(cat "$HOSTED_SYNC_DEMO_PID_FILE")" 2>/dev/null'
+Enter
+Type 'rm -rf "$HOSTED_SYNC_DEMO_STORE_DIR" "$DEMO_WS/hosted-sync-demo.env"'
 Enter
 Sleep 500ms
 Show

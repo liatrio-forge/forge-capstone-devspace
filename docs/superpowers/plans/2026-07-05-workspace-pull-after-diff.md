@@ -4,7 +4,7 @@
 
 **Goal:** Make `devspace workspace pull` succeed after `devspace workspace diff` when the local manifest has no unpushed changes.
 
-**Architecture:** `PullWorkspaceManifest` currently infers "what did I last sync?" from the cached manifest clone's pre-pull `manifest.json` (`internal/devspace/workspace_sync.go:188`). `DiffWorkspaceManifest` fast-forwards that same cached clone (`fetchLocalizedWorkspaceRemoteManifest` → `pullManifestRepo`, workspace_sync.go:259), so a diff run before a pull makes the "previous remote" look identical to the new remote, and the unpushed-changes guard (workspace_sync.go:207) wrongly reports `local manifest differs from remote manifest`. The fix: prefer the purpose-built base snapshot `base-manifest.json` (written by `recordBaseManifest` on every push/pull/reconcile, read by `loadBaseManifest` in `internal/devspace/base_manifest.go`) as the guard's baseline, falling back to the clone's pre-pull contents only when no base has been recorded (first pull on a machine). No changes to `DiffWorkspaceManifest` — once the guard stops depending on the clone's incidental state, diff advancing the cache is harmless.
+**Architecture:** `PullWorkspaceManifest` currently infers "what did I last sync?" from the cached manifest clone's pre-pull `manifest.json` (`internal/devspace/workspace_sync.go:188`). `DiffWorkspaceManifest` fast-forwards that same cached clone (`fetchLocalizedWorkspaceRemoteManifest` → `pullManifestRepo`, workspace_sync.go:259), so a diff run before a pull makes the "previous remote" look identical to the new remote, and the unpushed-changes guard (workspace_sync.go:207) wrongly reports `local manifest differs from remote manifest`. The fix: prefer the purpose-built base snapshot `base-manifest.json` (written by `recordBaseManifest` at successful sync boundaries, read by `loadBaseManifest` in `internal/devspace/base_manifest.go`) as the guard's baseline, falling back to the clone's pre-pull contents only when no base has been recorded (first pull on a machine). No changes to `DiffWorkspaceManifest` — once the guard stops depending on the clone's incidental state, diff advancing the cache is harmless.
 
 **Tech Stack:** Go, stdlib `testing`, single package `internal/devspace`.
 
@@ -139,7 +139,7 @@ with:
  // The clone's pre-pull contents are only a proxy for the last synced
  // state and go stale whenever something else advances the cache (e.g.
  // `workspace diff` fast-forwards the same clone). Prefer the base
- // snapshot recorded on every push/pull/reconcile when one exists.
+ // snapshot recorded on successful sync boundaries when one exists.
  base, hasBase, err := loadBaseManifest()
  if err != nil {
   return false, err

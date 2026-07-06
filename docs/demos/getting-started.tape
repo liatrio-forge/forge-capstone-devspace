@@ -21,7 +21,9 @@ Type "git -C $DEMO_WS/api-service init -q"
 Enter
 Type "git -C $DEMO_WS/web-app init -q"
 Enter
-Type "export PATH=/Users/lecoqjacob/Projects/personal/devdrop/bin:$PATH"
+Type "export REPO_ROOT=$(git rev-parse --show-toplevel)"
+Enter
+Type 'export PATH="$REPO_ROOT/bin:$PATH"'
 Enter
 Sleep 500ms
 Type "clear"

@@ -182,9 +182,10 @@ conflicts) is written to `DEVSPACE_HOME/last-reconcile.json`
 (`reconcilePlanPath`) without changing the manifest. `--apply` re-checks the
 local manifest hash against the plan, backs up the pre-reconcile manifest to
 `DEVSPACE_HOME/manifest-backup.json` (`manifestBackupPath`), writes the merged
-manifest, and records the new base snapshot. Plain `push`/`pull` keep their
-existing refuse-on-divergence behavior; `reconcile` is the opt-in path for
-divergence that the plain flow refuses.
+manifest, and leaves the base snapshot at the last published sync point until
+the merged manifest is pushed or pulled. Plain `push`/`pull` keep their existing
+refuse-on-divergence behavior; `reconcile` is the opt-in path for divergence
+that the plain flow refuses.
 
 The design questions the earlier spike (`docs/architecture/manifest-merge.md`)
 left open are resolved: two-way fallback (not refuse) when there's no base;

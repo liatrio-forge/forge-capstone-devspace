@@ -251,7 +251,7 @@ devspace hosted serve --addr 127.0.0.1:8787 --store ~/.devspace/hosted-control-p
 devspace hosted config set http://127.0.0.1:8787 --token dev-token --workspace team-a
 devspace hosted push
 devspace hosted pull
-devspace hosted reconcile [--apply] [--force-local|--force-remote]
+devspace hosted reconcile [--json] [--apply] [--force-local|--force-remote]
 ```
 
 `devspace hosted reconcile` resolves hosted version conflicts (HTTP 409) the same way as `workspace reconcile`: three-way merge against the base snapshot, review-first plan, backup + hash-guarded apply, and explicit force flags for genuine conflicts. On apply it pushes the merged manifest with version-conflict protection, then refreshes the local manifest and sync baseline.

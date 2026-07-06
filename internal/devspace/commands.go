@@ -449,7 +449,7 @@ func newWorkspaceReconcileCommand() *cobra.Command {
 		Long: strings.Join([]string{
 			"Reconcile computes a three-way merge between the last synced base manifest, the local manifest, and the configured Git remote manifest.",
 			"By default it writes only a review artifact to DEVSPACE_HOME/last-reconcile.json and does not change the workspace manifest.",
-			"With --apply, DevSpace writes DEVSPACE_HOME/manifest-backup.json before replacing the local manifest, then refreshes the base snapshot. Apply is guarded by the local manifest hash captured when reconcile was generated.",
+			"With --apply, DevSpace writes DEVSPACE_HOME/manifest-backup.json before replacing the local manifest. The base snapshot refreshes after the merged manifest is pushed. Apply is guarded by the local manifest hash captured when reconcile was generated.",
 			"If no base snapshot exists, reconcile falls back to a conservative two-way union: one-sided additions merge, same-key differences become conflicts.",
 			"Use --force-local or --force-remote to resolve every conflict to that side before applying.",
 		}, "\n\n"),

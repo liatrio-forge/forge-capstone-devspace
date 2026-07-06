@@ -35,7 +35,12 @@ mkdir -p "$WS_B/apps/web"
 git -C "$WS_B/apps/web" init -q -b main
 DEVSPACE_HOME="$HOME_B" "$BIN" scan >/dev/null
 
-cat > /tmp/06-reconcile-demo-env.sh <<EOF
+ENV_FILE=/tmp/06-reconcile-demo-env.sh
+if [ -e "$ENV_FILE" ] || [ -L "$ENV_FILE" ]; then
+  rm -f "$ENV_FILE"
+fi
+(umask 077
+cat > "$ENV_FILE" <<EOF
 export BIN="$BIN"
 export DEMO="$DEMO"
 export HOME_A="$HOME_A"
@@ -46,3 +51,4 @@ export REMOTE="$REMOTE"
 export DEVSPACE_HOME="$HOME_B"
 export PATH="$(dirname "$BIN"):\$PATH"
 EOF
+)

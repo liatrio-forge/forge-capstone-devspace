@@ -1,5 +1,7 @@
 package devspace
 
+var recordBaseManifestForSync = recordBaseManifest
+
 func recordBaseManifest(m Manifest) error {
 	path, err := baseManifestPath()
 	if err != nil {
@@ -21,4 +23,10 @@ func loadBaseManifest() (Manifest, bool, error) {
 		return Manifest{}, false, err
 	}
 	return m, true, nil
+}
+
+// The sync mutation has already succeeded by the time this runs, so a snapshot
+// write failure must not turn the completed push/pull into a reported failure.
+func recordBaseManifestAfterSync(m Manifest) {
+	_ = recordBaseManifestForSync(m)
 }

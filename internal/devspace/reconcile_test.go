@@ -218,9 +218,57 @@ func TestWorkspaceReconcileNonConflicting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ok || !reflect.DeepEqual(baseSnapshot.Projects, merged.Projects) {
-		t.Fatalf("base snapshot = %+v ok=%t, want merged %+v", baseSnapshot.Projects, ok, merged.Projects)
+	if !ok {
+		t.Fatal("base snapshot missing")
 	}
+	if _, ok := findProject(baseSnapshot, "apps/local"); ok {
+		t.Fatalf("base snapshot recorded unpushed local project: %+v", baseSnapshot.Projects)
+	}
+	if _, ok := findProject(baseSnapshot, "apps/remote"); ok {
+		t.Fatalf("base snapshot recorded remote project before local push: %+v", baseSnapshot.Projects)
+	}
+
+	t.Setenv(envHome, homeB)
+	nextRemote, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextRemote.Projects = append(nextRemote.Projects, hardeningProject("apps/another-remote", ProjectTypeLocal, ""))
+	if err := SaveManifest(workspaceB, nextRemote); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, homeA)
+	nextPlan, err := ReconcileWorkspaceManifest("", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(nextPlan.Conflicts) != 0 {
+		t.Fatalf("next reconcile conflicts=%+v", nextPlan.Conflicts)
+	}
+	merged, err = LoadManifest(workspaceA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"apps/base", "apps/local", "apps/remote", "apps/another-remote"} {
+		if _, ok := findProject(merged, path); !ok {
+			t.Fatalf("missing project %s after second reconcile: %+v", path, merged.Projects)
+		}
+	}
+	if changed, err := PushWorkspaceManifest(); err != nil || !changed {
+		t.Fatalf("push after reconcile changed=%t err=%v", changed, err)
+	}
+	baseSnapshot, ok, err = loadBaseManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok || !reflect.DeepEqual(baseSnapshot.Projects, manifestForSync(merged).Projects) {
+		t.Fatalf("base snapshot = %+v ok=%t, want pushed merged %+v", baseSnapshot.Projects, ok, merged.Projects)
+	}
+
 	second, err := ReconcileWorkspaceManifest("", true)
 	if err != nil {
 		t.Fatal(err)

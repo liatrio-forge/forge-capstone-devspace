@@ -171,9 +171,7 @@ func PushHostedManifest() (HostedSyncResult, error) {
 			if err := recordHostedSync(remote.Version, remote.ManifestHash); err != nil {
 				return HostedSyncResult{}, err
 			}
-			if err := recordBaseManifest(normalized); err != nil {
-				return HostedSyncResult{}, err
-			}
+			recordBaseManifestAfterSync(normalized)
 			return HostedSyncResult{Changed: false, Version: remote.Version, ManifestHash: remote.ManifestHash}, nil
 		}
 		if st.HostedSyncVersion == 0 {
@@ -197,9 +195,7 @@ func PushHostedManifest() (HostedSyncResult, error) {
 	if err := recordHostedSync(updated.Version, updated.ManifestHash); err != nil {
 		return HostedSyncResult{}, err
 	}
-	if err := recordBaseManifest(normalized); err != nil {
-		return HostedSyncResult{}, err
-	}
+	recordBaseManifestAfterSync(normalized)
 	return HostedSyncResult{Changed: true, Version: updated.Version, ManifestHash: updated.ManifestHash}, nil
 }
 
@@ -257,9 +253,7 @@ func PullHostedManifest() (HostedSyncResult, error) {
 	if err := recordHostedSync(remote.Version, remote.ManifestHash); err != nil {
 		return HostedSyncResult{}, err
 	}
-	if err := recordBaseManifest(manifestForSync(localized)); err != nil {
-		return HostedSyncResult{}, err
-	}
+	recordBaseManifestAfterSync(manifestForSync(localized))
 	return HostedSyncResult{Changed: !bytes.Equal(before, after), Version: remote.Version, ManifestHash: remote.ManifestHash}, nil
 }
 

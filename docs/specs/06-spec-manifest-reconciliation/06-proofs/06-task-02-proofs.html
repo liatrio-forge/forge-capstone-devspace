@@ -97,7 +97,7 @@ PASS</code></pre>
 
   <article class="artifact">
     <h2>Artifact: End-to-end reconcile flows (auto-merge and conflict block)</h2>
-    <p class="proves"><strong>What it proves:</strong> The full command path works against real divergence: two app homes sharing a bare git remote diverge; reconcile+apply produces the union, writes the app-home backup, refreshes the base snapshot, and re-running reports zero ops. With a genuine conflict, <code>--apply</code> errors and leaves the local manifest untouched until a force flag chooses a side.</p>
+    <p class="proves"><strong>What it proves:</strong> The full command path works against real divergence: two app homes sharing a bare git remote diverge; reconcile+apply produces the union and writes the app-home backup while leaving the base snapshot at the last published sync point until the merged manifest is pushed. With a genuine conflict, <code>--apply</code> errors and leaves the local manifest untouched until a force flag chooses a side.</p>
     <p class="matters"><strong>Why it matters:</strong> These tests exercise fetch/localize, plan persistence, the hash guard, backup, and the non-destructive conflict gate together — the exact scenario that today ends in "remote branch diverged … pull/reconcile manually".</p>
     <p><strong>Command:</strong></p>
     <pre><code>go test ./internal/devspace -run 'TestWorkspaceReconcileNonConflicting|TestWorkspaceReconcileConflictBlocksApply' -v</code></pre>
@@ -121,7 +121,7 @@ By default it writes only a review artifact to DEVSPACE_HOME/last-reconcile.json
 not change the workspace manifest.
 
 With --apply, DevSpace writes DEVSPACE_HOME/manifest-backup.json before replacing the
-local manifest, then refreshes the base snapshot. Apply is guarded by the local manifest
+local manifest. The base snapshot refreshes after the merged manifest is pushed. Apply is guarded by the local manifest
 hash captured when reconcile was generated.
 
 If no base snapshot exists, reconcile falls back to a conservative two-way union:

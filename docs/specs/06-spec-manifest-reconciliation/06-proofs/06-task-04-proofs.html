@@ -90,23 +90,23 @@ machine-b$ devspace workspace pull
 machine-b$ devspace workspace reconcile
 Workspace reconcile:
 Auto-merged: 1
-  ADDED project project_73776ec8bf13
+  ADDED project &lt;api-project-id&gt;
 Conflicts: 0
 Review saved to DEVSPACE_HOME/last-reconcile.json.
 
 ### Reconcile flags the conflict and refuses to apply without an explicit choice
 machine-b$ devspace workspace reconcile
 Conflicts: 1
-  project project_8cc463c33edc field *
+  project &lt;shared-project-id&gt; field *
     local:  "{... Path:apps/shared ... DefaultBranch:trunk ...}"
     remote: "{... Path:apps/shared ... DefaultBranch:develop ...}"
 machine-b$ devspace workspace reconcile --apply
-  ERROR  Unresolved reconcile conflicts: - project project_8cc463c33edc ...  (exit 1)
+  ERROR  Unresolved reconcile conflicts: - project &lt;shared-project-id&gt; ...  (exit 1)
 
 ### Explicit resolution: take the remote side
 machine-b$ devspace workspace reconcile --force-remote --apply
 Auto-merged: 1
-  CHANGED project project_8cc463c33edc
+  CHANGED project &lt;shared-project-id&gt;
 Applied reconciled manifest.
 
 ### Final state on machine B

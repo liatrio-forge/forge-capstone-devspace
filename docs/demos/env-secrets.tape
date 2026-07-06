@@ -19,7 +19,9 @@ Type "mkdir -p $DEMO_WS/demo-project"
 Enter
 Type "git -C $DEMO_WS/demo-project init -q"
 Enter
-Type "export PATH=/Users/lecoqjacob/Projects/personal/devdrop/bin:$PATH"
+Type "export REPO_ROOT=$(git rev-parse --show-toplevel)"
+Enter
+Type 'export PATH="$REPO_ROOT/bin:$PATH"'
 Enter
 Type "devspace init --workspace $DEMO_WS"
 Enter
@@ -30,7 +32,7 @@ Sleep 1s
 Type "cd $DEMO_WS"
 Enter
 Sleep 500ms
-Type "cp /Users/lecoqjacob/Projects/personal/devdrop/docs/demos/set-api-key.sh ./set-api-key.sh"
+Type 'cp "$REPO_ROOT/docs/demos/set-api-key.sh" ./set-api-key.sh'
 Enter
 Type "chmod +x set-api-key.sh"
 Enter

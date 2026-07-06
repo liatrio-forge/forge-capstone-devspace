@@ -1,6 +1,7 @@
 package devspace
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -99,6 +100,151 @@ func TestHostedSyncRecordsBaseManifest(t *testing.T) {
 	assertBaseManifest(t, manifestForSync(expected), 0o600)
 }
 
+func TestWorkspaceSyncDoesNotFailWhenBaseRecordFailsAfterSuccess(t *testing.T) {
+	root := t.TempDir()
+	remote := workspaceSyncBareRepo(t)
+	workspaceA := filepath.Join(root, "machine-a", "code")
+	workspaceB := filepath.Join(root, "machine-b", "code")
+	homeA := filepath.Join(root, "home-a")
+	homeB := filepath.Join(root, "home-b")
+
+	t.Setenv(envHome, homeA)
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	local := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspaceA,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}
+	if err := SaveManifest(workspaceA, local); err != nil {
+		t.Fatal(err)
+	}
+
+	pushCalls := 0
+	restore := replaceBaseManifestRecorder(func(Manifest) error {
+		pushCalls++
+		return errors.New("base snapshot write failed")
+	})
+	changed, err := PushWorkspaceManifest()
+	restore()
+	if err != nil || !changed {
+		t.Fatalf("push changed=%t err=%v", changed, err)
+	}
+	if pushCalls != 1 {
+		t.Fatalf("base recorder calls after push = %d, want 1", pushCalls)
+	}
+
+	t.Setenv(envHome, homeB)
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	pullCalls := 0
+	restore = replaceBaseManifestRecorder(func(Manifest) error {
+		pullCalls++
+		return errors.New("base snapshot write failed")
+	})
+	changed, err = PullWorkspaceManifest()
+	restore()
+	if err != nil || !changed {
+		t.Fatalf("pull changed=%t err=%v", changed, err)
+	}
+	if pullCalls != 1 {
+		t.Fatalf("base recorder calls after pull = %d, want 1", pullCalls)
+	}
+	pulled, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(pulled, "apps/app"); !ok {
+		t.Fatalf("pulled manifest missing apps/app: %+v", pulled.Projects)
+	}
+}
+
+func TestHostedSyncDoesNotFailWhenBaseRecordFailsAfterSuccess(t *testing.T) {
+	root := t.TempDir()
+	server := hostedSyncTestServer(t)
+	workspaceA := filepath.Join(root, "machine-a", "code")
+	workspaceB := filepath.Join(root, "machine-b", "code")
+	homeA := filepath.Join(root, "home-a")
+	homeB := filepath.Join(root, "home-b")
+
+	t.Setenv(envHome, homeA)
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetHostedSync(server.URL, "test-token", "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	local := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspaceA,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}
+	if err := SaveManifest(workspaceA, local); err != nil {
+		t.Fatal(err)
+	}
+
+	pushCalls := 0
+	restore := replaceBaseManifestRecorder(func(Manifest) error {
+		pushCalls++
+		return errors.New("base snapshot write failed")
+	})
+	result, err := PushHostedManifest()
+	restore()
+	if err != nil || !result.Changed || result.Version != 1 {
+		t.Fatalf("push result=%+v err=%v", result, err)
+	}
+	if pushCalls != 1 {
+		t.Fatalf("base recorder calls after hosted push = %d, want 1", pushCalls)
+	}
+	envelope := hostedSyncGet(t, server.URL, "team-a")
+	if envelope.Version != 1 {
+		t.Fatalf("hosted version = %d, want 1", envelope.Version)
+	}
+
+	t.Setenv(envHome, homeB)
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetHostedSync(server.URL, "test-token", "team-a"); err != nil {
+		t.Fatal(err)
+	}
+	pullCalls := 0
+	restore = replaceBaseManifestRecorder(func(Manifest) error {
+		pullCalls++
+		return errors.New("base snapshot write failed")
+	})
+	result, err = PullHostedManifest()
+	restore()
+	if err != nil || !result.Changed || result.Version != 1 {
+		t.Fatalf("pull result=%+v err=%v", result, err)
+	}
+	if pullCalls != 1 {
+		t.Fatalf("base recorder calls after hosted pull = %d, want 1", pullCalls)
+	}
+	pulled, err := LoadManifest(workspaceB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(pulled, "apps/app"); !ok {
+		t.Fatalf("pulled hosted manifest missing apps/app: %+v", pulled.Projects)
+	}
+	st, err := LoadState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.HostedSyncVersion != 1 || st.HostedSyncManifestHash != envelope.ManifestHash {
+		t.Fatalf("hosted sync state = %+v, want version/hash 1/%s", st, envelope.ManifestHash)
+	}
+}
+
 func TestBaseManifestAbsentIsDetectable(t *testing.T) {
 	t.Setenv(envHome, t.TempDir())
 
@@ -108,6 +254,14 @@ func TestBaseManifestAbsentIsDetectable(t *testing.T) {
 	}
 	if ok {
 		t.Fatalf("ok = true, manifest = %+v", got)
+	}
+}
+
+func replaceBaseManifestRecorder(fn func(Manifest) error) func() {
+	previous := recordBaseManifestForSync
+	recordBaseManifestForSync = fn
+	return func() {
+		recordBaseManifestForSync = previous
 	}
 }
 

@@ -156,9 +156,7 @@ func PushWorkspaceManifest() (bool, error) {
 		return false, err
 	}
 	if !changed {
-		if err := recordBaseManifest(normalized); err != nil {
-			return false, err
-		}
+		recordBaseManifestAfterSync(normalized)
 		return false, nil
 	}
 	if err := commitManifestRepo(repo, cfg); err != nil {
@@ -167,9 +165,7 @@ func PushWorkspaceManifest() (bool, error) {
 	if err := pushManifestRepo(repo); err != nil {
 		return false, err
 	}
-	if err := recordBaseManifest(normalized); err != nil {
-		return false, err
-	}
+	recordBaseManifestAfterSync(normalized)
 	return true, nil
 }
 
@@ -192,7 +188,7 @@ func PullWorkspaceManifest() (bool, error) {
 	// The clone's pre-pull contents are only a proxy for the last synced
 	// state and go stale whenever something else advances the cache (e.g.
 	// `workspace diff` fast-forwards the same clone). Prefer the base
-	// snapshot recorded on every push/pull/reconcile when one exists.
+	// snapshot recorded on successful sync boundaries when one exists.
 	base, hasBase, err := loadBaseManifest()
 	if err != nil {
 		return false, err
@@ -229,9 +225,7 @@ func PullWorkspaceManifest() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if err := recordBaseManifest(manifestForSync(localized)); err != nil {
-		return false, err
-	}
+	recordBaseManifestAfterSync(manifestForSync(localized))
 	return !bytes.Equal(before, after), nil
 }
 

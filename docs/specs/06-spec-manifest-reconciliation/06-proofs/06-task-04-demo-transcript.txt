@@ -1,11 +1,11 @@
 ### Setup: machine A initializes a workspace, creates a local bare manifest remote, pushes
 
-machine-a$ devspace init --workspace /tmp/devspace-reconcile-demo.R0uVrh/machine-a/code
-Initialized DevSpace workspace: /tmp/devspace-reconcile-demo.R0uVrh/machine-a/code
-Machine: Jacobs-MacBook-Pro.local (machine_a38250f1c8f6016f)
+machine-a$ devspace init --workspace <demo-root>/machine-a/code
+Initialized DevSpace workspace: <demo-root>/machine-a/code
+Machine: <host> (<machine-a-id>)
 
-machine-a$ devspace workspace remote create local /tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
-/tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
+machine-a$ devspace workspace remote create local <demo-root>/manifest-remote.git
+<demo-root>/manifest-remote.git
 
 machine-a$ devspace scan
 Scanning workspace...
@@ -20,12 +20,12 @@ Pushed workspace manifest.
 
 ### Machine B joins: same remote, pulls the manifest
 
-machine-b$ devspace init --workspace /tmp/devspace-reconcile-demo.R0uVrh/machine-b/code
-Initialized DevSpace workspace: /tmp/devspace-reconcile-demo.R0uVrh/machine-b/code
-Machine: Jacobs-MacBook-Pro.local (machine_31abf8e2cadcbd26)
+machine-b$ devspace init --workspace <demo-root>/machine-b/code
+Initialized DevSpace workspace: <demo-root>/machine-b/code
+Machine: <host> (<machine-b-id>)
 
-machine-b$ devspace workspace remote set /tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
-/tmp/devspace-reconcile-demo.R0uVrh/manifest-remote.git
+machine-b$ devspace workspace remote set <demo-root>/manifest-remote.git
+<demo-root>/manifest-remote.git
 
 machine-b$ devspace workspace pull
 Pulled workspace manifest.
@@ -75,7 +75,7 @@ machine-b$ devspace workspace pull
 machine-b$ devspace workspace reconcile
 Workspace reconcile:
 Auto-merged: 1
-  ADDED project project_73776ec8bf13
+  ADDED project <api-project-id>
 Conflicts: 0
 No reconcile conflicts.
 Review saved to DEVSPACE_HOME/last-reconcile.json.
@@ -85,7 +85,7 @@ Review saved to DEVSPACE_HOME/last-reconcile.json.
 machine-b$ devspace workspace reconcile --apply
 Workspace reconcile:
 Auto-merged: 1
-  ADDED project project_73776ec8bf13
+  ADDED project <api-project-id>
 Conflicts: 0
 No reconcile conflicts.
 Applied reconciled manifest.
@@ -109,9 +109,9 @@ Workspace reconcile:
 Auto-merged: 0
 No local manifest changes.
 Conflicts: 1
-  project project_8cc463c33edc field *
-    local: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
-    remote: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+  project <shared-project-id> field *
+    local: "{ID:<shared-project-id> Name:shared Path:apps/shared Type:git Remote: DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+    remote: "{ID:<shared-project-id> Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
 Review saved to DEVSPACE_HOME/last-reconcile.json.
 
 machine-b$ devspace workspace reconcile --apply
@@ -119,18 +119,18 @@ Workspace reconcile:
 Auto-merged: 0
 No local manifest changes.
 Conflicts: 1
-  project project_8cc463c33edc field *
-    local: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
-    remote: "{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+  project <shared-project-id> field *
+    local: "{ID:<shared-project-id> Name:shared Path:apps/shared Type:git Remote: DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
+    remote: "{ID:<shared-project-id> Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"
 Review saved to DEVSPACE_HOME/last-reconcile.json.
           
    ERROR  
           
   Unresolved reconcile conflicts:                                                                                     
-  - project project_8cc463c33edc *: local="{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote:     
+  - project <shared-project-id> *: local="{ID:<shared-project-id> Name:shared Path:apps/shared Type:git Remote:
   DefaultBranch:trunk HydrateMode:on-demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor  
   coverage .cache .DS_Store *.log] Setup:{PackageManager: InstallCommand: DevCommand:}}"                              
-  remote="{ID:project_8cc463c33edc Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-
+  remote="{ID:<shared-project-id> Name:shared Path:apps/shared Type:git Remote: DefaultBranch:develop HydrateMode:on-
   demand EnvProfiles:[] Ignore:[node_modules dist build .next turbo target vendor coverage .cache .DS_Store *.log]    
   Setup:{PackageManager: InstallCommand: DevCommand:}}".                                                              
 
@@ -141,7 +141,7 @@ Review saved to DEVSPACE_HOME/last-reconcile.json.
 machine-b$ devspace workspace reconcile --force-remote --apply
 Workspace reconcile:
 Auto-merged: 1
-  CHANGED project project_8cc463c33edc
+  CHANGED project <shared-project-id>
 Conflicts: 0
 No reconcile conflicts.
 Applied reconciled manifest.
