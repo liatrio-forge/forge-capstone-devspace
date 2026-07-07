@@ -56,3 +56,16 @@ install-hooks:
 
 clean:
 	rm -rf $(BIN_DIR) $(DIST_DIR)
+
+help:
+	@echo "Usage: make <target>"
+	@echo "Targets:"
+	@echo "  all - Run all checks and build the binary"
+	@echo "  fmt - Format the code"
+	@echo "  fmt-check - Check if the code is formatted"
+	@echo "  test - Run the tests"
+	@echo "  vet - Run the vet checks"
+	@echo "  lint - Run the lint checks"
+	@echo "  vulncheck - Run the vulnerability checks"
+	@echo "  build - Build the binary"
+	@echo "  verify - Run all checks and build the binary"
