@@ -45,6 +45,7 @@ type dashboardModel struct {
 	width         int
 	height        int
 
+	statusCache     *syncStatusCache
 	watchCmdFactory func(string) tea.Cmd
 }
 
@@ -102,6 +103,7 @@ func newDashboardModel(noWatch bool) dashboardModel {
 	model := dashboardModel{
 		noWatch:         noWatch,
 		syncMode:        WatchSyncOff,
+		statusCache:     newSyncStatusCache(dashboardSyncStatusCmd()),
 		watchCmdFactory: dashboardWatchCmd,
 	}
 	cfg, err := LoadConfig()
@@ -121,9 +123,9 @@ func newDashboardModel(noWatch bool) dashboardModel {
 
 func (m dashboardModel) Init() tea.Cmd {
 	if m.noWatch {
-		return tea.Batch(dashboardScanCmd(), dashboardSyncStatusCmd())
+		return tea.Batch(dashboardScanCmd(), m.syncStatusCmd())
 	}
-	return tea.Batch(dashboardScanCmd(), dashboardSyncStatusCmd(), m.nextWatchCmd())
+	return tea.Batch(dashboardScanCmd(), m.syncStatusCmd(), m.nextWatchCmd())
 }
 
 func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -142,7 +144,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rows = msg.rows
 		m.summary = msg.summary
 		m.clampSelected()
-		return m, dashboardSyncStatusCmd()
+		return m, m.syncStatusCmd()
 	case actionResultMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -154,7 +156,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summary = msg.summary
 		m.prependEvent(fmt.Sprintf("%s complete", msg.label))
 		m.clampSelected()
-		return m, dashboardSyncStatusCmd()
+		return m, m.syncStatusCmd()
 	case watchRefreshMsg:
 		m.busy = false
 		if msg.err != nil {
@@ -201,7 +203,7 @@ func (m dashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if cmd == nil {
 				return m, nil
 			}
-			return m, tea.Batch(cmd, dashboardSyncStatusCmd())
+			return m, tea.Batch(cmd, m.syncStatusCmd())
 		case "s":
 			return m.startAction("scan", dashboardScanCmd())
 		case "p":
@@ -293,7 +295,17 @@ func (m dashboardModel) startAction(label string, cmd tea.Cmd) (dashboardModel, 
 	}
 	m.busy = true
 	m.errText = ""
+	if m.statusCache != nil {
+		m.statusCache.invalidate()
+	}
 	return m, cmd
+}
+
+func (m dashboardModel) syncStatusCmd() tea.Cmd {
+	if m.statusCache == nil {
+		return dashboardSyncStatusCmd()
+	}
+	return m.statusCache.cmd()
 }
 
 func (m dashboardModel) nextWatchCmd() tea.Cmd {

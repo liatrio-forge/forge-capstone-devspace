@@ -14,7 +14,7 @@ done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 016 | ui-server concurrent requests + cached sync status (no more network pull per watch event) | P1 | M | — | TODO |
+| 016 | ui-server concurrent requests + cached sync status (no more network pull per watch event) | P1 | M | — | DONE (spec 09 task 1.0) |
 | 017 | Protocol version handshake + Go/TS golden contract tests | P1 | M | — | TODO |
 | 018 | TUI client stream-decode + watch failure visibility/recovery in both frontends | P2 | M | 016 | TODO |
 | 019 | `devspace tui install` (download matching release asset to $DEVSPACE_HOME/bin) | P2 | M | — | TODO |

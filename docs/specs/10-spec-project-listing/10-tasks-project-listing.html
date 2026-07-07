@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>10-tasks-project-listing</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .parent-task { border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1.25rem 0; }
+  .parent-task > h3 { margin-top:0; }
+  .proof-artifacts ul { margin:.5rem 0; }
+  .tbd-marker { color:var(--muted); font-style:italic; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">TASKS</span>
+    <h1>10-tasks-project-listing</h1>
+    <p class="meta">Sequence 10 · Feature: project-listing · Phase 2 · Parent tasks (sub-tasks pending)</p>
+  </header>
+
+  <section id="standards-evidence">
+    <h2>Standards Evidence Table</h2>
+    <table>
+      <thead>
+        <tr><th>Source File</th><th>Read Status</th><th>Standards Extracted</th><th>Conflicts</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>AGENTS.md</code></td><td>yes</td><td>Go CLI code belongs under <code>cmd/devspace</code> and <code>internal/devspace</code>; tests sit beside implementation; run <code>make verify</code>; local-first commands need explicit sync opt-in.</td><td>none</td></tr>
+        <tr><td><code>README.md</code></td><td>yes</td><td>Read commands with <code>--json</code> must emit clean JSON; <code>scan</code> refreshes manifest/state; watch and sync commands do not copy source or secrets.</td><td>none</td></tr>
+        <tr><td><code>Makefile</code></td><td>yes</td><td><code>make verify</code> runs test, vet, lint, vulncheck, and build; <code>fmt</code> uses <code>gofmt</code> over <code>cmd</code> and <code>internal</code>.</td><td>none</td></tr>
+        <tr><td><code>.github/workflows/ci.yml</code></td><td>yes</td><td>CI runs <code>make verify</code> on PRs and pushes to <code>main</code>; Go version comes from <code>go.mod</code>; checkout persists no credentials.</td><td>none</td></tr>
+        <tr><td><code>CONTRIBUTING.md</code></td><td>not found</td><td>-</td><td>none</td></tr>
+        <tr><td><code>.github/pull_request_template.md</code></td><td>not found</td><td>-</td><td>none</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="tasks">
+    <h2>Tasks</h2>
+
+    <section class="parent-task" data-task-id="1.0" data-status="pending">
+      <h3>1.0 Wire Bare <code>devspace project</code> As A Read-Only List Command</h3>
+
+      <div class="proof-artifacts">
+        <h4>1.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>Test: <code>TestProjectCommandListsTrackedProjects</code> passes and demonstrates bare <code>devspace project</code> executes the list view while existing subcommands still work.</li>
+          <li>CLI: <code>devspace project</code> in an initialized sandbox workspace with no tracked projects prints a clear empty-state message.</li>
+          <li>CLI: <code>devspace project add apps/api && devspace project</code> demonstrates the command lists a tracked project without requiring a subcommand.</li>
+        </ul>
+      </div>
+
+      <div class="subtasks" data-tbd="true">
+        <h4>1.0 Tasks</h4>
+        <p class="tbd-marker">TBD</p>
+      </div>
+    </section>
+
+    <section class="parent-task" data-task-id="2.0" data-status="pending">
+      <h3>2.0 Render The Human Project Table From Saved Manifest And State</h3>
+
+      <div class="proof-artifacts">
+        <h4>2.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>Test: formatter or command coverage passes for hydrated, placeholder, missing, dirty, branch, and env-file states.</li>
+          <li>CLI: <code>devspace project</code> output shows name, path, type, hydration status, dirty flag, branch, and env-file presence for sandbox projects.</li>
+          <li>Diff: manifest and state files before and after <code>devspace project</code> are unchanged, demonstrating read-only behavior.</li>
+        </ul>
+      </div>
+
+      <div class="subtasks" data-tbd="true">
+        <h4>2.0 Tasks</h4>
+        <p class="tbd-marker">TBD</p>
+      </div>
+    </section>
+
+    <section class="parent-task" data-task-id="3.0" data-status="pending">
+      <h3>3.0 Add Stable <code>devspace project --json</code> Output</h3>
+
+      <div class="proof-artifacts">
+        <h4>3.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>Test: <code>json.Unmarshal</code> on <code>devspace project --json</code> output passes and verifies each row contains a full <code>Project</code> and matching <code>ProjectState</code>.</li>
+          <li>CLI: <code>devspace project --json | python3 -m json.tool</code> demonstrates parseable JSON with no ANSI bytes.</li>
+          <li>Security scan: proof fixture output contains no plaintext env values, age identities, or hosted sync tokens.</li>
+        </ul>
+      </div>
+
+      <div class="subtasks" data-tbd="true">
+        <h4>3.0 Tasks</h4>
+        <p class="tbd-marker">TBD</p>
+      </div>
+    </section>
+
+    <section class="parent-task" data-task-id="4.0" data-status="pending">
+      <h3>4.0 Document And Verify The New Project Listing Workflow</h3>
+
+      <div class="proof-artifacts">
+        <h4>4.0 Proof Artifact(s)</h4>
+        <ul>
+          <li>Diff: <code>README.md</code> documents <code>devspace project</code>, <code>devspace project --json</code>, and the saved-metadata behavior.</li>
+          <li>Test: project command help output demonstrates <code>--json</code> is discoverable without hiding existing subcommands.</li>
+          <li>Verification: <code>make verify</code> passes after implementation and documentation updates.</li>
+        </ul>
+      </div>
+
+      <div class="subtasks" data-tbd="true">
+        <h4>4.0 Tasks</h4>
+        <p class="tbd-marker">TBD</p>
+      </div>
+    </section>
+  </section>
+</div>
+</body>
+</html>

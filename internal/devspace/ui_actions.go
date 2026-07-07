@@ -4,6 +4,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -176,6 +177,53 @@ func dashboardSyncStatusCmd() tea.Cmd {
 		}
 		return syncStatusLoadedMsg{status: status}
 	}
+}
+
+// syncStatusCache memoizes dashboardSyncStatusCmd results so the TUI's
+// status-after-every-event pattern doesn't trigger a remote git pull per
+// filesystem change. Mutating actions call invalidate().
+type syncStatusCache struct {
+	mu       sync.Mutex
+	ttl      time.Duration
+	fetch    func() tea.Msg
+	fetched  time.Time
+	status   dashboardSyncStatus
+	hasValue bool
+}
+
+const syncStatusCacheTTL = 30 * time.Second
+
+func newSyncStatusCache(fetch func() tea.Msg) *syncStatusCache {
+	return &syncStatusCache{ttl: syncStatusCacheTTL, fetch: fetch}
+}
+
+func (c *syncStatusCache) cmd() tea.Cmd {
+	return func() tea.Msg {
+		c.mu.Lock()
+		if c.hasValue && time.Since(c.fetched) < c.ttl {
+			status := c.status
+			c.mu.Unlock()
+			return syncStatusLoadedMsg{status: status}
+		}
+		c.mu.Unlock()
+		msg := c.fetch()
+		loaded, ok := msg.(syncStatusLoadedMsg)
+		if !ok {
+			return msg
+		}
+		c.mu.Lock()
+		c.status = loaded.status
+		c.fetched = time.Now()
+		c.hasValue = true
+		c.mu.Unlock()
+		return loaded
+	}
+}
+
+func (c *syncStatusCache) invalidate() {
+	c.mu.Lock()
+	c.hasValue = false
+	c.mu.Unlock()
 }
 
 func hostedSyncConfigured(cfg Config) bool {

@@ -36,26 +36,27 @@ func TestFindTUIBinaryUsesAppHomeBin(t *testing.T) {
 
 func uiServerRoundTrip(t *testing.T, opts uiServerOptions, requests []string) []map[string]any {
 	t.Helper()
-	input := strings.Join(requests, "\n") + "\n"
 	outR, outW := io.Pipe()
+	inR, inW := io.Pipe()
 	done := make(chan error, 1)
 	go func() {
-		err := runUIServer(strings.NewReader(input), outW, opts)
+		err := runUIServer(inR, outW, opts)
 		_ = outW.Close()
 		done <- err
 	}()
 	var messages []map[string]any
 	dec := json.NewDecoder(outR)
-	for {
+	for _, req := range requests {
+		if _, err := fmt.Fprintln(inW, req); err != nil {
+			t.Fatalf("write request: %v", err)
+		}
 		var msg map[string]any
 		if err := dec.Decode(&msg); err != nil {
-			if !errors.Is(err, io.EOF) {
-				t.Fatalf("decode server output: %v", err)
-			}
-			break
+			t.Fatalf("decode server output: %v", err)
 		}
 		messages = append(messages, msg)
 	}
+	_ = inW.Close()
 	if err := <-done; err != nil {
 		t.Fatalf("runUIServer: %v", err)
 	}
@@ -422,4 +423,147 @@ func TestUIServerHandlesVeryLongRequestLine(t *testing.T) {
 		t.Fatalf("first response = %+v", first)
 	}
 	uiResponseResult(t, messages[1])
+}
+
+func TestUIServerReadsNotBlockedBySlowAction(t *testing.T) {
+	dashboardSeedWorkspace(t)
+
+	started := make(chan struct{})
+	unblock := make(chan struct{})
+	opts := uiServerOptions{
+		NoWatch: true,
+		hydrateCmd: func(string) tea.Cmd {
+			return func() tea.Msg {
+				close(started)
+				<-unblock
+				return actionResultMsg{
+					label:   "hydrate",
+					rows:    []dashboardRow{{ref: "apps/api", name: "api", status: dashboardStatusHydrated}},
+					summary: ScanSummary{FoundProjects: 1},
+				}
+			}
+		},
+	}
+	dec, inW, done := startUIServerForTest(t, opts)
+
+	writeUIServerRequest(t, inW, `{"id":1,"method":"hydrate","params":{"ref":"apps/api"}}`)
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("hydrate did not start")
+	}
+	writeUIServerRequest(t, inW, `{"id":2,"method":"hello"}`)
+
+	hello := readUIServerMessage(t, dec)
+	if hello["id"] != float64(2) {
+		t.Fatalf("first response id = %v, want 2: %+v", hello["id"], hello)
+	}
+	uiResponseResult(t, hello)
+
+	close(unblock)
+	hydrate := readUIServerMessage(t, dec)
+	if hydrate["id"] != float64(1) {
+		t.Fatalf("second response id = %v, want 1: %+v", hydrate["id"], hydrate)
+	}
+	uiResponseResult(t, hydrate)
+	closeUIServerForTest(t, inW, done)
+}
+
+func TestUIServerRejectsConcurrentActions(t *testing.T) {
+	dashboardSeedWorkspace(t)
+
+	started := make(chan struct{})
+	unblock := make(chan struct{})
+	opts := uiServerOptions{
+		NoWatch: true,
+		hydrateCmd: func(string) tea.Cmd {
+			return func() tea.Msg {
+				close(started)
+				<-unblock
+				return actionResultMsg{label: "hydrate"}
+			}
+		},
+	}
+	dec, inW, done := startUIServerForTest(t, opts)
+
+	writeUIServerRequest(t, inW, `{"id":1,"method":"hydrate","params":{"ref":"apps/api"}}`)
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("hydrate did not start")
+	}
+	writeUIServerRequest(t, inW, `{"id":2,"method":"scan"}`)
+
+	scan := readUIServerMessage(t, dec)
+	if scan["id"] != float64(2) {
+		t.Fatalf("first response id = %v, want 2: %+v", scan["id"], scan)
+	}
+	if msg := uiResponseError(t, scan); !strings.Contains(msg, "busy: hydrate in progress") {
+		t.Fatalf("scan error = %q, want busy hydrate", msg)
+	}
+
+	close(unblock)
+	hydrate := readUIServerMessage(t, dec)
+	if hydrate["id"] != float64(1) {
+		t.Fatalf("second response id = %v, want 1: %+v", hydrate["id"], hydrate)
+	}
+	uiResponseResult(t, hydrate)
+	closeUIServerForTest(t, inW, done)
+}
+
+func startUIServerForTest(t *testing.T, opts uiServerOptions) (*json.Decoder, *io.PipeWriter, <-chan error) {
+	t.Helper()
+	outR, outW := io.Pipe()
+	inR, inW := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		err := runUIServer(inR, outW, opts)
+		_ = outW.Close()
+		done <- err
+	}()
+	return json.NewDecoder(outR), inW, done
+}
+
+func writeUIServerRequest(t *testing.T, inW *io.PipeWriter, req string) {
+	t.Helper()
+	if _, err := fmt.Fprintln(inW, req); err != nil {
+		t.Fatalf("write request: %v", err)
+	}
+}
+
+func readUIServerMessage(t *testing.T, dec *json.Decoder) map[string]any {
+	t.Helper()
+	type result struct {
+		msg map[string]any
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		var msg map[string]any
+		err := dec.Decode(&msg)
+		ch <- result{msg: msg, err: err}
+	}()
+	select {
+	case got := <-ch:
+		if got.err != nil {
+			t.Fatalf("decode server output: %v", got.err)
+		}
+		return got.msg
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server output")
+		return nil
+	}
+}
+
+func closeUIServerForTest(t *testing.T, inW *io.PipeWriter, done <-chan error) {
+	t.Helper()
+	_ = inW.Close()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("runUIServer: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for server shutdown")
+	}
 }

@@ -3,6 +3,7 @@ package devspace
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -104,6 +105,32 @@ func TestDashboardSyncStatusMessageUpdatesModel(t *testing.T) {
 	got := updated.(dashboardModel)
 	if got.syncStatus.LastSyncAt != status.LastSyncAt || !got.syncStatus.Configured {
 		t.Fatalf("syncStatus = %+v, want %+v", got.syncStatus, status)
+	}
+}
+
+func TestSyncStatusCacheCachesWithinTTLAndInvalidates(t *testing.T) {
+	calls := 0
+	cache := newSyncStatusCache(func() tea.Msg {
+		calls++
+		return syncStatusLoadedMsg{status: dashboardSyncStatus{LastSyncAt: fmt.Sprintf("call-%d", calls)}}
+	})
+
+	first := cache.cmd()().(syncStatusLoadedMsg)
+	second := cache.cmd()().(syncStatusLoadedMsg)
+	if calls != 1 {
+		t.Fatalf("fetch calls = %d, want 1", calls)
+	}
+	if second.status.LastSyncAt != first.status.LastSyncAt {
+		t.Fatalf("cached status = %+v, want %+v", second.status, first.status)
+	}
+
+	cache.invalidate()
+	third := cache.cmd()().(syncStatusLoadedMsg)
+	if calls != 2 {
+		t.Fatalf("fetch calls after invalidate = %d, want 2", calls)
+	}
+	if third.status.LastSyncAt == first.status.LastSyncAt {
+		t.Fatalf("status after invalidate = %+v, want fresh value", third.status)
 	}
 }
 

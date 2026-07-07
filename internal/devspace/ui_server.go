@@ -104,6 +104,14 @@ type uiServerOptions struct {
 
 	watchCmdFactory func(string) tea.Cmd // test seam, same as dashboardModel
 	watchRetryBase  time.Duration        // base backoff between watch retries; defaults to watchRetryDefaultBase when zero
+
+	// test seams; production fills these with the dashboard*Cmd defaults
+	scanCmd    func() tea.Cmd
+	refreshCmd func(string) tea.Cmd
+	planCmd    func() tea.Cmd
+	applyCmd   func() tea.Cmd
+	hydrateCmd func(string) tea.Cmd
+	statusCmd  func() tea.Cmd
 }
 
 const (
@@ -114,6 +122,11 @@ const (
 
 type uiServer struct {
 	opts uiServerOptions
+
+	statusCache *syncStatusCache
+
+	actionMu   sync.Mutex
+	actionBusy string
 
 	mu  sync.Mutex // guards enc: responses and watch events interleave
 	enc *json.Encoder
@@ -129,7 +142,30 @@ func runUIServer(r io.Reader, w io.Writer, opts uiServerOptions) error {
 	if opts.watchRetryBase <= 0 {
 		opts.watchRetryBase = watchRetryDefaultBase
 	}
-	srv := &uiServer{opts: opts, enc: json.NewEncoder(w)}
+	statusCache := newSyncStatusCache(dashboardSyncStatusCmd())
+	if opts.scanCmd == nil {
+		opts.scanCmd = dashboardScanCmd
+	}
+	if opts.refreshCmd == nil {
+		opts.refreshCmd = dashboardRefreshCmd
+	}
+	if opts.planCmd == nil {
+		opts.planCmd = dashboardPlanCmd
+	}
+	if opts.applyCmd == nil {
+		opts.applyCmd = dashboardApplyCmd
+	}
+	if opts.hydrateCmd == nil {
+		opts.hydrateCmd = dashboardHydrateCmd
+	}
+	if opts.statusCmd == nil {
+		opts.statusCmd = statusCache.cmd
+	}
+	srv := &uiServer{
+		opts:        opts,
+		statusCache: statusCache,
+		enc:         json.NewEncoder(w),
+	}
 	if !opts.NoWatch {
 		go srv.watchLoop()
 	}
@@ -138,8 +174,7 @@ func runUIServer(r io.Reader, w io.Writer, opts uiServerOptions) error {
 	// not a network socket, so an unbounded per-line read is fine — nothing
 	// caps request size the way bufio.Scanner's fixed buffer would (and a
 	// scanner hitting that cap would kill the whole session).
-	// Requests are handled sequentially by design; that's the same
-	// single-flight guard the dashboard implements with startAction.
+	// Requests run concurrently; mutating actions are single-flight in handle.
 	for {
 		line, readErr := reader.ReadString('\n')
 		if trimmed := strings.TrimSpace(line); trimmed != "" {
@@ -147,23 +182,28 @@ func runUIServer(r io.Reader, w io.Writer, opts uiServerOptions) error {
 			if err := json.Unmarshal([]byte(trimmed), &req); err != nil {
 				srv.write(uiServerResponse{Error: &uiServerError{Message: "malformed request: " + err.Error()}})
 			} else {
-				result, err := srv.handle(req)
-				resp := uiServerResponse{ID: req.ID}
-				if err != nil {
-					resp.Error = &uiServerError{Message: err.Error()}
-				} else {
-					resp.Result = result
-				}
-				srv.write(resp)
+				go srv.serve(req)
 			}
 		}
 		if readErr != nil {
 			if readErr == io.EOF {
+				// The process is exiting; late handler writes may be dropped.
 				return nil
 			}
 			return readErr
 		}
 	}
+}
+
+func (s *uiServer) serve(req uiServerRequest) {
+	result, err := s.handle(req)
+	resp := uiServerResponse{ID: req.ID}
+	if err != nil {
+		resp.Error = &uiServerError{Message: err.Error()}
+	} else {
+		resp.Result = result
+	}
+	s.write(resp)
 }
 
 func (s *uiServer) write(v any) {
@@ -187,14 +227,39 @@ func (s *uiServer) handle(req uiServerRequest) (any, error) {
 		}
 		return uiSnapshot{Rows: uiRows(rows), Summary: uiSummary(summary)}, nil
 	case "scan":
-		return snapshotFromMsg("scan", dashboardScanCmd()())
+		if err := s.beginAction("scan"); err != nil {
+			return nil, err
+		}
+		defer s.endAction()
+		s.statusCache.invalidate()
+		return snapshotFromMsg("scan", s.opts.scanCmd()())
 	case "refresh":
-		return snapshotFromMsg("refresh", dashboardRefreshCmd(s.opts.SyncMode)())
+		if err := s.beginAction("refresh"); err != nil {
+			return nil, err
+		}
+		defer s.endAction()
+		s.statusCache.invalidate()
+		return snapshotFromMsg("refresh", s.opts.refreshCmd(s.opts.SyncMode)())
 	case "plan":
-		return snapshotFromMsg("plan", dashboardPlanCmd()())
+		if err := s.beginAction("plan"); err != nil {
+			return nil, err
+		}
+		defer s.endAction()
+		s.statusCache.invalidate()
+		return snapshotFromMsg("plan", s.opts.planCmd()())
 	case "apply":
-		return snapshotFromMsg("apply-safe", dashboardApplyCmd()())
+		if err := s.beginAction("apply-safe"); err != nil {
+			return nil, err
+		}
+		defer s.endAction()
+		s.statusCache.invalidate()
+		return snapshotFromMsg("apply-safe", s.opts.applyCmd()())
 	case "hydrate":
+		if err := s.beginAction("hydrate"); err != nil {
+			return nil, err
+		}
+		defer s.endAction()
+		s.statusCache.invalidate()
 		var params struct {
 			Ref string `json:"ref"`
 		}
@@ -206,9 +271,9 @@ func (s *uiServer) handle(req uiServerRequest) (any, error) {
 		if strings.TrimSpace(params.Ref) == "" {
 			return nil, errors.New("hydrate requires params.ref")
 		}
-		return snapshotFromMsg("hydrate", dashboardHydrateCmd(params.Ref)())
+		return snapshotFromMsg("hydrate", s.opts.hydrateCmd(params.Ref)())
 	case "status":
-		msg, ok := dashboardSyncStatusCmd()().(syncStatusLoadedMsg)
+		msg, ok := s.opts.statusCmd()().(syncStatusLoadedMsg)
 		if !ok {
 			return nil, errors.New("unexpected sync status result")
 		}
@@ -226,6 +291,22 @@ func (s *uiServer) handle(req uiServerRequest) (any, error) {
 	default:
 		return nil, fmt.Errorf("unknown method %q", req.Method)
 	}
+}
+
+func (s *uiServer) beginAction(label string) error {
+	s.actionMu.Lock()
+	defer s.actionMu.Unlock()
+	if s.actionBusy != "" {
+		return fmt.Errorf("busy: %s in progress", s.actionBusy)
+	}
+	s.actionBusy = label
+	return nil
+}
+
+func (s *uiServer) endAction() {
+	s.actionMu.Lock()
+	s.actionBusy = ""
+	s.actionMu.Unlock()
 }
 
 func (s *uiServer) hello() (any, error) {
