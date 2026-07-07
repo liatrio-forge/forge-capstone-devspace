@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>10-questions-1-project-listing</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .question { margin: 1.5rem 0; }
+  .options { list-style:none; padding-left:0; }
+  .options li { padding:.3rem 0; }
+  .options li input[type="checkbox"] { margin-right:.5rem; }
+  .context-note, .recommend-note { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:.75rem 1rem; margin:.5rem 0; }
+  .why-list { margin:.5rem 0 0; }
+</style>
+</head>
+<body data-overall-status="pending">
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">Questions</span>
+    <h1>10 Questions Round 1 - Project Listing</h1>
+    <p class="meta">Sequence 10 · Feature: project-listing · Round 1 · Phase 1</p>
+  </header>
+
+  <p>Please answer each question below (select one or more options, or add your own notes). Feel free to add additional context under any question. If you are using Lavish Editor, reply/annotate directly in the interactive session; otherwise edit this file's checkboxes and notes, or answer in chat as instructed.</p>
+
+  <section class="question" id="q1">
+    <h2>1. Command Entry Point</h2>
+    <p>What should the command surface be for viewing tracked projects?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" /> (A) Make bare <code>devspace project</code> list tracked projects, while preserving existing subcommands such as <code>add</code>, <code>hydrate</code>, <code>remove</code>, and <code>status</code>.</label></li>
+      <li><label><input type="checkbox" /> (B) Add only <code>devspace project list</code>, leaving bare <code>devspace project</code> as help output.</label></li>
+      <li><label><input type="checkbox" /> (C) Add both <code>devspace project</code> and <code>devspace project list</code> as equivalent listing commands.</label></li>
+      <li><label><input type="checkbox" /> (D) Do not add a project listing command; keep using <code>devspace status</code> and <code>devspace ui</code>.</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> No external standards research is needed here; existing Cobra command behavior and this repo's documented CLI patterns are enough to decide the user-facing surface.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (A)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li><code>(A)</code> matches the request literally: users can view tracked projects with <code>devspace project</code>.</li>
+        <li><code>(A)</code> is smaller than <code>(C)</code> because it avoids maintaining two names for the same behavior unless an alias is explicitly wanted.</li>
+        <li><code>(B)</code> keeps a common CLI shape, but it does not satisfy the requested bare command.</li>
+        <li><code>(D)</code> leaves the current discoverability gap in place.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="question" id="q2">
+    <h2>2. Listing Content</h2>
+    <p>Which fields should the project listing show in its default human-readable output?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" /> (A) Minimal identity columns only: project name and relative path.</label></li>
+      <li><label><input type="checkbox" /> (B) Operational table: name, path, type, hydration status, dirty flag, branch, and env-file presence.</label></li>
+      <li><label><input type="checkbox" /> (C) Full manifest metadata: all manifest fields including remote, hydrate mode, ignore patterns, setup hints, and env profiles.</label></li>
+      <li><label><input type="checkbox" /> (D) Match the TUI dashboard row shape exactly, even if that excludes manifest-only fields such as remote URL.</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> No external standards research is needed here; the repository already has status, dashboard, and JSON output patterns to reuse.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (B)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li><code>(B)</code> gives a useful terminal view without turning the list command into a manifest dump.</li>
+        <li><code>(B)</code> can reuse existing state fields already shown by <code>devspace status</code> and <code>devspace ui</code>.</li>
+        <li><code>(A)</code> is simple but misses the hydration and dirty-state information users usually need when checking tracked projects.</li>
+        <li><code>(C)</code> is better suited for JSON or a future detail command because it is noisy in a default table.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="question" id="q3">
+    <h2>3. Machine-Readable Output</h2>
+    <p>Should the listing include a stable JSON mode for scripts?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" /> (A) Yes, add <code>--json</code> to the listing and emit an array of project rows.</label></li>
+      <li><label><input type="checkbox" /> (B) Yes, add <code>--json</code> and emit the full manifest project objects plus current state.</label></li>
+      <li><label><input type="checkbox" /> (C) No, keep this first version human-readable only.</label></li>
+      <li><label><input type="checkbox" /> (D) No, users should parse <code>&lt;workspace&gt;/.devspace/manifest.json</code> directly when they need automation.</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> No external standards research is needed here; this repo already treats <code>--json</code> on read commands as the stable scripting contract.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (A)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li><code>(A)</code> follows the repo's existing <code>status --json</code>, <code>doctor --json</code>, <code>plan --json</code>, and <code>workspace diff --json</code> pattern.</li>
+        <li><code>(A)</code> keeps scripts away from private on-disk layout details while still giving them stable fields.</li>
+        <li><code>(B)</code> exposes more data, but it makes the first contract larger and harder to keep stable.</li>
+        <li><code>(C)</code> is the smallest implementation, but it would likely require a follow-up as soon as automation wants the same listing.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="question" id="q4">
+    <h2>4. Refresh And Side Effects</h2>
+    <p>Should listing projects refresh workspace metadata before printing?</p>
+    <ul class="options">
+      <li><label><input type="checkbox" /> (A) Read only the saved manifest and state; tell users to run <code>devspace scan</code> when they want fresh metadata.</label></li>
+      <li><label><input type="checkbox" /> (B) Run a local scan before every listing so the output is fresher.</label></li>
+      <li><label><input type="checkbox" /> (C) Add an explicit <code>--refresh</code> flag that scans before listing.</label></li>
+      <li><label><input type="checkbox" /> (D) Reuse watch-mode state when available and scan only when no state exists.</label></li>
+      <li><label><input type="checkbox" /> (E) Other (describe): ___________</label></li>
+    </ul>
+    <div class="context-note"><strong>Current best-practice context:</strong> No external standards research is needed here; the repo guideline is local-first behavior with explicit side effects, and <code>scan</code> already owns metadata refresh.</div>
+    <div class="recommend-note">
+      <strong>Recommended answer(s):</strong> (A)
+      <p><strong>Why these are recommended:</strong></p>
+      <ul class="why-list">
+        <li><code>(A)</code> keeps <code>devspace project</code> a fast, read-only view command.</li>
+        <li><code>(A)</code> preserves the existing split where <code>scan</code> mutates manifest/state and read commands display saved data.</li>
+        <li><code>(B)</code> surprises users by making a view command write manifest/state.</li>
+        <li><code>(C)</code> is reasonable later, but it is extra surface area unless users explicitly want it.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+</body>
+</html>

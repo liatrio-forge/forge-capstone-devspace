@@ -55,7 +55,7 @@ hard stops (report back instead of improvising).
 
 ## Tasks
 
-### [ ] 1.0 Make ui-server responsive: concurrent reads, single-flight actions, TTL-cached sync status (plan 016)
+### [~] 1.0 Make ui-server responsive: concurrent reads, single-flight actions, TTL-cached sync status (plan 016)
 
 #### 1.0 Proof Artifact(s)
 

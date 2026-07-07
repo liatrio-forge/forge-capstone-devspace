@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>10-spec-project-listing</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1a1a2e; --muted: #6b7280; --border: #e5e7eb;
+    --card: #f9fafb; --accent: #4f46e5; --pass: #059669; --fail: #dc2626; --warn: #d97706;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1117; --fg:#e6e6ef; --muted:#9ca3af; --border:#262a35; --card:#161922; --accent:#818cf8; --pass:#34d399; --fail:#f87171; --warn:#fbbf24; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height:1.6; }
+  .doc { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header.doc-header { border-bottom: 1px solid var(--border); padding-bottom:1rem; margin-bottom:2rem; }
+  h1 { margin: .25rem 0; font-size:1.6rem; }
+  h2 { margin-top:2rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .6rem; border-radius:999px; }
+  .badge-type { background:var(--accent); color:#fff; }
+  .status-pass, .status-done, .status-verified { background:var(--pass); color:#fff; }
+  .status-fail, .status-failed { background:var(--fail); color:#fff; }
+  .status-flag, .status-pending, .status-unknown, .status-in-progress { background:var(--warn); color:#111; }
+  table { width:100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { border:1px solid var(--border); padding:.5rem .75rem; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem 1.25rem; margin:1rem 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background:var(--card); border:1px solid var(--border); border-radius:.5rem; padding:1rem; overflow-x:auto; }
+  .task-list { list-style:none; padding-left:0; }
+  .task { padding:.35rem 0; }
+  .task[data-status="done"] .task-label::before { content: "\2611 "; }
+  .task[data-status="pending"] .task-label::before { content: "\2610 "; }
+  .task[data-status="in-progress"] .task-label::before { content: "\25D1 "; }
+  figure { margin: 1rem 0; }
+  figure img { max-width:100%; border:1px solid var(--border); border-radius:.5rem; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.35rem; }
+  .unit { margin: 1.25rem 0; }
+</style>
+</head>
+<body data-overall-status="draft">
+<div class="doc">
+  <header class="doc-header">
+    <span class="badge badge-type">Spec</span>
+    <h1>10-spec-project-listing</h1>
+    <p class="meta">Sequence 10 · Feature: project-listing · Phase 1</p>
+  </header>
+
+  <section id="introduction">
+    <h2>Introduction/Overview</h2>
+    <p>DevSpace already tracks projects in the workspace manifest, but the project command group does not have a direct list view. This feature makes bare <code>devspace project</code> show tracked projects, including useful local state, without mutating the workspace or contacting remotes.</p>
+  </section>
+
+  <section id="goals">
+    <h2>Goals</h2>
+    <ul>
+      <li>Make <code>devspace project</code> print a readable table of tracked projects.</li>
+      <li>Keep existing subcommands such as <code>add</code>, <code>hydrate</code>, <code>remove</code>, and <code>status</code> unchanged.</li>
+      <li>Show operational fields in the default view: name, path, type, hydration status, dirty flag, branch, and env-file presence.</li>
+      <li>Add a stable <code>--json</code> mode that returns full manifest project objects plus current project state.</li>
+      <li>Keep the listing read-only; users run <code>devspace scan</code> when they want refreshed metadata.</li>
+    </ul>
+  </section>
+
+  <section id="user-stories">
+    <h2>User Stories</h2>
+    <ul>
+      <li><strong>As a</strong> DevSpace user, <strong>I want to</strong> run <code>devspace project</code> <strong>so that</strong> I can quickly see which projects are tracked.</li>
+      <li><strong>As a</strong> user moving between machines, <strong>I want to</strong> see hydration and missing-state information <strong>so that</strong> I can decide which projects need <code>devspace project hydrate</code> or a scan.</li>
+      <li><strong>As a</strong> script author, <strong>I want to</strong> run <code>devspace project --json</code> <strong>so that</strong> automation can consume project manifest metadata and local state without reading private files directly.</li>
+    </ul>
+  </section>
+
+  <section id="demoable-units">
+    <h2>Demoable Units of Work</h2>
+    <p>These units focus on one read-only CLI flow, then its scripting contract and docs/tests.</p>
+
+    <div class="card unit" id="unit-1">
+      <h3>Unit 1: Bare Project Listing</h3>
+      <p><strong>Purpose:</strong> Let users view tracked projects from the existing project command group.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall make bare <code>devspace project</code> execute a list view instead of only showing command help.</li>
+        <li>The system shall preserve all existing project subcommands and their argument validation.</li>
+        <li>The system shall print one row per manifest project, sorted by relative path.</li>
+        <li>The system shall print a clear empty-state message when no projects are tracked.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Test: command test covering <code>devspace project</code> with two tracked projects demonstrates the new bare command output.</li>
+        <li>CLI transcript: <code>devspace project</code> in a sandbox workspace demonstrates the table and empty state.</li>
+      </ul>
+    </div>
+
+    <div class="card unit" id="unit-2">
+      <h3>Unit 2: Operational Table Fields</h3>
+      <p><strong>Purpose:</strong> Show useful project health without requiring users to open the TUI or inspect manifest/state files.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall include name, path, type, hydration status, dirty flag, current branch, and env-file presence in the default table.</li>
+        <li>The system shall derive hydration status from saved state using the same meanings as the dashboard: hydrated, placeholder, or missing.</li>
+        <li>The system shall not run <code>ScanWorkspace</code>, push, pull, hydrate, apply plans, or modify manifest/state as part of listing.</li>
+        <li>The system shall keep output readable when branch or state fields are absent by using a stable placeholder such as <code>-</code>.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Test: formatter or command test with hydrated, placeholder, and missing states demonstrates table status values.</li>
+        <li>CLI transcript: listing output demonstrates the selected columns and read-only behavior after setup.</li>
+      </ul>
+    </div>
+
+    <div class="card unit" id="unit-3">
+      <h3>Unit 3: JSON Project Listing</h3>
+      <p><strong>Purpose:</strong> Give scripts a stable view of manifest projects plus current local state.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall add <code>--json</code> to the listing command.</li>
+        <li>The JSON response shall include an array of rows containing each full manifest <code>Project</code> object and its matching <code>ProjectState</code>.</li>
+        <li>The JSON response shall remain free of ANSI styling and human table decorations.</li>
+        <li>The JSON response shall not expose secrets or plaintext env values.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Test: <code>json.Unmarshal</code> on <code>devspace project --json</code> output demonstrates stable field names and valid JSON.</li>
+        <li>CLI transcript: <code>devspace project --json | python3 -m json.tool</code> demonstrates parseable manifest-plus-state rows.</li>
+      </ul>
+    </div>
+
+    <div class="card unit" id="unit-4">
+      <h3>Unit 4: Documentation And Discovery</h3>
+      <p><strong>Purpose:</strong> Make the new read command visible in help and README usage.</p>
+      <p><strong>Functional Requirements:</strong></p>
+      <ul>
+        <li>The system shall document <code>devspace project</code> and <code>devspace project --json</code> in the README command reference.</li>
+        <li>The system shall keep Cobra help text accurate for the project command group and its subcommands.</li>
+        <li>The system shall clarify that listing uses saved metadata and <code>devspace scan</code> refreshes it.</li>
+      </ul>
+      <p><strong>Proof Artifacts:</strong></p>
+      <ul>
+        <li>Diff: README update demonstrates user-facing documentation for the new command behavior.</li>
+        <li>Test: help or command test demonstrates <code>--json</code> is accepted on the project listing command.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="non-goals">
+    <h2>Non-Goals (Out of Scope)</h2>
+    <p>This feature is a project listing surface only.</p>
+    <ol>
+      <li><strong>No implicit refresh:</strong> <code>devspace project</code> will not scan the workspace before printing.</li>
+      <li><strong>No remote sync:</strong> listing will not push, pull, reconcile, or contact hosted sync.</li>
+      <li><strong>No hydration action:</strong> listing will not clone or create project directories.</li>
+      <li><strong>No interactive UI changes:</strong> the existing <code>devspace ui</code> dashboard is not changed by this spec.</li>
+      <li><strong>No project filtering or search:</strong> filters, sorting flags, and detail subcommands can be considered later if needed.</li>
+    </ol>
+  </section>
+
+  <section id="design-considerations">
+    <h2>Design Considerations</h2>
+    <p>The default output should follow existing terminal-output patterns: concise labels, stable columns, color only through existing style helpers, and clean fallback when output is piped or <code>--no-color</code> is used. The JSON mode should be treated as the scripting surface and should not include human-only formatting.</p>
+  </section>
+
+  <section id="repository-standards">
+    <h2>Repository Standards</h2>
+    <ul>
+      <li>DevSpace is a Go CLI with command wiring in <code>internal/devspace/commands.go</code> and presentation helpers in <code>internal/devspace/output.go</code>.</li>
+      <li>Use standard Go formatting and keep tests next to implementation as <code>*_test.go</code>.</li>
+      <li>Prefer explicit user-facing command errors over silent fallbacks.</li>
+      <li>Keep CLI behavior local-first unless a command explicitly opts into Git or hosted sync.</li>
+      <li>Use existing JSON helpers and command-test patterns from <code>commands_test.go</code>.</li>
+      <li>Run <code>make verify</code> before completion.</li>
+    </ul>
+  </section>
+
+  <section id="technical-considerations">
+    <h2>Technical Considerations</h2>
+    <p>No latest external standards research was needed; the feature uses existing Go, Cobra, manifest/state, output, and JSON patterns already present in the repository. Implementation should reuse existing types where possible: <code>Project</code> and <code>ProjectState</code> for JSON, and existing dashboard/status state derivation for human-readable hydration labels. Avoid adding dependencies or a new abstraction unless the existing output helpers cannot represent the table cleanly.</p>
+  </section>
+
+  <section id="security-considerations">
+    <h2>Security Considerations</h2>
+    <ul>
+      <li>The command must not print plaintext env values or encrypted profile contents.</li>
+      <li>The command may print manifest metadata already stored in <code>manifest.json</code>, including Git remote URLs in JSON mode because the user selected full manifest project objects.</li>
+      <li>The command must not read or write hosted sync tokens, age identities, or generated workspace state outside normal manifest/state loading.</li>
+      <li>Proof artifacts should use sandbox workspaces and placeholders, not real <code>.env</code> files or private remotes.</li>
+    </ul>
+  </section>
+
+  <section id="success-metrics">
+    <h2>Success Metrics</h2>
+    <ol>
+      <li><strong>Bare command works:</strong> <code>devspace project</code> lists tracked projects and exits successfully in a configured workspace.</li>
+      <li><strong>Stable JSON works:</strong> <code>devspace project --json</code> parses as JSON and includes full <code>project</code> and <code>state</code> data for each row.</li>
+      <li><strong>Read-only behavior is preserved:</strong> listing does not change manifest, state, project files, remotes, or hosted sync.</li>
+      <li><strong>Verification passes:</strong> focused command tests and <code>make verify</code> pass.</li>
+    </ol>
+  </section>
+
+  <section id="open-questions">
+    <h2>Open Questions</h2>
+    <p>No open questions at this time.</p>
+  </section>
+</div>
+</body>
+</html>
