@@ -68,6 +68,10 @@ changelog:
 
 release:
   prerelease: auto
+  # devspace-tui companion binaries are cross-compiled by Bun in the release
+  # workflow (make tui-build-all) before GoReleaser runs.
+  extra_files:
+    - glob: tui/dist/devspace-tui_*
   # release-please pushes the tag AND a bare GitHub Release (changelog only,
   # no assets) for it — skip-github-release: false in
   # release-please-config.json. append adds this run's archives/checksums/

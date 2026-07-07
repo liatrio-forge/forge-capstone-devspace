@@ -10,6 +10,17 @@ binary publication. This workflow packages the CLI; the hosted server is
 published separately as a container image. It does not add a daemon, FUSE
 behavior, managed team identity, or dependency install behavior.
 
+## devspace-tui companion binary
+
+`devspace ui` launches the `devspace-tui` companion (an OpenTUI/Bun app in
+`tui/`) when it is installed next to `devspace`, in `$DEVSPACE_HOME/bin`, or on
+`PATH`; otherwise it falls back to the built-in dashboard (`--legacy` forces the
+fallback). The release workflow cross-compiles it with Bun
+(`make tui-build-all`) and GoReleaser attaches the four
+`devspace-tui_<os>_<arch>` binaries to the release as extra assets. To install,
+download the binary for your platform, rename it to `devspace-tui`, `chmod +x`,
+and place it in one of the locations above.
+
 ## Automated release (primary)
 
 ### How it works

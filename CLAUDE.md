@@ -17,6 +17,7 @@ make verify        # test + vet + lint + build — the local gate; use before pu
 make test          # go test ./...
 make build         # builds bin/devspace (-trimpath)
 make vulncheck     # govulncheck; CI-only (network-dependent), not part of verify
+make tui-verify    # Bun typecheck + tests for the devspace-tui companion (tui/)
 go run ./cmd/devspace --help
 
 # Run one test / package
@@ -80,6 +81,13 @@ a placeholder into a real checkout via `git clone`. Plans are persisted to
 - `setup.go` — detects and, only via the explicit `devspace setup` command, runs
   install/dev commands. Never auto-executes project commands.
 - `doctor.go` — `devspace doctor` readiness diagnostics run before sync/apply.
+- `ui.go` / `ui_server.go` / `tui/` — `devspace ui` launches the `devspace-tui`
+  companion (OpenTUI/Bun/React app in `tui/`) when installed, falling back to
+  the built-in Bubble Tea dashboard (`ui_model.go`; `--legacy` forces it). The
+  companion spawns the hidden `devspace ui-server` subcommand and talks stdio
+  NDJSON JSON-RPC (`ui_server.go`); both frontends reuse the same
+  `dashboard*Cmd` domain closures in `ui_actions.go`. Protocol DTO changes must
+  update `tui/src/protocol.ts` in lockstep.
 
 ## Invariants to preserve
 

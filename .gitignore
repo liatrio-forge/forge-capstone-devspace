@@ -22,3 +22,7 @@ coverage/
 
 # Local metaharness scaffold (generated, not committed)
 devdrop-capstone-harness/
+
+# TUI (Bun) build artifacts
+tui/node_modules/
+tui/dist/
