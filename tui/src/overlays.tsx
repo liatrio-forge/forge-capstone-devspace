@@ -65,6 +65,11 @@ export function HelpOverlay({ th }: { th: Theme; width: number; height: number }
 
 const SAFETY_ORDER = ["safe", "skipped"];
 
+/** Number of plan lines visible in the overlay for a given terminal height. */
+export function planVisibleLines(height: number): number {
+  return Math.max(5, height - 12);
+}
+
 export function PlanOverlay({ th, overlay, height }: { th: Theme; overlay: Extract<Overlay, { kind: "plan" }>; width: number; height: number }) {
   const plan = overlay.plan;
   const actions = plan.actions ?? [];
@@ -73,7 +78,7 @@ export function PlanOverlay({ th, overlay, height }: { th: Theme; overlay: Extra
     actions.filter((a) => !SAFETY_ORDER.includes(a.safety)),
   );
   const safeCount = actions.filter((a) => a.safety === "safe").length;
-  const visible = Math.max(5, height - 12);
+  const visible = planVisibleLines(height);
   const lines: Array<{ text: string; color: string }> = [
     ...grouped.map((action) => ({ text: planActionLine(action), color: actionColor(th, action) })),
     ...warnings.map((warning) => ({ text: `⚠ ${warning}`, color: th.warn })),

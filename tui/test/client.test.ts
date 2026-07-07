@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { DevspaceClient, type ClientTransport } from "../src/client";
 import type { ServerEvent } from "../src/protocol";
 
-function pair(): { client: DevspaceClient; sent: string[] } {
+function pair(requestTimeoutMs?: number): { client: DevspaceClient; sent: string[] } {
   const sent: string[] = [];
   const transport: ClientTransport = {
     write: (line) => sent.push(line),
     close: () => {},
   };
-  return { client: new DevspaceClient(transport), sent };
+  return { client: new DevspaceClient(transport, requestTimeoutMs), sent };
 }
 
 describe("DevspaceClient", () => {
@@ -71,5 +71,29 @@ describe("DevspaceClient", () => {
     client.feed("garbage\n");
     client.feed(`{"id":1,"result":{"protocol":1,"workspaceRoot":"/w","machineId":"m","machineName":"","syncMode":"off","watch":false}}\n`);
     expect((await req).protocol).toBe(1);
+  });
+
+  test("rejects a request that exceeds requestTimeoutMs", async () => {
+    const { client } = pair(30);
+    const req = client.request("hello");
+    await expect(req).rejects.toThrow("timed out after 30ms");
+  });
+
+  test("resolves normally when the response arrives before the timeout", async () => {
+    const { client } = pair(50);
+    const req = client.request("hello");
+    client.feed(
+      `{"id":1,"result":{"protocol":1,"workspaceRoot":"/w","machineId":"m","machineName":"mac","syncMode":"off","watch":true}}\n`,
+    );
+    expect((await req).workspaceRoot).toBe("/w");
+    // Wait past the timeout window to prove the cleared timer doesn't fire a stray rejection.
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  });
+
+  test("closed() with stderr context propagates the message to in-flight requests", async () => {
+    const { client } = pair();
+    const req = client.request("scan");
+    client.closed(new Error("devspace ui-server exited: connection refused"));
+    await expect(req).rejects.toThrow("devspace ui-server exited: connection refused");
   });
 });

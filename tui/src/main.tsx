@@ -1,10 +1,18 @@
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { App } from "./app";
-import { connect } from "./client";
+import { connect, type DevspaceClient } from "./client";
 
 const noWatch = process.argv.includes("--no-watch");
-const client = connect({ noWatch });
+
+let client: DevspaceClient;
+try {
+  client = connect({ noWatch });
+} catch (err) {
+  const message = err instanceof Error ? err.message : String(err);
+  process.stderr.write(`devspace-tui: failed to start devspace ui-server: ${message}\n`);
+  process.exit(1);
+}
 
 const renderer = await createCliRenderer({
   exitOnCtrlC: false, // we quit via our own handler so the terminal is always restored

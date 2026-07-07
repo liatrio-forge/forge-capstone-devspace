@@ -4,7 +4,7 @@ import type { DevspaceClient } from "./client";
 import type { Hello, ProjectRow, Snapshot } from "./protocol";
 import { initialState, reduce, type DashboardState } from "./state";
 import { themes, type Theme } from "./theme";
-import { ConfirmApply, HelpOverlay, Palette, PlanOverlay, paletteCommands, runPaletteCommand } from "./overlays";
+import { ConfirmApply, HelpOverlay, Palette, PlanOverlay, paletteCommands, planVisibleLines, runPaletteCommand } from "./overlays";
 
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -24,6 +24,8 @@ export function App({ client, quit }: AppProps) {
 
   const stateRef = useRef(state);
   stateRef.current = state;
+  const heightRef = useRef(height);
+  heightRef.current = height;
   const toastSeq = useRef(1);
 
   function addToast(tone: "ok" | "error", text: string) {
@@ -91,7 +93,8 @@ export function App({ client, quit }: AppProps) {
         return dispatch({ type: "overlay", overlay: { kind: "none" } });
       }
       if (overlay.kind === "plan") {
-        const max = Math.max(0, (overlay.plan.actions?.length ?? 0) + (overlay.plan.warnings?.length ?? 0) - 5);
+        const totalLines = (overlay.plan.actions?.length ?? 0) + (overlay.plan.warnings?.length ?? 0);
+        const max = Math.max(0, totalLines - planVisibleLines(heightRef.current));
         if (key.name === "j" || key.name === "down") {
           return dispatch({ type: "overlay", overlay: { ...overlay, scroll: Math.min(overlay.scroll + 1, max) } });
         }
