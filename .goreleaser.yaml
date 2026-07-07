@@ -48,6 +48,8 @@ archives:
 
 checksum:
   name_template: checksums.txt
+  extra_files:
+    - glob: tui/dist/devspace-tui_*
 
 changelog:
   sort: asc

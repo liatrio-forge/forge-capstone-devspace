@@ -39,6 +39,7 @@ func NewRootCommand(version string) *cobra.Command {
 	cmd.AddCommand(newWatchCommand())
 	cmd.AddCommand(newUICommand())
 	cmd.AddCommand(newUIServerCommand(version))
+	cmd.AddCommand(newTUICommand(version))
 	cmd.AddCommand(newPlanCommand())
 	cmd.AddCommand(newApplyCommand())
 	cmd.AddCommand(newWorkspaceCommand())

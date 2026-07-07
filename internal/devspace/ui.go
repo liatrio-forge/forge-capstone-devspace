@@ -36,7 +36,7 @@ func newUICommand() *cobra.Command {
 					return runExternalTUI(tui, noWatch)
 				}
 				fmt.Fprintln(cmd.ErrOrStderr(), currentTheme.Muted.Render(
-					"devspace-tui not found; using the built-in dashboard (install devspace-tui next to devspace or in $DEVSPACE_HOME/bin for the full experience)"))
+					"devspace-tui not found; using the built-in dashboard (run 'devspace tui install' to get the full experience)"))
 			}
 			model := newDashboardModel(noWatch)
 			program := tea.NewProgram(model, tea.WithOutput(out))

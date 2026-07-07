@@ -114,7 +114,7 @@ hard stops (report back instead of improvising).
 - [x] 3.7 Move `cell()` to new `tui/src/text.ts` using `Bun.stringWidth` (measure, truncate by code points, manual pad); update `app.tsx` import; add `tui/test/text.test.ts` (ASCII, emoji, CJK width-10 case) (Step 6)
 - [x] 3.8 Run gates (`make verify`, `make tui-verify`, race-enabled Go selection), write proof file `09-proofs/09-task-03-proofs.md`, flip plan 018's row in `plans/README.md`, commit
 
-### [~] 4.0 Ship `devspace tui install`: version-matched, token-aware, checksum-verified companion install (plan 019)
+### [x] 4.0 Ship `devspace tui install`: version-matched, token-aware, checksum-verified companion install (plan 019)
 
 #### 4.0 Proof Artifact(s)
 
@@ -126,9 +126,9 @@ hard stops (report back instead of improvising).
 
 #### 4.0 Tasks
 
-- [ ] 4.1 Run plan 019's drift check; create branch `advisor/019-tui-install`
-- [ ] 4.2 Extend `.goreleaser.yaml` `checksum:` with `extra_files: [glob: tui/dist/devspace-tui_*]` (Step 1)
-- [ ] 4.3 Create `tui_install.go`: `newTUICommand(version)` / `newTUIInstallCommand(version)` with `--version` (default `v<version>`, required for `dev` builds) and `--repo` (default `liatrio-forge/devdrop-capstone`); install logic with injected API base URL — platform validation (linux/darwin × amd64/arm64 only), token from `GITHUB_TOKEN`/`GH_TOKEN`/`gh auth token`, release lookup by tag, asset download via API `url` with `Accept: application/octet-stream` (30s metadata / 5m download timeouts), sha256 verification against `checksums.txt` when covered (stated skip otherwise), same-dir temp + chmod 0755 + rename into `$DEVSPACE_HOME/bin/devspace-tui`, temp cleanup on all error paths, shadowing warning when `findTUIBinary()` resolves elsewhere; no token value in any output (Step 2)
-- [ ] 4.4 Wire `cmd.AddCommand(newTUICommand(version))` in `commands.go`; update the `ui.go` fallback hint to mention `devspace tui install` (Step 3)
-- [ ] 4.5 Write the 7 httptest-backed tests in `tui_install_test.go` (per plan 019 Step 4; placeholder token `test-token` only), including asserting error output never contains the token value in the failure cases (Step 4)
-- [ ] 4.6 Run gates (`make verify`, `go run ./cmd/devspace tui install --help`), write proof file `09-proofs/09-task-04-proofs.md`, flip plan 019's row in `plans/README.md`, commit; note in the proof file that the one-time manual smoke against a real release (plan 019 test plan) remains for a human with repo access
+- [x] 4.1 Run plan 019's drift check; create branch `advisor/019-tui-install`
+- [x] 4.2 Extend `.goreleaser.yaml` `checksum:` with `extra_files: [glob: tui/dist/devspace-tui_*]` (Step 1)
+- [x] 4.3 Create `tui_install.go`: `newTUICommand(version)` / `newTUIInstallCommand(version)` with `--version` (default `v<version>`, required for `dev` builds) and `--repo` (default `liatrio-forge/devdrop-capstone`); install logic with injected API base URL — platform validation (linux/darwin × amd64/arm64 only), token from `GITHUB_TOKEN`/`GH_TOKEN`/`gh auth token`, release lookup by tag, asset download via API `url` with `Accept: application/octet-stream` (30s metadata / 5m download timeouts), sha256 verification against `checksums.txt` when covered (stated skip otherwise), same-dir temp + chmod 0755 + rename into `$DEVSPACE_HOME/bin/devspace-tui`, temp cleanup on all error paths, shadowing warning when `findTUIBinary()` resolves elsewhere; no token value in any output (Step 2)
+- [x] 4.4 Wire `cmd.AddCommand(newTUICommand(version))` in `commands.go`; update the `ui.go` fallback hint to mention `devspace tui install` (Step 3)
+- [x] 4.5 Write the 7 httptest-backed tests in `tui_install_test.go` (per plan 019 Step 4; placeholder token `test-token` only), including asserting error output never contains the token value in the failure cases (Step 4)
+- [x] 4.6 Run gates (`make verify`, `go run ./cmd/devspace tui install --help`), write proof file `09-proofs/09-task-04-proofs.md`, flip plan 019's row in `plans/README.md`, commit; note in the proof file that the one-time manual smoke against a real release (plan 019 test plan) remains for a human with repo access
