@@ -2,7 +2,49 @@
 
 This document tracks the execution and status of Liatrio Spec-Driven Development (SDD) plans for DevSpace.
 
-## 🎉 Status: All Initial Plans Completed
+## Wave 2 — TUI flow & setup audit (2026-07-07, planned at `2ff060e`)
+
+Deep focused audit of the `devspace ui` flow: `tui/` (OpenTUI companion),
+`internal/devspace/ui*.go` (ui-server + legacy dashboard), and their
+CI/release wiring. Execute in the order below. Each executor: read the plan
+fully before starting, honor its STOP conditions, and update your row when
+done.
+
+### Execution order & status
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 016 | ui-server concurrent requests + cached sync status (no more network pull per watch event) | P1 | M | — | TODO |
+| 017 | Protocol version handshake + Go/TS golden contract tests | P1 | M | — | TODO |
+| 018 | TUI client stream-decode + watch failure visibility/recovery in both frontends | P2 | M | 016 | TODO |
+| 019 | `devspace tui install` (download matching release asset to $DEVSPACE_HOME/bin) | P2 | M | — | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
+
+### Dependency notes
+
+- 018 requires 016: its watcher-restart hook assumes the goroutine-dispatch +
+  single-flight (`beginAction`) server shape introduced in 016.
+- 017 and 019 are independent; if 016/017 land in either order expect only a
+  trivial merge in `ui_server.go` test imports.
+
+### Findings considered and rejected (do not re-audit)
+
+- Unbounded `ReadString` in the ui-server read loop — documented, deliberate
+  (trusted parent-child pipe; a capped Scanner would kill sessions).
+- PATH lookup in `findTUIBinary` — documented trust-model decision in
+  `ui.go:52-57`.
+- Early watch events dropped / busy double-fire / non-width-aware `cell()` —
+  not rejected; folded into plan 018 as included cleanups.
+- Direction: legacy Bubble Tea dashboard freeze-vs-delete decision — surfaced,
+  not planned this wave (owner call; the drift evidence is in plan 018's
+  "Why this matters").
+- Direction: hydrate progress streaming — deferred, low value until large-repo
+  clones are a reported pain.
+
+---
+
+## 🎉 Wave 1 Status: All Initial Plans Completed
 
 All implementation plans from the original SDD execution against commit `595d158` have been successfully completed and integrated into the repository. The hardening passes, FUSE spikes, and structural refactors were addressed comprehensively.
 
