@@ -20,15 +20,16 @@ const renderer = await createCliRenderer({
 });
 
 let quitting = false;
-function quit(code = 0): void {
+function quit(code = 0, message?: string): void {
   if (quitting) return;
   quitting = true;
   client.close();
   renderer.destroy();
+  if (message) process.stderr.write(`devspace-tui: ${message}\n`);
   process.exit(code);
 }
 
 process.on("SIGINT", () => quit(130));
 process.on("SIGTERM", () => quit(143));
 
-createRoot(renderer).render(<App client={client} quit={() => quit()} />);
+createRoot(renderer).render(<App client={client} quit={(message) => quit(message === undefined ? 0 : 1, message)} />);

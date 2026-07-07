@@ -1,0 +1,69 @@
+{
+  "rows": [
+    {
+      "ref": "apps/api",
+      "name": "api",
+      "path": "apps/api",
+      "type": "git",
+      "status": "Hydrated",
+      "dirty": true,
+      "branch": "main",
+      "env": true
+    },
+    {
+      "ref": "tools/cli",
+      "name": "cli",
+      "path": "tools/cli",
+      "type": "local",
+      "status": "Placeholder",
+      "dirty": false,
+      "env": false
+    }
+  ],
+  "summary": {
+    "foundProjects": 2,
+    "gitRepos": 1,
+    "untrackedFolders": 1,
+    "localOnlyProjects": 1,
+    "projectsWithEnv": 1
+  },
+  "plan": {
+    "version": 1,
+    "workspaceRoot": "/ws",
+    "manifestHash": "abc123",
+    "generatedAt": "2026-07-07T12:00:00Z",
+    "actions": [
+      {
+        "safety": "safe",
+        "kind": "hydrate",
+        "path": "apps/api",
+        "reason": "missing checkout",
+        "project": "api"
+      },
+      {
+        "safety": "skipped",
+        "kind": "delete",
+        "path": "tmp/old",
+        "reason": "dirty worktree",
+        "project": "old"
+      }
+    ],
+    "warnings": [
+      "untracked folder ignored"
+    ]
+  },
+  "project": {
+    "id": "api",
+    "name": "api",
+    "path": "apps/api",
+    "type": "git",
+    "remote": "git@example.com:org/api.git",
+    "defaultBranch": "main",
+    "hydrateMode": "clone",
+    "envProfiles": [
+      "dev",
+      "prod"
+    ],
+    "setup": {}
+  }
+}

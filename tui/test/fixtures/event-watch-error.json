@@ -1,0 +1,7 @@
+{
+  "method": "event",
+  "params": {
+    "message": "boom",
+    "type": "watch-error"
+  }
+}

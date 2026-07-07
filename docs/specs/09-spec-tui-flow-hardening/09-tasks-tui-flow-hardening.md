@@ -74,7 +74,7 @@ hard stops (report back instead of improvising).
 - [x] 1.6 Write `TestUIServerReadsNotBlockedBySlowAction`, `TestUIServerRejectsConcurrentActions`, and `TestSyncStatusCache` TTL/invalidate tests using the existing io.Pipe harness pattern (Step 5)
 - [x] 1.7 Run gates (`go test -race` selection, `make verify`), write proof file `09-proofs/09-task-01-proofs.md`, flip plan 016's row to DONE in `plans/README.md`, commit
 
-### [ ] 2.0 Enforce the protocol contract: hello version handshake + Go/TS golden fixtures (plan 017)
+### [x] 2.0 Enforce the protocol contract: hello version handshake + Go/TS golden fixtures (plan 017)
 
 #### 2.0 Proof Artifact(s)
 
@@ -86,12 +86,12 @@ hard stops (report back instead of improvising).
 
 #### 2.0 Tasks
 
-- [ ] 2.1 Run plan 017's drift check; create branch `advisor/017-protocol-contract`
-- [ ] 2.2 Create `ui_protocol_fixtures_test.go`: fully-populated DTO instances for hello, snapshot (plan+project), sync status, both event shapes, and error response; `-update-ui-fixtures` flag writes `tui/test/fixtures/`, default mode byte-compares and names the regeneration command on failure (Step 1); generate and check in the six fixtures
-- [ ] 2.3 Add runtime type guards `isHello`/`isSnapshot`/`isSyncStatus`/`isServerEvent` to `tui/src/protocol.ts` — explicit `typeof` checks, `null`-tolerant for `actions`/`warnings`, no new dependency — plus the pure handshake decision `helloProblem(hello: Hello): string | null` (returns an error message naming both protocol versions and the server version on mismatch; `null` on match) (Step 2, remediated)
-- [ ] 2.4 Create `tui/test/protocol.test.ts`: validate all six fixtures via the guards, assert `hello.protocol === PROTOCOL_VERSION` (lockstep), one negative case (deleted field → guard returns false), and `helloProblem` cases — mismatch returns a message naming both versions, match returns `null` (Step 3, remediated)
-- [ ] 2.5 Enforce the handshake: `app.tsx` routes any non-null `helloProblem(hello)` result — and any hello request failure — to the fatal-quit path; `main.tsx` `quit(code, message?)` restores the terminal before writing the message to stderr and exiting non-zero (Step 4, remediated)
-- [ ] 2.6 Run gates (`make verify`, `make tui-verify`), spot-check that deleting a fixture field fails `bun test` (restore it), write proof file `09-proofs/09-task-02-proofs.md`, flip plan 017's row in `plans/README.md`, commit
+- [x] 2.1 Run plan 017's drift check; create branch `advisor/017-protocol-contract`
+- [x] 2.2 Create `ui_protocol_fixtures_test.go`: fully-populated DTO instances for hello, snapshot (plan+project), sync status, both event shapes, and error response; `-update-ui-fixtures` flag writes `tui/test/fixtures/`, default mode byte-compares and names the regeneration command on failure (Step 1); generate and check in the six fixtures
+- [x] 2.3 Add runtime type guards `isHello`/`isSnapshot`/`isSyncStatus`/`isServerEvent` to `tui/src/protocol.ts` — explicit `typeof` checks, `null`-tolerant for `actions`/`warnings`, no new dependency — plus the pure handshake decision `helloProblem(hello: Hello): string | null` (returns an error message naming both protocol versions and the server version on mismatch; `null` on match) (Step 2, remediated)
+- [x] 2.4 Create `tui/test/protocol.test.ts`: validate all six fixtures via the guards, assert `hello.protocol === PROTOCOL_VERSION` (lockstep), one negative case (deleted field → guard returns false), and `helloProblem` cases — mismatch returns a message naming both versions, match returns `null` (Step 3, remediated)
+- [x] 2.5 Enforce the handshake: `app.tsx` routes any non-null `helloProblem(hello)` result — and any hello request failure — to the fatal-quit path; `main.tsx` `quit(code, message?)` restores the terminal before writing the message to stderr and exiting non-zero (Step 4, remediated)
+- [x] 2.6 Run gates (`make verify`, `make tui-verify`), spot-check that deleting a fixture field fails `bun test` (restore it), write proof file `09-proofs/09-task-02-proofs.md`, flip plan 017's row in `plans/README.md`, commit
 
 ### [ ] 3.0 Harden the client and watcher: stream-safe decode, visible/recoverable watch death, legacy backoff parity (plan 018 — requires 1.0)
 

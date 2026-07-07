@@ -1,0 +1,32 @@
+{
+  "method": "event",
+  "params": {
+    "refresh": {
+      "fullScan": true,
+      "refreshStartedAt": "2026-07-07T12:00:00Z",
+      "watchedDirCount": 5,
+      "syncChanged": true,
+      "syncMode": "git"
+    },
+    "rows": [
+      {
+        "ref": "apps/api",
+        "name": "api",
+        "path": "apps/api",
+        "type": "git",
+        "status": "Hydrated",
+        "dirty": true,
+        "branch": "main",
+        "env": true
+      }
+    ],
+    "summary": {
+      "foundProjects": 1,
+      "gitRepos": 1,
+      "untrackedFolders": 0,
+      "localOnlyProjects": 0,
+      "projectsWithEnv": 1
+    },
+    "type": "watch-refresh"
+  }
+}

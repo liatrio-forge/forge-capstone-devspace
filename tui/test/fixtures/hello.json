@@ -1,0 +1,9 @@
+{
+  "protocol": 1,
+  "version": "9.9.9",
+  "workspaceRoot": "/ws",
+  "machineId": "m-1",
+  "machineName": "mach",
+  "syncMode": "git",
+  "watch": true
+}

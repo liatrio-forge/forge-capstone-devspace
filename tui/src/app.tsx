@@ -1,7 +1,7 @@
 import { useTerminalDimensions, useKeyboard } from "@opentui/react";
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { DevspaceClient } from "./client";
-import type { Hello, ProjectRow, Snapshot } from "./protocol";
+import { helloProblem, type Hello, type ProjectRow, type Snapshot } from "./protocol";
 import { initialState, reduce, type DashboardState } from "./state";
 import { themes, type Theme } from "./theme";
 import { ConfirmApply, HelpOverlay, Palette, PlanOverlay, paletteCommands, planVisibleLines, runPaletteCommand } from "./overlays";
@@ -12,7 +12,7 @@ type ActionMethod = "scan" | "refresh" | "plan" | "apply" | "hydrate";
 
 export interface AppProps {
   client: DevspaceClient;
-  quit: () => void;
+  quit: (message?: string) => void;
 }
 
 export function App({ client, quit }: AppProps) {
@@ -67,7 +67,17 @@ export function App({ client, quit }: AppProps) {
   }
 
   useEffect(() => {
-    client.request("hello").then(setHello, () => {});
+    client.request("hello").then(
+      (hello) => {
+        const problem = helloProblem(hello);
+        if (problem) {
+          quit(problem);
+          return;
+        }
+        setHello(hello);
+      },
+      (err: Error) => quit(`hello failed: ${err.message}`),
+    );
     runAction("scan");
     refreshStatus();
     const offEvent = client.onEvent((event) => {

@@ -1,0 +1,12 @@
+{
+  "configured": true,
+  "lastSyncAt": "2026-07-07T12:00:00Z",
+  "localDiffers": true,
+  "diffAdded": 1,
+  "diffRemoved": 2,
+  "diffChanged": 3,
+  "reconcileSaved": true,
+  "conflictCount": 4,
+  "gitDiffUnavailable": "git unavailable",
+  "unavailableReason": "network"
+}

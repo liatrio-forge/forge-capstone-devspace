@@ -90,6 +90,150 @@ export type ServerEvent =
   | { type: "watch-refresh"; rows: ProjectRow[]; summary: ScanSummary; refresh: WatchRefresh }
   | { type: "watch-error"; message: string };
 
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(v: unknown): v is JsonRecord {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((item) => typeof item === "string");
+}
+
+function optionalString(v: JsonRecord, key: string): boolean {
+  return v[key] === undefined || typeof v[key] === "string";
+}
+
+function optionalStringArray(v: JsonRecord, key: string): boolean {
+  return v[key] === undefined || isStringArray(v[key]);
+}
+
+function isProjectRow(v: unknown): v is ProjectRow {
+  return (
+    isRecord(v) &&
+    typeof v.ref === "string" &&
+    typeof v.name === "string" &&
+    typeof v.path === "string" &&
+    typeof v.type === "string" &&
+    typeof v.status === "string" &&
+    typeof v.dirty === "boolean" &&
+    optionalString(v, "branch") &&
+    typeof v.env === "boolean"
+  );
+}
+
+function isScanSummary(v: unknown): v is ScanSummary {
+  return (
+    isRecord(v) &&
+    typeof v.foundProjects === "number" &&
+    typeof v.gitRepos === "number" &&
+    typeof v.untrackedFolders === "number" &&
+    typeof v.localOnlyProjects === "number" &&
+    typeof v.projectsWithEnv === "number"
+  );
+}
+
+function isPlanAction(v: unknown): v is PlanAction {
+  return (
+    isRecord(v) &&
+    typeof v.safety === "string" &&
+    typeof v.kind === "string" &&
+    typeof v.path === "string" &&
+    optionalString(v, "reason") &&
+    optionalString(v, "project")
+  );
+}
+
+function isPlan(v: unknown): v is Plan {
+  return (
+    isRecord(v) &&
+    typeof v.version === "number" &&
+    typeof v.workspaceRoot === "string" &&
+    typeof v.manifestHash === "string" &&
+    typeof v.generatedAt === "string" &&
+    (v.actions === null || (Array.isArray(v.actions) && v.actions.every(isPlanAction))) &&
+    (v.warnings === null || isStringArray(v.warnings))
+  );
+}
+
+function isProject(v: unknown): v is Project {
+  return (
+    isRecord(v) &&
+    typeof v.id === "string" &&
+    typeof v.name === "string" &&
+    typeof v.path === "string" &&
+    typeof v.type === "string" &&
+    optionalString(v, "remote") &&
+    optionalString(v, "defaultBranch") &&
+    typeof v.hydrateMode === "string" &&
+    optionalStringArray(v, "envProfiles")
+  );
+}
+
+function isWatchRefresh(v: unknown): v is WatchRefresh {
+  return (
+    isRecord(v) &&
+    typeof v.fullScan === "boolean" &&
+    optionalString(v, "refreshStartedAt") &&
+    typeof v.watchedDirCount === "number" &&
+    typeof v.syncChanged === "boolean" &&
+    optionalString(v, "syncMode")
+  );
+}
+
+export function isHello(v: unknown): v is Hello {
+  return (
+    isRecord(v) &&
+    typeof v.protocol === "number" &&
+    optionalString(v, "version") &&
+    typeof v.workspaceRoot === "string" &&
+    typeof v.machineId === "string" &&
+    typeof v.machineName === "string" &&
+    typeof v.syncMode === "string" &&
+    typeof v.watch === "boolean"
+  );
+}
+
+export function isSnapshot(v: unknown): v is Snapshot {
+  return (
+    isRecord(v) &&
+    Array.isArray(v.rows) &&
+    v.rows.every(isProjectRow) &&
+    isScanSummary(v.summary) &&
+    (v.plan === undefined || isPlan(v.plan)) &&
+    (v.project === undefined || isProject(v.project))
+  );
+}
+
+export function isSyncStatus(v: unknown): v is SyncStatus {
+  return (
+    isRecord(v) &&
+    typeof v.configured === "boolean" &&
+    optionalString(v, "lastSyncAt") &&
+    typeof v.localDiffers === "boolean" &&
+    typeof v.diffAdded === "number" &&
+    typeof v.diffRemoved === "number" &&
+    typeof v.diffChanged === "number" &&
+    typeof v.reconcileSaved === "boolean" &&
+    typeof v.conflictCount === "number" &&
+    optionalString(v, "gitDiffUnavailable") &&
+    optionalString(v, "unavailableReason")
+  );
+}
+
+export function isServerEvent(v: unknown): v is ServerEvent {
+  if (!isRecord(v) || typeof v.type !== "string") return false;
+  if (v.type === "watch-error") return typeof v.message === "string";
+  return v.type === "watch-refresh" && Array.isArray(v.rows) && v.rows.every(isProjectRow) && isScanSummary(v.summary) && isWatchRefresh(v.refresh);
+}
+
+export function helloProblem(hello: Hello): string | null {
+  if (hello.protocol === PROTOCOL_VERSION) return null;
+  return `devspace ui-server speaks protocol v${hello.protocol}, this devspace-tui expects v${PROTOCOL_VERSION} (server version ${
+    hello.version ?? "unknown"
+  }). Update devspace and devspace-tui to matching releases.`;
+}
+
 export interface RequestMap {
   hello: { params?: undefined; result: Hello };
   projects: { params?: undefined; result: Snapshot };
