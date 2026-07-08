@@ -1,5 +1,61 @@
 # Implementation Plans
 
+Generated and reconciled by the improve skill. Execute TODO plans in the order below unless dependencies say otherwise. Each executor: read the plan fully before starting, honor its STOP conditions, and update your row when done.
+
+## Reconcile 2026-07-08 — status and audit
+
+- Planned at: `cedcbc7` on branch `feat/11-tui-project-remove`.
+- Existing plans `001`-`019`: kept as DONE; no duplicate plan created for completed hardening/TUI work.
+- Verification sampled during reconciliation:
+  - `go test ./... -count=1` → pass.
+  - `go test ./internal/devspace -coverprofile=/tmp/devspace-cover.out -covermode=atomic` → pass, 73.5% statement coverage.
+  - `cd tui && bun test` → pass, 45 tests.
+  - `cd tui && bun run typecheck` → pass.
+  - `goreleaser check` → pass.
+  - `goreleaser release --snapshot --clean --skip=publish` → local dry-run reached ko image loading and stopped because Docker daemon was unavailable; release-check should validate that path on GitHub Actions.
+- Audit scope: standard, hotspot-weighted. Read root docs/config, CI/release config, existing plans, architecture/spec docs, Go CLI hot paths, hosted sync, reconcile, setup, TUI protocol/client/state tests, and release workflow. Not a whole-repo deep line-by-line audit of generated HTML, demo artifacts, or vendored `tui/node_modules`.
+
+## Wave 3 — reconciliation audit findings (2026-07-08)
+
+### Execution order & status
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 020 | Runtime-validate every devspace-tui RPC response before state updates | P1 | M | — | TODO |
+| 021 | Make release-check build devspace-tui assets before the GoReleaser dry-run | P1 | S | — | TODO |
+| 022 | Reconcile README, architecture, and follow-up docs with shipped DevSpace state | P2 | S | — | TODO |
+| 023 | Define the managed hosted sync production contract | P2 | M | 022 | TODO |
+
+Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
+
+### Dependency notes
+
+- 020 and 021 are independent.
+- 022 can run anytime, but doing it after 020/021 lets the docs mention any extra verification if those land first.
+- 023 should run after 022 so the production contract is not built on stale README/architecture claims.
+
+### Vetted findings table
+
+| # | Finding | Category | Impact | Effort | Risk | Evidence |
+|---|---------|----------|--------|--------|------|----------|
+| 1 | TUI RPC responses are not runtime-validated at the client boundary even though validators exist. | correctness / tests | Protocol drift can enter React state as typed data and fail later with unclear UI errors. | M | LOW | `tui/src/client.ts:124-130`; `tui/src/protocol.ts:312-349`; `tui/src/protocol.ts:381-393` |
+| 2 | `release-check` does not build `devspace-tui` assets before the GoReleaser dry-run. | dx / release | Release-config PRs do not exercise the TUI extra-file path used by real releases. | S | LOW | `.github/workflows/release-check.yml:26-36`; `.github/workflows/release.yml:40-51`; `.goreleaser.yaml:49-52,71-76` |
+| 3 | Root docs still describe shipped reconcile/FUSE work as pending. | docs | Future agents and maintainers can plan duplicate work or trust stale limitations. | S | LOW | `README.md:87-93,416-423`; `ARCHITECTURE.md:173-175,221-229,248-251`; `FOLLOWUP.md:7`; `docs/operations/release-readiness.md:57-67` |
+
+### Direction findings
+
+- Managed hosted sync remains the largest product direction item, but it is intentionally still a prototype (`README.md:398`, `ARCHITECTURE.md:257`). Keep it as roadmap until token-to-user auth, deployment ownership, and service operations are chosen.
+- Hydration progress streaming was explicitly deferred in spec 09 until large-repo clones become reported pain. Do not plan it before user feedback; `hydrate` already has generous request timeouts and safe clone behavior.
+- Production app shape: keep the CLI local-first and make managed hosted sync the production boundary. Plan 023 is a docs/design spike only; it avoids a broad SaaS rewrite and turns the hosted prototype into small future slices.
+
+### Findings considered and rejected
+
+- Reopen plans `001`-`019`: rejected; `plans/README.md` marks them DONE and sampled tests/docs support current completion.
+- `findTUIBinary` PATH lookup: rejected; `internal/devspace/ui.go` documents adjacent binary and `$DEVSPACE_HOME/bin` precedence, then PATH as the usual CLI trust model.
+- ui-server unbounded `ReadString`: rejected; `internal/devspace/ui_server.go` documents trusted parent-child pipe rationale, and plan 018 already covered the risk.
+- `goreleaser release --snapshot --clean --skip=publish` local failure: not a source finding; the observed failure was missing local Docker daemon for ko image loading.
+
+
 This document tracks the execution and status of Liatrio Spec-Driven Development (SDD) plans for DevSpace.
 
 ## Wave 2 — TUI flow & setup audit (2026-07-07, planned at `2ff060e`)

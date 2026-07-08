@@ -64,10 +64,10 @@
 ## Remaining Risks
 
 - Plan/apply is intentionally conservative and may require manual cleanup or explicit future flags for advanced cases.
-- Manifest sync has no force flag or merge UI; conflicts intentionally require manual reconciliation.
+- Manifest sync conflicts are resolved via `workspace reconcile` / `hosted reconcile`, with global `--force-local`/`--force-remote` and repeatable per-project `--force-project <projectID>=<local|remote>` overrides; there is no interactive merge UI beyond these flags.
 - Git inspection still avoids mutating repos, so stale/outdated remote commit detection remains shallow.
 - Encrypted `.env` generation overwrites the target `.env` only when explicitly requested via `env pull`.
 
 ## Recommended Next Feature
 
-Manifest conflict reconciliation and clearer multi-machine history.
+Clearer multi-machine history (manifest conflict reconciliation already shipped via `reconcile`, spec 06).

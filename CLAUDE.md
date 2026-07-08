@@ -13,10 +13,10 @@ progress — see Migration below).
 ## Commands
 
 ```bash
-make verify        # test + vet + lint + build — the local gate; use before pushing
+make verify        # test + vet + lint + govulncheck + build — the local gate; use before pushing
 make test          # go test ./...
 make build         # builds bin/devspace (-trimpath)
-make vulncheck     # govulncheck; CI-only (network-dependent), not part of verify
+make vulncheck     # govulncheck (also run as part of make verify)
 make tui-verify    # Bun typecheck + tests for the devspace-tui companion (tui/)
 go run ./cmd/devspace --help
 
@@ -26,7 +26,7 @@ go test ./internal/devspace -run TestName -v
 
 There is a single Go module and effectively a single package worth testing
 (`internal/devspace`). CI (`.github/workflows/ci.yml`) runs `go test`, `go vet`,
-and a build on every PR and push to `main`.
+lint, govulncheck, and a build on every PR and push to `main`.
 
 ## Architecture
 

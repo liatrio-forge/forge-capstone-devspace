@@ -52,5 +52,5 @@ encrypted locally.
 4. Capture final proof links in [proof-artifacts.md](proof-artifacts.md).
 5. Add the personal reflection after demo feedback is received.
 
-Done and verified: the v0.1.0 tagged release shipped with GitHub Release
+Done and verified: v0.2.0 is the release of record, shipped with GitHub Release
 assets (see [proof-artifacts.md](proof-artifacts.md)).

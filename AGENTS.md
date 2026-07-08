@@ -10,7 +10,7 @@ DevSpace is a Go CLI. The command entry point is `cmd/devspace/main.go`; most im
 - `go vet ./...`: run Go static checks used by CI.
 - `go build -trimpath -o bin/devspace ./cmd/devspace`: build the CLI locally.
 - `go run ./cmd/devspace --help`: run the CLI from source.
-- `make verify`: run the local CI gate: tests, vet, and build.
+- `make verify`: run the local CI gate: tests, vet, lint, govulncheck, and build.
 - `make clean`: remove local `bin/` and `dist/` outputs.
 
 ## Coding Style & Naming Conventions

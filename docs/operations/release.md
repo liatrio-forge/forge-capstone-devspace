@@ -115,7 +115,7 @@ The tag already exists, so re-running is safe and idempotent from the same tag:
    `release` workflow run from the Actions UI or `gh run rerun <run-id>`.
    GoReleaser runs with `--clean` and will replace partial release assets.
 2. If the release was published in a broken state, delete it
-   (`gh release delete v0.1.0`) and re-run the workflow — or cut a new
+   (`gh release delete v0.2.0`) and re-run the workflow — or cut a new
    `-rc.N+1` tag if the fix required code changes.
 
 ## Consumer verification
@@ -135,14 +135,14 @@ repo is made public:
 
 ```bash
 gh attestation verify checksums.txt --repo liatrio-forge/devdrop-capstone
-gh attestation verify devspace_v0.1.0_<goos>_<goarch>.tar.gz --repo liatrio-forge/devdrop-capstone
+gh attestation verify devspace_v0.2.0_<goos>_<goarch>.tar.gz --repo liatrio-forge/devdrop-capstone
 ```
 
 Then unpack and install:
 
 ```bash
-tar -xzf devspace_v0.1.0_<goos>_<goarch>.tar.gz
-install -m 0755 devspace_v0.1.0_<goos>_<goarch>/devspace /usr/local/bin/devspace
+tar -xzf devspace_v0.2.0_<goos>_<goarch>.tar.gz
+install -m 0755 devspace_v0.2.0_<goos>_<goarch>/devspace /usr/local/bin/devspace
 ```
 
 ## Install from source
@@ -183,11 +183,14 @@ CI runs the same gate on every PR, but you can run it locally:
 make verify
 ```
 
-`make verify` runs:
+`make verify` runs tests, vet, lint, govulncheck, and the build — the local
+CI gate:
 
 1. `go test ./...`
 2. `go vet ./...`
-3. `go build -trimpath -o bin/devspace ./cmd/devspace`
+3. lint
+4. `govulncheck`
+5. `go build -trimpath -o bin/devspace ./cmd/devspace`
 
 Individual targets are also available:
 

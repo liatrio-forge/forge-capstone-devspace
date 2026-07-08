@@ -84,11 +84,13 @@ DevSpace respects the following environment variables to configure its runtime b
 
 Releases are automated with GoReleaser: pushing a `v*` tag publishes a GitHub Release with prebuilt `devspace` archives for Linux and macOS (amd64/arm64), SHA256 checksums, and build-provenance attestation. Download archives from the [releases page](https://github.com/liatrio-forge/devdrop-capstone/releases) and verify them with `sha256sum -c` and `gh attestation verify`.
 
-CI (`go test`, `go vet`, build) runs on every PR and push to `main`. The same gate is available locally:
+CI runs `go test`, `go vet`, build, `make tui-verify` for the `devspace-tui` companion, and a `mount-integration` FUSE job on every PR and push to `main`. The same core gate is available locally:
 
 ```bash
 make verify
 ```
+
+`make verify` runs tests, vet, lint, govulncheck, and the build — the local CI gate.
 
 See [`docs/operations/release.md`](docs/operations/release.md) for the full release process, consumer verification steps, install-from-source instructions, and the manual `make release` fallback.
 
@@ -102,7 +104,7 @@ This repository is being prepared as a Liatrio Forge Module 5 capstone. See [`do
 
 ## Supported Commands
 
-Output is styled (color, headers, tables) when stdout is a terminal, and automatically falls back to plain text when piped, redirected, or when `NO_COLOR`/`CLICOLOR_FORCE=0` is set. Pass the persistent `--no-color` flag to force plain output on any command regardless of terminal capability. Commands that support `--json` (`status`, `doctor`, `project`, `workspace`, `workspace diff`, `mount --preview`, `plan`, `setup plan`) always emit clean JSON with no ANSI content.
+Output is styled (color, headers, tables) when stdout is a terminal, and automatically falls back to plain text when piped, redirected, or when `NO_COLOR`/`CLICOLOR_FORCE=0` is set. Pass the persistent `--no-color` flag to force plain output on any command regardless of terminal capability. Commands that support `--json` (`plan`, `workspace`, `workspace diff`, `workspace reconcile`, `hosted reconcile`, `project`, `status`, `doctor`, `setup plan`, `mount --preview`) always emit clean JSON with no ANSI content.
 
 ### Core Workflow
 
@@ -120,7 +122,7 @@ Creates `~/.devspace/config.json`, `~/.devspace/state.json`, `~/.devspace/identi
 devspace scan
 ```
 
-Scans the configured workspace and updates the manifest/state with Git remote URL, current branch, last commit, dirty working tree status, `.env` file presence, and dependency/setup hints. Common build output directories (`node_modules/`, `dist/`, `build/`, etc.) are ignored by default.
+Scans the configured workspace and updates the manifest/state with Git remote URL, current branch, last commit, dirty working tree status, `.env` file presence, and dependency/setup hints. Common build output directories are ignored by default: `node_modules`, `dist`, `build`, `.next`, `turbo`, `target`, `vendor`, `coverage`, `.cache`, `.DS_Store`, `*.log`.
 
 #### `devspace watch`
 
@@ -141,9 +143,13 @@ Default behavior is local-only. `--sync git` and `--sync hosted` explicitly push
 ```bash
 devspace ui
 devspace ui --no-watch
+devspace ui --legacy
+devspace tui install
 ```
 
 Opens a full-screen workspace dashboard with project hydration, dirty, branch, env, scan summary, and recent refresh events. The dashboard exposes only safe actions: scan, plan, apply-safe, hydrate selected, and untrack selected projects. Project untracking removes manifest metadata only; files on disk are not touched. Use `--no-watch` to disable live filesystem watching and refresh manually with `r`.
+
+When the external `devspace-tui` companion (an OpenTUI/Bun/React app) is installed — adjacent to the `devspace` binary, in `$DEVSPACE_HOME/bin`, or on `PATH` — `devspace ui` launches it instead of the built-in dashboard. Pass `--legacy` to force the built-in Bubble Tea dashboard even when the companion is installed. Run `devspace tui install [--version vX.Y.Z] [--repo owner/repo]` to download the matching companion release asset into `$DEVSPACE_HOME/bin`.
 
 #### `devspace status`
 
@@ -248,9 +254,10 @@ devspace workspace reconcile            # review-first: writes a plan, changes n
 devspace workspace reconcile --json     # machine-readable reconcile plan
 devspace workspace reconcile --apply    # apply the merged manifest (backup + hash guard)
 devspace workspace reconcile --force-local|--force-remote --apply
+devspace workspace reconcile --force-project client-a-api=local --apply
 ```
 
-When local and remote manifests diverge (the push/pull "diverged, reconcile manually" dead end), `reconcile` performs a three-way, project-level merge against the last-synced base manifest. Non-conflicting changes (each side added/removed/changed different projects) merge automatically; a project changed differently on both sides is a **conflict** that is never auto-resolved — apply is blocked until you pass `--force-local` or `--force-remote`. The command is review-first: it writes the plan to `DEVSPACE_HOME/last-reconcile.json`, and `--apply` backs up the previous manifest to `DEVSPACE_HOME/manifest-backup.json` before writing, guarded by a manifest-hash check. Without a base snapshot (first run after upgrade), it falls back to a conservative two-way union where every same-project difference is a conflict.
+When local and remote manifests diverge (the push/pull "diverged, reconcile manually" dead end), `reconcile` performs a three-way, project-level merge against the last-synced base manifest. Non-conflicting changes (each side added/removed/changed different projects) merge automatically; a project changed differently on both sides is a **conflict** that is never auto-resolved — apply is blocked until you pass `--force-local`/`--force-remote` (global) or repeat `--force-project <projectID>=<local|remote>` for per-project conflict resolution. The command is review-first: it writes the plan to `DEVSPACE_HOME/last-reconcile.json`, and `--apply` backs up the previous manifest to `DEVSPACE_HOME/manifest-backup.json` before writing, guarded by a manifest-hash check. Without a base snapshot (first run after upgrade), it falls back to a conservative two-way union where every same-project difference is a conflict.
 
 #### `devspace workspace diff`
 
@@ -271,6 +278,7 @@ devspace hosted config set http://127.0.0.1:8787 --token dev-token --workspace t
 devspace hosted push
 devspace hosted pull
 devspace hosted reconcile [--json] [--apply] [--force-local|--force-remote]
+devspace hosted reconcile --force-project client-a-api=remote --apply
 ```
 
 `devspace hosted reconcile` resolves hosted version conflicts (HTTP 409) the same way as `workspace reconcile`: three-way merge against the base snapshot, review-first plan, backup + hash-guarded apply, and explicit force flags for genuine conflicts. On apply it pushes the merged manifest with version-conflict protection, then refreshes the local manifest and sync baseline.
@@ -415,10 +423,9 @@ On first run, an existing `~/.devdrop` application home is automatically migrate
 
 ## Roadmap
 
-- Per-project conflict choices in `workspace reconcile` (global resolution and `--force-local` / `--force-remote` shipped).
 - Hosted sync: grow the shipped prototype into a managed service.
 - Daemon process management for running watch mode outside a terminal.
-- FUSE lazy mount: grow the shipped prototype into a supported feature (macOS local proof pending).
+- FUSE lazy mount: grow the shipped prototype into a supported feature.
 - Managed team identity provider & OS keychain integration.
 - Release-readiness checklist automation.
 

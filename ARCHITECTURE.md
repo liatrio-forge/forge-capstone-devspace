@@ -74,6 +74,8 @@ The `workspace` command group owns Git-backed manifest sync:
 - `workspace push` writes only `manifest.json` to the remote repo.
 - `workspace pull` validates, localizes, and replaces the local manifest.
 - `workspace diff` previews remote manifest differences as `ManifestDiff`.
+- `workspace reconcile` computes a three-way (or two-way fallback) merge
+  between local and remote manifests, reviewable before an explicit `--apply`.
 
 The `hosted` command group owns the opt-in hosted control-plane prototype:
 
@@ -81,6 +83,8 @@ The `hosted` command group owns the opt-in hosted control-plane prototype:
 - `hosted config` stores endpoint/workspace/token configuration.
 - `hosted push` and `hosted pull` sync manifest metadata with version/hash
   conflict checks.
+- `hosted reconcile` runs the same merge/review/apply flow as `workspace
+  reconcile`, resolving hosted 409/version conflicts.
 
 ## Manifest Sync Flow
 
@@ -106,7 +110,7 @@ last hosted sync. Both paths sync manifest metadata only.
 
 ## Tasks TUI Dashboard
 
-The TUI dashboard was the most recent merged feature on `main`:
+The TUI dashboard (spec 05) added the built-in Bubble Tea dashboard:
 
 ```text
 cd3cd8d feat: add devspace ui interactive dashboard (spec 05) (#30)
@@ -170,9 +174,10 @@ local, remote Manifest) (ReconcileResult, error)`:
   adds/removes still merge automatically, but any same-path/same-key
   difference between local and remote becomes a conflict. It never refuses
   outright and never silently picks a side.
-- Real conflicts block `--apply` unless the caller passes exactly one of the
-  mutually exclusive, global-only `--force-local` / `--force-remote` flags
-  (per-project force selection is deferred, see Current Gaps).
+- Real conflicts block `--apply` unless the caller passes the mutually
+  exclusive global `--force-local` / `--force-remote` flags, or repeats
+  `--force-project <projectID>=<local|remote>` to resolve individual project
+  conflicts.
 
 Two commands drive this: `devspace workspace reconcile` (Git-backed sync) and
 `devspace hosted reconcile` (hosted 409/version conflicts), both wired in
@@ -190,7 +195,7 @@ that the plain flow refuses.
 The design questions the earlier spike (`docs/architecture/manifest-merge.md`)
 left open are resolved: two-way fallback (not refuse) when there's no base;
 keying by `Project.Path` (not `Project.ID`), with same-path/different-ID as a
-conflict; and global `--force-local`/`--force-remote` flags (not
+conflict; and `--force-local`/`--force-remote`/`--force-project` flags (not
 `--force-mine`/`--force-theirs`).
 
 ## How The Pieces Connect
@@ -225,42 +230,42 @@ local Manifest
   -> manifestForSync
   -> Git remote or hosted envelope
   -> localized remote Manifest
-  -> diff / pull / future reconcile
+  -> diff / pull / reconcile
   -> local Manifest
 ```
 
 ## Recent Commit Context
 
-Recent `main` history shows the project moving from release hardening into a
-more interactive workspace manager:
+`main` history (release of record: `v0.2.0`) shows the project moving from
+release hardening into an interactive, sync-aware workspace manager:
 
 - `feat: add devspace ui interactive dashboard (spec 05) (#30)` added the TUI.
-- `Mount status enrichment and unmount diagnostics (#29)` improved mount
-  observability.
-- `Extract hosted-serve HTTP lifecycle into hosted_sync.go (#27)` separated the
-  hosted server lifecycle from command wiring.
-- `Finalize proof-artifacts.md release gate (#28)` tightened capstone release
-  proof.
-- `docs: re-record the status/doctor/plan tour vhs demo` refreshed demos.
-- `feat: styled terminal output with Charm (...)` introduced the current styled
-  terminal output foundation that the dashboard builds on.
+- `docs: spec 06 manifest reconciliation planning artifacts (#31)` and the
+  subsequent `reconcile.go` work implemented three-way/two-way manifest
+  reconciliation.
+- `feat: warning-only access-role advisories (spec 07) (#34)` added advisory
+  access-role warnings.
+- `feat: per-project reconcile force and read-only sync status in devspace ui
+  (spec 08) (#35)` added `--force-project` and sync status in the dashboard.
+- `feat(ui): opentui-based devspace-tui companion dashboard (#39)` introduced
+  the external `devspace-tui` companion frontend.
 
 ## Current Gaps
 
-- Force resolution (`--force-local`/`--force-remote`) is global-only; there is
-  no per-project conflict selection yet.
 - Users/Teams reconciliation is record-level (whole record wins or conflicts),
   not field-level; a losing side's unrelated field changes are not preserved.
   Machines are excluded from reconciliation entirely.
-- `devspace ui` is intentionally safe and local-only. It does not yet surface
-  sync/reconcile operations, and spec 05 explicitly kept those out of scope.
+- `devspace ui` surfaces read-only sync/reconcile status (last sync/base time,
+  remote configuration state) but does not itself initiate push/pull/reconcile
+  actions; it remains intentionally limited to safe, local operations.
 - Hosted sync remains a runnable prototype rather than a managed service.
 - Hydration is full `git clone`; partial clone and sparse checkout are not yet
   implemented.
 
 ## Review Notes For Future Work
 
-When implementing spec 06, keep the existing safety shape:
+Spec 06 (manifest reconciliation) established the following safety shape; keep
+it for future work in this area:
 
 - add tests against temp `DEVSPACE_HOME` and temp workspaces only;
 - keep `withAppLock` at command boundaries and avoid nested lock acquisition;

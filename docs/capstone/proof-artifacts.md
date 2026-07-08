@@ -15,7 +15,7 @@ links as releases, PRs, and recordings are created.
 | Demo script | Done | `scripts/demo-check.sh`, `docs/capstone/demo-script.md` (demo-check.sh verified 2026-07-06) |
 | Remote-agent case study | Done | `docs/capstone/remote-agent-case-study.md` |
 | Frontier Linear cards | Drafted | `CIL-227` through `CIL-231` |
-| Release binary | Done | https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.1.0 |
+| Release binary | Done | https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.2.0 |
 | Final demo recording | Pending | Filled at end of wave 5 |
 | Personal reflection | Pending | Filled at end of wave 5 |
 
@@ -35,8 +35,9 @@ Expected current baseline:
 
 - `go test ./...` passes.
 - The build produces a local `devspace` binary.
-- `devspace --help` lists init, workspace, project, env, scan, plan, apply,
-  status, and version commands.
+- `devspace --help` lists apply, completion, doctor, env, hosted, init, mount,
+  plan, project, scan, setup, status, tui, ui, version, watch, and workspace
+  commands.
 - `scripts/demo-check.sh` passes without network access, GitHub auth, Linear
   auth, or real secrets.
 
@@ -84,10 +85,10 @@ These are covered by tests in `internal/devspace/hardening_test.go`,
 
 ## Release Gate
 
-- Release tag: `v0.1.0`
+- Release tag: `v0.2.0`
 - Release URL:
-  https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.1.0
-- Commit SHA: `43dfbd878dc980c0bd566d3674c0bae6d5433f93`
+  https://github.com/liatrio-forge/devdrop-capstone/releases/tag/v0.2.0
+- Commit SHA: `410f8e29c9318d90ea1262b71802d44531389ec6`
 - Demo recording: Pending; filled at end of wave 5.
 - Remote-agent run: case study at
   https://github.com/liatrio-forge/devdrop-capstone/blob/main/docs/capstone/remote-agent-case-study.md
@@ -117,8 +118,7 @@ These are covered by tests in `internal/devspace/hardening_test.go`,
 - Final test command output: `go test ./...` passed in this worktree:
   `? github.com/liatrio-forge/devdrop-capstone/cmd/devspace [no test files]`
   and `ok github.com/liatrio-forge/devdrop-capstone/internal/devspace`. The
-  `internal/devspace` package contains 198 passing tests: 148 top-level test
-  functions plus subtests.
+  full `go test ./...` suite passes.
 - Known limitation accepted: hosted sync, daemon/watch, FUSE lazy mounting,
   managed team identity, and explicit dependency install remain frontier
   prototypes outside the completed local-first MVP baseline. MVP sync exchanges
