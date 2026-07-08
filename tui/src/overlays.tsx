@@ -41,6 +41,7 @@ const KEYMAP: Array<[string, string]> = [
   ["p", "build plan (opens plan view)"],
   ["a", "apply safe actions (confirms first)"],
   ["h", "hydrate selected project (git clone)"],
+  ["x", "remove selected project"],
   ["ctrl+k", "command palette"],
   ["t", "cycle theme"],
   ["mouse", "click selects · wheel scrolls"],
@@ -140,6 +141,25 @@ export function ConfirmApply({ th, plan }: { th: Theme; plan: Plan; width: numbe
   );
 }
 
+export function ConfirmRemove({ th, row }: { th: Theme; row: ProjectRow; width: number; height: number }) {
+  return (
+    <OverlayFrame th={th} title="Remove project?">
+      <text fg={th.text}>
+        Remove <strong fg={th.warn}>{row.name}</strong> from tracking?
+      </text>
+      <text fg={th.muted}>{row.path}</text>
+      <text fg={th.muted}>Files on disk are not touched.</text>
+      <text> </text>
+      <text>
+        <span fg={th.ok}>enter/y</span>
+        <span fg={th.muted}> remove · </span>
+        <span fg={th.fail}>esc/n</span>
+        <span fg={th.muted}> cancel</span>
+      </text>
+    </OverlayFrame>
+  );
+}
+
 export function WorkspaceOverlay({ th, overview }: { th: Theme; overview: WorkspaceOverview; width: number; height: number }) {
   const users = overview.users?.map((u) => u.name).join(", ") || "-";
   const teams = overview.teams?.map((t) => t.name).join(", ") || "-";
@@ -194,6 +214,7 @@ export function paletteCommands(state: DashboardState, query: string): PaletteCo
     { id: "plan", label: "Build plan", hint: "p" },
     { id: "apply", label: "Apply safe actions", hint: "a" },
     ...(selected ? [{ id: "hydrate", label: `Hydrate ${selected.name}`, hint: "h" }] : []),
+    ...(selected ? [{ id: "remove", label: "Remove selected project", hint: "x" }] : []),
     ...(state.lastPlan ? [{ id: "show-plan", label: "Show last plan" }] : []),
     { id: "theme", label: "Cycle theme", hint: "t" },
     { id: "help", label: "Help", hint: "?" },
@@ -217,8 +238,9 @@ export function paletteCommands(state: DashboardState, query: string): PaletteCo
 export function runPaletteCommand(
   id: string,
   ctx: {
-    runAction: (method: "scan" | "refresh" | "plan" | "apply" | "hydrate", ref?: string) => void;
+    runAction: (method: "scan" | "refresh" | "plan" | "apply" | "hydrate" | "remove", ref?: string) => void;
     selectedRow?: ProjectRow;
+    openRemove: (row: ProjectRow) => void;
     openWorkspace: () => void;
     openHelp: () => void;
     openPlan: () => void;
@@ -234,6 +256,9 @@ export function runPaletteCommand(
       return ctx.runAction(id);
     case "hydrate":
       if (ctx.selectedRow) ctx.runAction("hydrate", ctx.selectedRow.ref);
+      return;
+    case "remove":
+      if (ctx.selectedRow) ctx.openRemove(ctx.selectedRow);
       return;
     case "workspace":
       return ctx.openWorkspace();

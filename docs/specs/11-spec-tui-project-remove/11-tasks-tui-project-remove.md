@@ -58,7 +58,7 @@
 - [x] 1.5 Add ui-server tests proving a tracked project is removed from response rows, its manifest/access/state entries are gone, and the project directory still exists on disk.
 - [x] 1.6 Add ui-server error-path coverage for missing, blank, malformed, and unknown project refs.
 
-### [ ] 2.0 Add TUI Remove Entry Points And Confirmation
+### [x] 2.0 Add TUI Remove Entry Points And Confirmation
 
 #### 2.0 Proof Artifact(s)
 
@@ -67,16 +67,16 @@
 
 #### 2.0 Tasks
 
-- [ ] 2.1 Add `remove: { params: { ref: string }; result: Snapshot }` to `RequestMap` in `tui/src/protocol.ts`.
-- [ ] 2.2 Extend the TUI action method union in `tui/src/app.tsx` to include `remove`, and route it through `client.request("remove", { ref })`.
-- [ ] 2.3 Add a `confirm-remove` overlay state carrying the selected `ProjectRow` in `tui/src/state.ts`.
-- [ ] 2.4 Add a `ConfirmRemove` overlay in `tui/src/overlays.tsx` that shows project name/path and says files on disk are not touched.
-- [ ] 2.5 Add `x` handling in the main app key switch to open `confirm-remove` for the selected row when one exists.
-- [ ] 2.6 Add `enter`/`y` handling in the confirmation overlay to call remove for the selected ref, and `esc`/`n`/`q` handling to cancel.
-- [ ] 2.7 Add `Remove selected project` to the command palette when a row is selected and route it to the same confirmation overlay.
-- [ ] 2.8 Update help overlay and status bar text so `x remove` is visible without changing the no-project empty state.
+- [x] 2.1 Add `remove: { params: { ref: string }; result: Snapshot }` to `RequestMap` in `tui/src/protocol.ts`.
+- [x] 2.2 Extend the TUI action method union in `tui/src/app.tsx` to include `remove`, and route it through `client.request("remove", { ref })`.
+- [x] 2.3 Add a `confirm-remove` overlay state carrying the selected `ProjectRow` in `tui/src/state.ts`.
+- [x] 2.4 Add a `ConfirmRemove` overlay in `tui/src/overlays.tsx` that shows project name/path and says files on disk are not touched.
+- [x] 2.5 Add `x` handling in the main app key switch to open `confirm-remove` for the selected row when one exists.
+- [x] 2.6 Add `enter`/`y` handling in the confirmation overlay to call remove for the selected ref, and `esc`/`n`/`q` handling to cancel.
+- [x] 2.7 Add `Remove selected project` to the command palette when a row is selected and route it to the same confirmation overlay.
+- [x] 2.8 Update help overlay and status bar text so `x remove` is visible without changing the no-project empty state.
 
-### [ ] 3.0 Surface Advisory, Result, And Refresh Feedback
+### [x] 3.0 Surface Advisory, Result, And Refresh Feedback
 
 #### 3.0 Proof Artifact(s)
 
@@ -85,16 +85,16 @@
 
 #### 3.0 Tasks
 
-- [ ] 3.1 In the ui-server remove flow, collect `accessRoleAdvisoryWarnings("devspace project remove", ref, AccessRoleOwner, AccessRoleMaintainer)` before calling `RemoveProject`.
-- [ ] 3.2 Add an optional `warnings` field to the remove snapshot response only if warnings exist; keep it free of ANSI styling.
-- [ ] 3.3 Update `tui/src/protocol.ts` snapshot validation to accept optional `warnings?: string[]`.
-- [ ] 3.4 Show advisory warnings in the TUI result flow, either as a warning event line or a compact toast that does not hide success/failure state.
-- [ ] 3.5 On successful remove, dispatch the returned snapshot so the removed row disappears and selection is clamped by the existing reducer.
-- [ ] 3.6 On successful remove, call `refreshStatus()` and do not call scan, push, pull, reconcile, hosted sync, or watch sync.
-- [ ] 3.7 On failed remove, leave rows unchanged and show the existing action error + error toast path.
-- [ ] 3.8 Add focused tests or fixture validation for optional snapshot warnings if the response DTO changes.
+- [x] 3.1 In the ui-server remove flow, collect `accessRoleAdvisoryWarnings("devspace project remove", ref, AccessRoleOwner, AccessRoleMaintainer)` before calling `RemoveProject`.
+- [x] 3.2 Add an optional `warnings` field to the remove snapshot response only if warnings exist; keep it free of ANSI styling.
+- [x] 3.3 Update `tui/src/protocol.ts` snapshot validation to accept optional `warnings?: string[]`.
+- [x] 3.4 Show advisory warnings in the TUI result flow, either as a warning event line or a compact toast that does not hide success/failure state.
+- [x] 3.5 On successful remove, dispatch the returned snapshot so the removed row disappears and selection is clamped by the existing reducer.
+- [x] 3.6 On successful remove, call `refreshStatus()` and do not call scan, push, pull, reconcile, hosted sync, or watch sync.
+- [x] 3.7 On failed remove, leave rows unchanged and show the existing action error + error toast path.
+- [x] 3.8 Add focused tests or fixture validation for optional snapshot warnings if the response DTO changes.
 
-### [ ] 4.0 Capture Demo And Verification Evidence
+### [x] 4.0 Capture Demo And Verification Evidence
 
 #### 4.0 Proof Artifact(s)
 
@@ -104,10 +104,10 @@
 
 #### 4.0 Tasks
 
-- [ ] 4.1 Update `README.md` so the `devspace ui` section lists project untracking and clearly says files on disk are not touched.
-- [ ] 4.2 Create a VHS tape that initializes a temporary `DEVSPACE_HOME` and workspace, adds a sandbox project, starts the TUI with `--no-watch`, removes the project, and verifies the project directory still exists.
-- [ ] 4.3 Render the VHS GIF under `docs/specs/11-spec-tui-project-remove/`.
-- [ ] 4.4 Save proof notes or command transcripts under `docs/specs/11-spec-tui-project-remove/11-proofs/` with exact commands and sanitized output.
-- [ ] 4.5 Run focused Go tests for remove and advisory behavior with a temporary `GOCACHE`.
-- [ ] 4.6 Run `make tui-verify`.
-- [ ] 4.7 Run `make verify`, or record the exact blocker if the broader sandbox gate cannot complete.
+- [x] 4.1 Update `README.md` so the `devspace ui` section lists project untracking and clearly says files on disk are not touched.
+- [x] 4.2 Create a VHS tape that initializes a temporary `DEVSPACE_HOME` and workspace, adds a sandbox project, starts the TUI with `--no-watch`, removes the project, and verifies the project directory still exists.
+- [x] 4.3 Render the VHS GIF under `docs/specs/11-spec-tui-project-remove/`.
+- [x] 4.4 Save proof notes or command transcripts under `docs/specs/11-spec-tui-project-remove/11-proofs/` with exact commands and sanitized output.
+- [x] 4.5 Run focused Go tests for remove and advisory behavior with a temporary `GOCACHE`.
+- [x] 4.6 Run `make tui-verify`.
+- [x] 4.7 Run `make verify`, or record the exact blocker if the broader sandbox gate cannot complete.

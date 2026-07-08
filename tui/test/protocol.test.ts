@@ -24,6 +24,12 @@ describe("protocol fixtures", () => {
     }
   });
 
+  test("snapshot accepts advisory warnings", async () => {
+    const snapshot = await fixture("snapshot.json");
+    expect(isSnapshot({ ...(snapshot as object), warnings: ["Access role advisory"] })).toBe(true);
+    expect(isSnapshot({ ...(snapshot as object), warnings: [42] })).toBe(false);
+  });
+
   test("sync status matches the client contract", async () => {
     expect(isSyncStatus(await fixture("sync-status.json"))).toBe(true);
   });
