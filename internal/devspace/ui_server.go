@@ -92,10 +92,11 @@ type uiWatchRefresh struct {
 }
 
 type uiSnapshot struct {
-	Rows    []uiProjectRow `json:"rows"`
-	Summary uiScanSummary  `json:"summary"`
-	Plan    *Plan          `json:"plan,omitempty"`
-	Project *Project       `json:"project,omitempty"`
+	Rows     []uiProjectRow `json:"rows"`
+	Summary  uiScanSummary  `json:"summary"`
+	Plan     *Plan          `json:"plan,omitempty"`
+	Project  *Project       `json:"project,omitempty"`
+	Warnings []string       `json:"warnings,omitempty"`
 }
 
 type uiServerOptions struct {
@@ -112,6 +113,7 @@ type uiServerOptions struct {
 	planCmd    func() tea.Cmd
 	applyCmd   func() tea.Cmd
 	hydrateCmd func(string) tea.Cmd
+	removeCmd  func(string) tea.Cmd
 	statusCmd  func() tea.Cmd
 }
 
@@ -159,6 +161,9 @@ func runUIServer(r io.Reader, w io.Writer, opts uiServerOptions) error {
 	}
 	if opts.hydrateCmd == nil {
 		opts.hydrateCmd = dashboardHydrateCmd
+	}
+	if opts.removeCmd == nil {
+		opts.removeCmd = dashboardRemoveCmd
 	}
 	if opts.statusCmd == nil {
 		opts.statusCmd = statusCache.cmd
@@ -295,6 +300,24 @@ func (s *uiServer) handle(req uiServerRequest) (any, error) {
 			return nil, errors.New("hydrate requires params.ref")
 		}
 		return snapshotFromMsg("hydrate", s.opts.hydrateCmd(params.Ref)())
+	case "remove":
+		if err := s.beginAction("remove"); err != nil {
+			return nil, err
+		}
+		defer s.endAction()
+		s.statusCache.invalidate()
+		var params struct {
+			Ref string `json:"ref"`
+		}
+		if len(req.Params) > 0 {
+			if err := json.Unmarshal(req.Params, &params); err != nil {
+				return nil, err
+			}
+		}
+		if strings.TrimSpace(params.Ref) == "" {
+			return nil, errors.New("remove requires params.ref")
+		}
+		return snapshotFromMsg("remove", s.opts.removeCmd(params.Ref)())
 	case "status":
 		msg, ok := s.opts.statusCmd()().(syncStatusLoadedMsg)
 		if !ok {
@@ -415,6 +438,9 @@ func snapshotFromMsg(label string, msg tea.Msg) (any, error) {
 		if msg.project.ID != "" {
 			project := msg.project
 			snap.Project = &project
+		}
+		if len(msg.warnings) > 0 {
+			snap.Warnings = append([]string(nil), msg.warnings...)
 		}
 		return snap, nil
 	default:
