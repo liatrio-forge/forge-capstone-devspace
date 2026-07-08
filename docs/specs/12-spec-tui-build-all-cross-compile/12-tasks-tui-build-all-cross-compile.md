@@ -68,7 +68,7 @@ Covers spec Unit 1 (all FRs) and Unit 2 (host-native smoke test).
 - [x] 1.6 Run `make tui-verify`; confirm typecheck + tests still pass (the change
   must not regress the host-only build path).
 
-### [ ] 2.0 Verify the GoReleaser release path attaches all four TUI assets
+### [x] 2.0 Verify the GoReleaser release path attaches all four TUI assets
 
 Confirm the fix holds where `make tui-build-all` runs in CI (`release.yml` on
 `ubuntu-latest`), so GoReleaser attaches and checksums the four `devspace-tui_*`
@@ -89,14 +89,14 @@ TUI assets."
 
 #### 2.0 Tasks
 
-- [ ] 2.1 Run `goreleaser check`; confirm `1 configuration file(s) validated`.
-- [ ] 2.2 If `docker info` succeeds, run `goreleaser release --snapshot --clean
+- [x] 2.1 Run `goreleaser check`; confirm `1 configuration file(s) validated`.
+- [x] 2.2 If `docker info` succeeds, run `goreleaser release --snapshot --clean
   --skip=publish` and confirm `dist/` contains the four `devspace-tui_*` files and
   `grep -c 'devspace-tui_' dist/checksums.txt` returns `4`. If Docker is
   unavailable, do not install it — record the skip note and rely on CI
   `release-check`.
-- [ ] 2.3 Confirm no generated `tui/dist/` or `dist/` output is staged for commit
+- [x] 2.3 Confirm no generated `tui/dist/` or `dist/` output is staged for commit
   (`git status --porcelain` shows none) — build output stays ignored.
-- [ ] 2.4 Confirm `release.yml` already invokes `make tui-build-all` so no
+- [x] 2.4 Confirm `release.yml` already invokes `make tui-build-all` so no
   workflow edit is required for this spec; note that adding the same step to
   `release-check.yml` is plan 021's scope, not this task.
