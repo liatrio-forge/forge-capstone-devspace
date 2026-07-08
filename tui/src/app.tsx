@@ -1,7 +1,7 @@
 import { useTerminalDimensions, useKeyboard } from "@opentui/react";
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { DevspaceClient } from "./client";
-import { helloProblem, type Hello, type ProjectRow, type Snapshot } from "./protocol";
+import type { Hello, ProjectRow, Snapshot } from "./protocol";
 import { initialState, reduce, type DashboardState } from "./state";
 import { cell } from "./text";
 import { themes, type Theme } from "./theme";
@@ -13,12 +13,12 @@ type ActionMethod = "scan" | "refresh" | "plan" | "apply" | "hydrate";
 
 export interface AppProps {
   client: DevspaceClient;
+  hello: Hello;
   quit: (message?: string) => void;
 }
 
-export function App({ client, quit }: AppProps) {
+export function App({ client, hello, quit }: AppProps) {
   const [state, dispatch] = useReducer(reduce, initialState);
-  const [hello, setHello] = useState<Hello>();
   const [themeIndex, setThemeIndex] = useState(0);
   const { width, height } = useTerminalDimensions();
   const th = themes[themeIndex % themes.length]!;
@@ -79,17 +79,6 @@ export function App({ client, quit }: AppProps) {
   }
 
   useEffect(() => {
-    client.request("hello").then(
-      (hello) => {
-        const problem = helloProblem(hello);
-        if (problem) {
-          quit(problem);
-          return;
-        }
-        setHello(hello);
-      },
-      (err: Error) => quit(`hello failed: ${err.message}`),
-    );
     runAction("scan");
     refreshStatus();
     const offEvent = client.onEvent((event) => {
