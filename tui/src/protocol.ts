@@ -139,6 +139,7 @@ export interface Snapshot {
   summary: ScanSummary;
   plan?: Plan;
   project?: Project;
+  warnings?: string[];
 }
 
 export interface WatchRefresh {
@@ -328,7 +329,8 @@ export function isSnapshot(v: unknown): v is Snapshot {
     v.rows.every(isProjectRow) &&
     isScanSummary(v.summary) &&
     (v.plan === undefined || isPlan(v.plan)) &&
-    (v.project === undefined || isProject(v.project))
+    (v.project === undefined || isProject(v.project)) &&
+    optionalStringArray(v, "warnings")
   );
 }
 
@@ -384,6 +386,7 @@ export interface RequestMap {
   plan: { params?: undefined; result: Snapshot };
   apply: { params?: undefined; result: Snapshot };
   hydrate: { params: { ref: string }; result: Snapshot };
+  remove: { params: { ref: string }; result: Snapshot };
   status: { params?: undefined; result: SyncStatus };
   workspace: { params?: undefined; result: WorkspaceOverview };
   lastPlan: { params?: undefined; result: Plan };

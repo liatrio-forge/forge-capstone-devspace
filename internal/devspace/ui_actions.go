@@ -1,6 +1,7 @@
 package devspace
 
 import (
+	"errors"
 	"os"
 	"sort"
 	"strings"
@@ -104,6 +105,31 @@ func dashboardHydrateCmd(ref string) tea.Cmd {
 			return actionResultMsg{label: "hydrate", err: snapshotErr}
 		}
 		return actionResultMsg{label: "hydrate", rows: rows, summary: summary, project: project}
+	}
+}
+
+func dashboardRemoveCmd(ref string) tea.Cmd {
+	return func() tea.Msg {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			return actionResultMsg{label: "remove", err: errors.New("remove requires params.ref")}
+		}
+		var project Project
+		var warnings []string
+		err := runLocked(func() error {
+			warnings = accessRoleAdvisoryWarnings("devspace project remove", ref, AccessRoleOwner, AccessRoleMaintainer)
+			var removeErr error
+			project, removeErr = RemoveProject(ref)
+			return removeErr
+		})
+		if err != nil {
+			return actionResultMsg{label: "remove", err: err}
+		}
+		rows, summary, snapshotErr := dashboardSnapshotFromState()
+		if snapshotErr != nil {
+			return actionResultMsg{label: "remove", err: snapshotErr}
+		}
+		return actionResultMsg{label: "remove", rows: rows, summary: summary, project: project, warnings: warnings}
 	}
 }
 

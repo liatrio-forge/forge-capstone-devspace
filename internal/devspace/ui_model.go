@@ -79,13 +79,14 @@ type scanLoadedMsg struct {
 }
 
 type actionResultMsg struct {
-	label   string
-	rows    []dashboardRow
-	summary ScanSummary
-	plan    Plan
-	project Project
-	refresh WatchRefresh
-	err     error
+	label    string
+	rows     []dashboardRow
+	summary  ScanSummary
+	plan     Plan
+	project  Project
+	refresh  WatchRefresh
+	warnings []string
+	err      error
 }
 
 type watchRefreshMsg struct {

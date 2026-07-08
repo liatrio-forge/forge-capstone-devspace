@@ -8,7 +8,8 @@ export type Overlay =
   | { kind: "palette"; query: string; selected: number }
   | { kind: "plan"; plan: Plan; scroll: number }
   | { kind: "workspace"; overview: WorkspaceOverview }
-  | { kind: "confirm-apply"; plan: Plan };
+  | { kind: "confirm-apply"; plan: Plan }
+  | { kind: "confirm-remove"; row: ProjectRow };
 
 export interface Toast {
   id: number;
@@ -46,6 +47,7 @@ export type Action =
   | { type: "server-event"; event: ServerEvent }
   | { type: "action-start"; label: string }
   | { type: "action-error"; label: string; message: string }
+  | { type: "event"; message: string }
   | { type: "move"; delta: number }
   | { type: "select"; index: number }
   | { type: "overlay"; overlay: Overlay }
@@ -112,6 +114,8 @@ export function reduce(state: DashboardState, action: Action): DashboardState {
         error: action.message,
         events: pushEvent(state.events, `${action.label} failed`),
       };
+    case "event":
+      return { ...state, events: pushEvent(state.events, action.message) };
     case "move":
       return clampSelected({ ...state, selected: state.selected + action.delta });
     case "select":

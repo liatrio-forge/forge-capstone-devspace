@@ -175,18 +175,86 @@ func TestUIServerRequestResponseFlow(t *testing.T) {
 	}
 }
 
+func TestUIServerRemoveUntracksProjectAndLeavesFiles(t *testing.T) {
+	workspace := initCommandWorkspace(t)
+	appPath := filepath.Join(workspace, "apps", "api")
+	hardeningWriteFile(t, filepath.Join(appPath, "README.md"), "hello\n", 0o644)
+	app, err := AddProject("apps/api")
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherPath := filepath.Join(workspace, "apps", "other")
+	hardeningWriteFile(t, filepath.Join(otherPath, "README.md"), "hello\n", 0o644)
+	other, err := AddProject("apps/other")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	messages := uiServerRoundTrip(t, uiServerOptions{NoWatch: true}, []string{
+		`{"id":1,"method":"remove","params":{"ref":"api"}}`,
+	})
+	result := uiResponseResult(t, messages[0])
+	if project := result["project"].(map[string]any); project["id"] != app.ID {
+		t.Fatalf("removed project = %+v, want %s", project, app.ID)
+	}
+	for _, row := range result["rows"].([]any) {
+		if row.(map[string]any)["ref"] == app.Path {
+			t.Fatalf("removed project still present in rows: %+v", result["rows"])
+		}
+	}
+	manifest, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := findProject(manifest, app.ID); ok {
+		t.Fatal("removed project still present in manifest")
+	}
+	if _, ok := findProject(manifest, other.ID); !ok {
+		t.Fatal("unrelated project was removed")
+	}
+	state, err := LoadState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := state.Projects[app.ID]; ok {
+		t.Fatal("removed project state remains")
+	}
+	if !exists(appPath) {
+		t.Fatal("project directory was deleted")
+	}
+}
+
+func TestUIServerRemoveReturnsAccessAdvisoryWarnings(t *testing.T) {
+	_, project := commandWorkspaceWithProjectRole(t, AccessRoleDeveloper)
+
+	messages := uiServerRoundTrip(t, uiServerOptions{NoWatch: true}, []string{
+		fmt.Sprintf(`{"id":1,"method":"remove","params":{"ref":%q}}`, project.Name),
+	})
+	result := uiResponseResult(t, messages[0])
+	warnings, ok := result["warnings"].([]any)
+	if !ok || len(warnings) == 0 {
+		t.Fatalf("warnings = %+v, want advisory warning", result["warnings"])
+	}
+	if got := warnings[0].(string); !strings.Contains(got, "devspace project remove") {
+		t.Fatalf("warning = %q, want project remove advisory", got)
+	}
+}
+
 func TestUIServerErrorPaths(t *testing.T) {
 	dashboardSeedWorkspace(t)
 
 	messages := uiServerRoundTrip(t, uiServerOptions{NoWatch: true}, []string{
 		`{"id":1,"method":"hydrate"}`,
 		`{"id":2,"method":"hydrate","params":{"ref":"nope"}}`,
-		`{"id":3,"method":"bogus"}`,
+		`{"id":3,"method":"remove"}`,
+		`{"id":4,"method":"remove","params":{"ref":"  "}}`,
+		`{"id":5,"method":"remove","params":{"ref":"nope"}}`,
+		`{"id":6,"method":"bogus"}`,
 		`not json`,
-		`{"id":4,"method":"hello"}`,
+		`{"id":7,"method":"hello"}`,
 	})
-	if len(messages) != 5 {
-		t.Fatalf("expected 5 responses, got %d: %+v", len(messages), messages)
+	if len(messages) != 8 {
+		t.Fatalf("expected 8 responses, got %d: %+v", len(messages), messages)
 	}
 	if msg := uiResponseError(t, messages[0]); !strings.Contains(msg, "requires params.ref") {
 		t.Fatalf("hydrate no-ref error = %q", msg)
@@ -194,13 +262,22 @@ func TestUIServerErrorPaths(t *testing.T) {
 	if msg := uiResponseError(t, messages[1]); !strings.Contains(msg, "not found") {
 		t.Fatalf("hydrate bad-ref error = %q", msg)
 	}
-	if msg := uiResponseError(t, messages[2]); !strings.Contains(msg, "unknown method") {
+	if msg := uiResponseError(t, messages[2]); !strings.Contains(msg, "requires params.ref") {
+		t.Fatalf("remove no-ref error = %q", msg)
+	}
+	if msg := uiResponseError(t, messages[3]); !strings.Contains(msg, "requires params.ref") {
+		t.Fatalf("remove blank-ref error = %q", msg)
+	}
+	if msg := uiResponseError(t, messages[4]); !strings.Contains(msg, "not found") {
+		t.Fatalf("remove bad-ref error = %q", msg)
+	}
+	if msg := uiResponseError(t, messages[5]); !strings.Contains(msg, "unknown method") {
 		t.Fatalf("unknown method error = %q", msg)
 	}
-	if msg := uiResponseError(t, messages[3]); !strings.Contains(msg, "malformed request") {
+	if msg := uiResponseError(t, messages[6]); !strings.Contains(msg, "malformed request") {
 		t.Fatalf("malformed error = %q", msg)
 	}
-	uiResponseResult(t, messages[4])
+	uiResponseResult(t, messages[7])
 }
 
 func TestUIServerWatchEventPush(t *testing.T) {

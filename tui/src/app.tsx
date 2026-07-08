@@ -5,11 +5,11 @@ import type { Hello, ProjectRow, Snapshot } from "./protocol";
 import { initialState, reduce, type DashboardState } from "./state";
 import { cell } from "./text";
 import { themes, type Theme } from "./theme";
-import { ConfirmApply, HelpOverlay, Palette, PlanOverlay, WorkspaceOverlay, paletteCommands, planVisibleLines, runPaletteCommand } from "./overlays";
+import { ConfirmApply, ConfirmRemove, HelpOverlay, Palette, PlanOverlay, WorkspaceOverlay, paletteCommands, planVisibleLines, runPaletteCommand } from "./overlays";
 
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-type ActionMethod = "scan" | "refresh" | "plan" | "apply" | "hydrate";
+type ActionMethod = "scan" | "refresh" | "plan" | "apply" | "hydrate" | "remove";
 
 export interface AppProps {
   client: DevspaceClient;
@@ -59,11 +59,12 @@ export function App({ client, hello, quit }: AppProps) {
     busyRef.current = true;
     dispatch({ type: "action-start", label });
     const req: Promise<Snapshot> =
-      method === "hydrate" ? client.request("hydrate", { ref: ref ?? "" }) : client.request(method);
+      method === "hydrate" || method === "remove" ? client.request(method, { ref: ref ?? "" }) : client.request(method);
     req.then(
       (snapshot) => {
         busyRef.current = false;
         dispatch({ type: "snapshot", label, snapshot });
+        for (const warning of snapshot.warnings ?? []) dispatch({ type: "event", message: warning });
         addToast("ok", `${label} complete`);
         if (method === "plan" && snapshot.plan) {
           dispatch({ type: "overlay", overlay: { kind: "plan", plan: snapshot.plan, scroll: 0 } });
@@ -76,6 +77,11 @@ export function App({ client, hello, quit }: AppProps) {
         addToast("error", `${label} failed`);
       },
     );
+  }
+
+  function openRemove(row?: ProjectRow) {
+    const target = row ?? stateRef.current.rows[stateRef.current.selected];
+    if (target) dispatch({ type: "overlay", overlay: { kind: "confirm-remove", row: target } });
   }
 
   useEffect(() => {
@@ -127,6 +133,14 @@ export function App({ client, hello, quit }: AppProps) {
         if (key.name === "n" || key.name === "q") return dispatch({ type: "overlay", overlay: { kind: "none" } });
         return;
       }
+      if (overlay.kind === "confirm-remove") {
+        if (key.name === "return" || key.name === "y") {
+          dispatch({ type: "overlay", overlay: { kind: "none" } });
+          return runAction("remove", overlay.row.ref);
+        }
+        if (key.name === "n" || key.name === "q") return dispatch({ type: "overlay", overlay: { kind: "none" } });
+        return;
+      }
       if (overlay.kind === "palette") {
         const commands = paletteCommands(s, overlay.query);
         if (key.name === "up" || (key.ctrl && key.name === "p")) {
@@ -147,6 +161,7 @@ export function App({ client, hello, quit }: AppProps) {
               selectedRow: s.rows[s.selected],
               openWorkspace,
               openHelp: () => dispatch({ type: "overlay", overlay: { kind: "help" } }),
+              openRemove,
               openPlan: () =>
                 s.lastPlan && dispatch({ type: "overlay", overlay: { kind: "plan", plan: s.lastPlan, scroll: 0 } }),
               cycleTheme: () => setThemeIndex((i) => i + 1),
@@ -190,6 +205,8 @@ export function App({ client, hello, quit }: AppProps) {
         if (row) runAction("hydrate", row.ref);
         return;
       }
+      case "x":
+        return openRemove();
       case "t":
         return setThemeIndex((i) => i + 1);
       case "?":
@@ -209,6 +226,8 @@ export function App({ client, hello, quit }: AppProps) {
         <PlanOverlay {...overlayProps} overlay={state.overlay} />
       ) : state.overlay.kind === "confirm-apply" ? (
         <ConfirmApply {...overlayProps} plan={state.overlay.plan} />
+      ) : state.overlay.kind === "confirm-remove" ? (
+        <ConfirmRemove {...overlayProps} row={state.overlay.row} />
       ) : state.overlay.kind === "palette" ? (
         <Palette
           {...overlayProps}
@@ -430,7 +449,7 @@ function StatusBar({ th, state, hello }: { th: Theme; state: DashboardState; hel
         )}
         <span fg={state.watchAlive && hello?.watch !== false ? th.ok : th.muted}>  {watch}</span>
       </text>
-      <text fg={th.muted}>j/k move · w workspace · s scan · p plan · a apply · h hydrate · ctrl+k palette · ? help · q quit</text>
+      <text fg={th.muted}>j/k move · w workspace · s scan · p plan · a apply · h hydrate · x remove · ctrl+k palette · ? help · q quit</text>
     </box>
   );
 }

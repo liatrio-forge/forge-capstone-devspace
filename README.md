@@ -143,7 +143,7 @@ devspace ui
 devspace ui --no-watch
 ```
 
-Opens a full-screen workspace dashboard with project hydration, dirty, branch, env, scan summary, and recent refresh events. The dashboard exposes only safe actions: scan, plan, apply-safe, and hydrate selected. Use `--no-watch` to disable live filesystem watching and refresh manually with `r`.
+Opens a full-screen workspace dashboard with project hydration, dirty, branch, env, scan summary, and recent refresh events. The dashboard exposes only safe actions: scan, plan, apply-safe, hydrate selected, and untrack selected projects. Project untracking removes manifest metadata only; files on disk are not touched. Use `--no-watch` to disable live filesystem watching and refresh manually with `r`.
 
 #### `devspace status`
 
