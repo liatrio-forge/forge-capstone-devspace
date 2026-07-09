@@ -21,7 +21,6 @@ import (
 // Retain private command and rendering paths while later Spec 13 tasks migrate
 // their behavior to canonical commands. They are intentionally unregistered.
 var (
-	_ = newMountCommand
 	_ = printProjectList
 )
 
@@ -73,6 +72,21 @@ func newExperimentalCommand() *cobra.Command {
 		Args:    cobra.NoArgs,
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error { return cmd.Help() }
+	mount := newMountCommand()
+	mount.Short = "Mount a prototype lazy workspace view (unsupported)"
+	cmd.AddCommand(mount, newExperimentalHostedCommand())
+	return cmd
+}
+
+func newExperimentalHostedCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "hosted",
+		Short: "Explore the hosted sync server prototype",
+		Long:  "The hosted sync server is an unsupported prototype and is not part of the supported recovery workflow.",
+		Args:  cobra.NoArgs,
+	}
+	cmd.RunE = func(cmd *cobra.Command, args []string) error { return cmd.Help() }
+	cmd.AddCommand(newHostedServeCommand())
 	return cmd
 }
 
@@ -137,7 +151,8 @@ func newWatchCommand() *cobra.Command {
 }
 
 func newHostedCommand() *cobra.Command {
-	cmd := &cobra.Command{Use: "hosted", Short: "Manage opt-in hosted manifest sync"}
+	cmd := &cobra.Command{Use: "hosted", Short: "Manage opt-in hosted manifest sync", Args: cobra.NoArgs}
+	cmd.RunE = func(cmd *cobra.Command, args []string) error { return cmd.Help() }
 	cmd.AddCommand(newHostedConfigCommand())
 	cmd.AddCommand(newHostedReconcileCommand())
 	cmd.AddCommand(&cobra.Command{
@@ -181,7 +196,6 @@ func newHostedCommand() *cobra.Command {
 			})
 		},
 	})
-	cmd.AddCommand(newHostedServeCommand())
 	return cmd
 }
 
@@ -720,9 +734,10 @@ func newMountCommand() *cobra.Command {
 		Use:   "mount <mountpoint>",
 		Short: "Mount a prototype lazy workspace view",
 		Long: strings.Join([]string{
-			"Mount a read-only FUSE-backed prototype view of tracked workspace projects.",
+			"Mount a read-only FUSE-backed experimental prototype view of tracked workspace projects.",
+			"This command is unsupported and is not part of the supported recovery workflow.",
 			"Tracked manifest paths appear as directories before they are hydrated.",
-			"Looking up an on-demand Git project through the mount runs the same safe hydration checks as `devspace project hydrate`.",
+			"Looking up an on-demand Git project through the mount runs the same safe update checks as `devspace project update`.",
 			"Use --preview to inspect the projected mount entries without requiring FUSE.",
 		}, "\n\n"),
 		Args: cobra.ExactArgs(1),
@@ -864,7 +879,8 @@ func newProjectCommand() *cobra.Command {
 }
 
 func newEnvCommand() *cobra.Command {
-	cmd := &cobra.Command{Use: "env", Short: "Manage encrypted env profiles"}
+	cmd := &cobra.Command{Use: "env", Short: "Manage encrypted env profiles", Args: cobra.NoArgs}
+	cmd.RunE = func(cmd *cobra.Command, args []string) error { return cmd.Help() }
 	var profile string
 	set := &cobra.Command{
 		Use:   "set <project> <key>",
@@ -905,10 +921,13 @@ func newEnvCommand() *cobra.Command {
 	list.Flags().StringVar(&profile, "profile", "dev", "env profile")
 	cmd.AddCommand(list)
 
-	pull := &cobra.Command{
-		Use:   "pull <project>",
-		Short: "Generate local .env from encrypted profile",
-		Args:  cobra.ExactArgs(1),
+	write := &cobra.Command{
+		Use:   "write <project>",
+		Short: "Write a local .env from an encrypted profile",
+		Long:  "Decrypt the selected encrypted profile and atomically write the project's local .env file with owner-only permissions.",
+		Example: "  devspace env write api\n" +
+			"  devspace env write api --profile staging",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return withAppLock(func() error {
 				path, err := EnvPull(args[0], profile)
@@ -920,8 +939,8 @@ func newEnvCommand() *cobra.Command {
 			})
 		},
 	}
-	pull.Flags().StringVar(&profile, "profile", "dev", "env profile")
-	cmd.AddCommand(pull)
+	write.Flags().StringVar(&profile, "profile", "dev", "env profile")
+	cmd.AddCommand(write)
 	cmd.AddCommand(newEnvRecipientCommand())
 	return cmd
 }
@@ -1125,17 +1144,16 @@ func newDoctorCommand() *cobra.Command {
 }
 
 func newSetupCommand() *cobra.Command {
-	cmd := &cobra.Command{Use: "setup", Short: "Review and run project setup commands"}
-	cmd.AddCommand(newSetupPlanCommand())
-	cmd.AddCommand(newSetupRunCommand())
-	cmd.AddCommand(newSetupApplyCommand())
+	cmd := &cobra.Command{Use: "setup", Short: "Review and run project setup commands", Args: cobra.NoArgs}
+	cmd.RunE = func(cmd *cobra.Command, args []string) error { return cmd.Help() }
+	cmd.AddCommand(newSetupShowCommand(), newSetupRunCommand())
 	return cmd
 }
 
-func newSetupPlanCommand() *cobra.Command {
+func newSetupShowCommand() *cobra.Command {
 	var jsonOut bool
 	cmd := &cobra.Command{
-		Use:   "plan",
+		Use:   "show",
 		Short: "Show detected setup commands without running them",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -1160,11 +1178,56 @@ func newSetupRunCommand() *cobra.Command {
 	var dryRun bool
 	var allowUnknown bool
 	var allowGlobal bool
+	var all bool
 	cmd := &cobra.Command{
-		Use:   "run <project>",
-		Short: "Run a reviewed setup command for one project",
-		Args:  cobra.ExactArgs(1),
+		Use:   "run [project]",
+		Short: "Run reviewed setup commands for one project or all projects",
+		Example: "  devspace setup run api --dry-run\n" +
+			"  devspace setup run --all --dry-run",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if all && len(args) > 0 {
+				return fmt.Errorf("use either --all or <project>, not both")
+			}
+			if !all && len(args) != 1 {
+				return fmt.Errorf("setup run requires <project> or --all")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if all {
+				plan, err := BuildSetupPlan()
+				if err != nil {
+					return err
+				}
+				if len(plan.Projects) == 0 {
+					printLine(cmd.OutOrStdout(), "No setup commands detected.")
+					return nil
+				}
+				if !dryRun && !yes {
+					if err := confirmSetupApply(cmd.InOrStdin(), cmd.ErrOrStderr(), "Type run all to run setup commands for every runnable project: ", "run all"); err != nil {
+						return err
+					}
+				}
+				results, err := RunAllProjectSetups(SetupRunOptions{
+					CommandKind:  kind,
+					DryRun:       dryRun,
+					AllowUnknown: allowUnknown,
+					AllowGlobal:  allowGlobal,
+					Stdout:       cmd.OutOrStdout(),
+					Stderr:       cmd.ErrOrStderr(),
+				})
+				if err != nil {
+					return err
+				}
+				if len(results) == 0 {
+					printLine(cmd.OutOrStdout(), "No runnable setup commands detected.")
+					return nil
+				}
+				for _, result := range results {
+					printSetupResult(cmd.OutOrStdout(), result)
+				}
+				return nil
+			}
 			result, err := RunProjectSetup(args[0], SetupRunOptions{
 				CommandKind:  kind,
 				DryRun:       true,
@@ -1201,56 +1264,6 @@ func newSetupRunCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print the command without running it")
 	cmd.Flags().BoolVar(&allowUnknown, "allow-unknown", false, "allow an unknown setup command after review")
 	cmd.Flags().BoolVar(&allowGlobal, "allow-global", false, "allow a setup command that appears to install globally")
-	return cmd
-}
-
-func newSetupApplyCommand() *cobra.Command {
-	var yes bool
-	var dryRun bool
-	var allowUnknown bool
-	var allowGlobal bool
-	cmd := &cobra.Command{
-		Use:   "apply",
-		Short: "Run reviewed install commands for all detected projects",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			plan, err := BuildSetupPlan()
-			if err != nil {
-				return err
-			}
-			if len(plan.Projects) == 0 {
-				printLine(cmd.OutOrStdout(), "No setup commands detected.")
-				return nil
-			}
-			if !dryRun && !yes {
-				if err := confirmSetupApply(cmd.InOrStdin(), cmd.ErrOrStderr(), "Type run all to run install commands for every runnable project: ", "run all"); err != nil {
-					return err
-				}
-			}
-			results, err := RunAllProjectSetups(SetupRunOptions{
-				CommandKind:  "install",
-				DryRun:       dryRun,
-				AllowUnknown: allowUnknown,
-				AllowGlobal:  allowGlobal,
-				Stdout:       cmd.OutOrStdout(),
-				Stderr:       cmd.ErrOrStderr(),
-			})
-			if err != nil {
-				return err
-			}
-			if len(results) == 0 {
-				printLine(cmd.OutOrStdout(), "No runnable install commands detected.")
-				return nil
-			}
-			for _, result := range results {
-				printSetupResult(cmd.OutOrStdout(), result)
-			}
-			return nil
-		},
-	}
-	cmd.Flags().BoolVar(&yes, "yes", false, "run without interactive confirmation")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print commands without running them")
-	cmd.Flags().BoolVar(&allowUnknown, "allow-unknown", false, "allow unknown setup commands after review")
-	cmd.Flags().BoolVar(&allowGlobal, "allow-global", false, "allow setup commands that appear to install globally")
+	cmd.Flags().BoolVar(&all, "all", false, "run setup commands for all detected projects")
 	return cmd
 }

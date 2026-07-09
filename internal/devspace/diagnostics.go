@@ -1,7 +1,7 @@
 package devspace
 
 // diagnostics.go provides the shared charm.land/log/v2 logger used by
-// long-running surfaces (watch, hosted serve, mount) to report leveled,
+// long-running surfaces (watch, experimental hosted serve, experimental mount) to report leveled,
 // timestamped diagnostics to stderr. The logger always renders through its
 // own lipgloss-based styles; newDiagnosticsLogger decides, independently of
 // stdout's profile, whether stderr gets the human-styled TextFormatter or

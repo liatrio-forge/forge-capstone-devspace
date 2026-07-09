@@ -53,7 +53,7 @@ func TestMountEntriesRepresentTrackedProjectsFromManifest(t *testing.T) {
 	assertMountEntry(t, entries, "notes/local", "missing", "no automatic mount hydration is configured")
 }
 
-func TestMountPreviewCommandDoesNotRequireFUSE(t *testing.T) {
+func TestExperimentalMountPreviewCommandDoesNotRequireFUSE(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	if err := SaveManifest(workspace, Manifest{
 		Version:       ManifestVersion,
@@ -65,11 +65,11 @@ func TestMountPreviewCommandDoesNotRequireFUSE(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd := newMountCommand()
+	cmd := NewRootCommand("test")
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&bytes.Buffer{})
-	cmd.SetArgs([]string{filepath.Join(t.TempDir(), "mnt"), "--preview"})
+	cmd.SetArgs([]string{"experimental", "mount", filepath.Join(t.TempDir(), "mnt"), "--preview"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}

@@ -102,11 +102,11 @@ func MountWorkspace(ctx context.Context, mountpoint string, opts WorkspaceMountO
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("FUSE mount failed at %s: %w\n\nFallback: run `devspace mount %s --preview` to inspect tracked mount entries without requiring FUSE\n\n%s", mountpoint, err, mountpoint, staleMountGuidance(mountpoint))
+		return fmt.Errorf("FUSE mount failed at %s: %w\n\nFallback: run `devspace experimental mount %s --preview` to inspect tracked mount entries without requiring FUSE\n\n%s", mountpoint, err, mountpoint, staleMountGuidance(mountpoint))
 	}
 	logger := newDiagnosticsLogger(opts.ErrOut)
 	logger.Info("mounted workspace", "mountpoint", mountpoint)
-	logger.Info("accessing an on-demand Git project through the mount triggers `devspace project hydrate` safety checks")
+	logger.Info("accessing an on-demand Git project through the mount triggers `devspace project update` safety checks")
 	logger.Info("press ctrl-c to unmount")
 
 	done := make(chan struct{})

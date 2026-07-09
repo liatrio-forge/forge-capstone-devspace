@@ -127,7 +127,7 @@
 - [x] 2.8 Run project domain/command tests covering missing/empty hydration, clean fast-forward, dirty/detached/local-only/no-remote/non-Git skips, non-destructive untrack, and JSON stability.
 - [x] 2.9 Execute the isolated two-machine sync/project workflow and write `13-proofs/13-task-02-proofs.md` with sanitized paths/remotes.
 
-### [ ] 3.0 Consolidate env/setup verbs and move server/mount prototypes under experimental
+### [~] 3.0 Consolidate env/setup verbs and move server/mount prototypes under experimental
 
 #### 3.0 Proof Artifact(s)
 
@@ -135,18 +135,18 @@
 - CLI: `devspace setup show`, `setup run demo --dry-run`, and `setup run --all --dry-run` demonstrate one review verb and one execution verb; a conflicting project-plus-`--all` invocation returns a clear error.
 - CLI: `devspace hosted --help` omits `serve`, while `devspace experimental --help`, `experimental hosted serve --help`, and `experimental mount --preview` demonstrate clearly labeled prototype paths with existing flags and guards.
 - Test: `go test ./internal/devspace -run 'TestEnvWrite|TestSetup(Command|Run)|TestExperimental(Command|HostedServe|Mount)' -count=1` passes and demonstrates permissions, confirmation/dry-run safeguards, public-bind protection, and FUSE-free preview behavior.
-- Evidence file: `docs/specs/13-spec-command-surface-consolidation/13-proofs/13-task-03-secondary-command-workflows.txt` records sanitized output and file-mode evidence.
+- Evidence file: `docs/specs/13-spec-command-surface-consolidation/13-proofs/13-task-03-proofs.md` records sanitized output and file-mode evidence.
 
 #### 3.0 Tasks
 
-- [ ] 3.1 Add failing env command tests for `env write`, profile selection, `0600` output, symlink-safe replacement, state refresh, redacted output, and rejection of `env pull`.
-- [ ] 3.2 Wire `env write` to the existing env materialization domain path, remove `env pull`, and update maintained user-facing guidance without changing encryption or recipient behavior.
-- [ ] 3.3 Add failing setup tests for `setup show`, `setup run <project>`, `setup run --all`, project/`--all` mutual exclusion, JSON show output, confirmations, dry-run, unknown-command, and global-install safeguards.
-- [ ] 3.4 Consolidate setup command wiring around existing `BuildSetupPlan`, `RunProjectSetup`, and `RunAllProjectSetups`; remove `setup plan`/`apply` and preserve actionable error/output behavior.
-- [ ] 3.5 Add failing help/contract tests showing hosted client commands remain under `hosted`, `hosted serve` is absent, and `experimental mount` plus `experimental hosted serve` retain all existing flags.
-- [ ] 3.6 Add the visible experimental group, move existing mount/server command constructors under it, and retain the server's loopback/public-HTTP/trusted-proxy guards plus mount preview/hydrate/debug behavior.
-- [ ] 3.7 Update mount diagnostics, logs, architecture comments, and tests to reference `experimental mount` and `project update` while preserving FUSE integration behavior.
-- [ ] 3.8 Run targeted env/setup/hosted/mount tests and write `13-proofs/13-task-03-secondary-command-workflows.txt` with masked values, file-mode evidence, help, and preview output.
+- [x] 3.1 Add failing env command tests for `env write`, profile selection, `0600` output, symlink-safe replacement, state refresh, redacted output, and rejection of `env pull`.
+- [x] 3.2 Wire `env write` to the existing env materialization domain path, remove `env pull`, and update maintained user-facing guidance without changing encryption or recipient behavior.
+- [x] 3.3 Add failing setup tests for `setup show`, `setup run <project>`, `setup run --all`, project/`--all` mutual exclusion, JSON show output, confirmations, dry-run, unknown-command, and global-install safeguards.
+- [x] 3.4 Consolidate setup command wiring around existing `BuildSetupPlan`, `RunProjectSetup`, and `RunAllProjectSetups`; remove `setup plan`/`apply` and preserve actionable error/output behavior.
+- [x] 3.5 Add failing help/contract tests showing hosted client commands remain under `hosted`, `hosted serve` is absent, and `experimental mount` plus `experimental hosted serve` retain all existing flags.
+- [x] 3.6 Add the visible experimental group, move existing mount/server command constructors under it, and retain the server's loopback/public-HTTP/trusted-proxy guards plus mount preview/hydrate/debug behavior.
+- [x] 3.7 Update mount diagnostics, logs, architecture comments, and tests to reference `experimental mount` and `project update` while preserving FUSE integration behavior.
+- [x] 3.8 Run targeted env/setup/hosted/mount tests and write `13-proofs/13-task-03-proofs.md` with masked values, file-mode evidence, help, and preview output.
 
 ### [x] 4.0 Make `devspace ui` the only release UI entry point and bundle the companion in archives
 

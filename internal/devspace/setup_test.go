@@ -139,6 +139,30 @@ func TestSetupRunCommandRequiresConfirmation(t *testing.T) {
 	}
 }
 
+func TestSetupRunAllCommandRequiresConfirmation(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	hardeningWriteFile(t, filepath.Join(workspace, "apps", "web", "package.json"), `{"scripts":{"dev":"vite"}}`, 0o644)
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	logPath := setupFakeExecutable(t, "npm")
+
+	cmd := NewRootCommand("test")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetIn(strings.NewReader("wrong\n"))
+	cmd.SetArgs([]string{"setup", "run", "--all"})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "confirmation did not match") {
+		t.Fatalf("confirmation error = %v", err)
+	}
+	if data, err := os.ReadFile(logPath); err == nil && len(data) > 0 {
+		t.Fatalf("setup commands ran without confirmation:\n%s", data)
+	}
+}
+
 func setupTestProject(t *testing.T, plan SetupPlan, name string) SetupPlanProject {
 	t.Helper()
 	for _, p := range plan.Projects {

@@ -227,15 +227,230 @@ func TestRootHelpListsSubcommands(t *testing.T) {
 	}
 }
 
-func TestHostedServeHelpDocumentsFlags(t *testing.T) {
-	stdout, _, err := executeCommand(t, "test", "hosted", "serve", "--help")
+func TestExperimentalHostedServeHelpDocumentsFlags(t *testing.T) {
+	stdout, _, err := executeCommand(t, "test", "experimental", "hosted", "serve", "--help")
 	if err != nil {
-		t.Fatalf("hosted serve --help error: %v", err)
+		t.Fatalf("experimental hosted serve --help error: %v", err)
 	}
 	for _, want := range []string{"--addr", "--token", "--trusted-proxy", "--allow-public-http"} {
 		if !strings.Contains(stdout, want) {
-			t.Errorf("hosted serve --help missing flag %q in output:\n%s", want, stdout)
+			t.Errorf("experimental hosted serve --help missing flag %q in output:\n%s", want, stdout)
 		}
+	}
+}
+
+func TestEnvWriteMaterializesSelectedProfileSafely(t *testing.T) {
+	workspace := initCommandWorkspace(t)
+	projectPath := filepath.Join(workspace, "services", "api")
+	if err := os.MkdirAll(projectPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p, err := AddProject("services/api")
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret := "proof-value-that-must-stay-redacted"
+	if err := EnvSet("api", "TOKEN", "staging", strings.NewReader(secret+"\n")); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "outside.txt")
+	if err := os.WriteFile(target, []byte("untouched\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	envPath := filepath.Join(projectPath, ".env")
+	if err := os.Symlink(target, envPath); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, err := executeCommand(t, "test", "env", "write", "api", "--profile", "staging")
+	if err != nil {
+		t.Fatalf("env write error: %v", err)
+	}
+	if strings.Contains(stdout+stderr, secret) {
+		t.Fatalf("env write exposed decrypted value: stdout=%q stderr=%q", stdout, stderr)
+	}
+	if !strings.Contains(stdout, "Wrote ") || !strings.Contains(stdout, envPath) {
+		t.Fatalf("env write output = %q", stdout)
+	}
+	info, err := os.Lstat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		t.Fatal("env write left .env as a symlink")
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf(".env mode = %o, want 0600", info.Mode().Perm())
+	}
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "TOKEN="+secret+"\n" {
+		t.Fatalf(".env content = %q", data)
+	}
+	targetData, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(targetData) != "untouched\n" {
+		t.Fatalf("env write followed symlink target: %q", targetData)
+	}
+	state, err := LoadState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.Projects[p.ID].EnvFilePresent {
+		t.Fatal("env write did not refresh project state")
+	}
+}
+
+func TestEnvWriteRejectsRemovedPullPath(t *testing.T) {
+	initCommandWorkspace(t)
+	if _, _, err := executeCommand(t, "test", "env", "pull", "api"); err == nil || !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("env pull error = %v, want unknown command", err)
+	}
+}
+
+func TestSetupCommandShowAndRunContract(t *testing.T) {
+	workspace := initCommandWorkspace(t)
+	hardeningWriteFile(t, filepath.Join(workspace, "apps", "web", "package.json"), `{"scripts":{"dev":"vite"}}`, 0o644)
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, _, err := executeCommand(t, "test", "setup", "show", "--json")
+	if err != nil {
+		t.Fatalf("setup show --json error: %v", err)
+	}
+	var plan SetupPlan
+	if err := json.Unmarshal([]byte(stdout), &plan); err != nil {
+		t.Fatalf("setup show --json did not parse: %v\n%s", err, stdout)
+	}
+	if len(plan.Projects) != 1 || plan.Projects[0].Project != "web" {
+		t.Fatalf("setup show plan = %+v", plan)
+	}
+
+	stdout, _, err = executeCommand(t, "test", "setup", "run", "web", "--dry-run")
+	if err != nil {
+		t.Fatalf("setup run web --dry-run error: %v", err)
+	}
+	if !strings.Contains(stdout, "npm install") {
+		t.Fatalf("setup run web --dry-run output = %q", stdout)
+	}
+
+	stdout, _, err = executeCommand(t, "test", "setup", "run", "--all", "--dry-run")
+	if err != nil {
+		t.Fatalf("setup run --all --dry-run error: %v", err)
+	}
+	if !strings.Contains(stdout, "npm install") {
+		t.Fatalf("setup run --all --dry-run output = %q", stdout)
+	}
+
+	if _, _, err := executeCommand(t, "test", "setup", "run", "web", "--all", "--dry-run"); err == nil || !strings.Contains(err.Error(), "either --all or <project>") {
+		t.Fatalf("setup run web --all error = %v, want mutual-exclusion error", err)
+	}
+	for _, removed := range []string{"plan", "apply"} {
+		if _, _, err := executeCommand(t, "test", "setup", removed); err == nil || !strings.Contains(err.Error(), "unknown command") {
+			t.Errorf("setup %s error = %v, want unknown command", removed, err)
+		}
+	}
+}
+
+func TestExperimentalCommandOwnsHostedServeAndMount(t *testing.T) {
+	stdout, _, err := executeCommand(t, "test", "hosted", "--help")
+	if err != nil {
+		t.Fatalf("hosted --help error: %v", err)
+	}
+	for _, want := range []string{"config", "push", "pull", "reconcile"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("hosted --help missing %q:\n%s", want, stdout)
+		}
+	}
+	if strings.Contains(stdout, "serve") {
+		t.Fatalf("hosted --help still exposes serve:\n%s", stdout)
+	}
+	if _, _, err := executeCommand(t, "test", "hosted", "serve"); err == nil || !strings.Contains(err.Error(), "unknown command") {
+		t.Fatalf("hosted serve error = %v, want unknown command", err)
+	}
+
+	stdout, _, err = executeCommand(t, "test", "experimental", "--help")
+	if err != nil {
+		t.Fatalf("experimental --help error: %v", err)
+	}
+	for _, want := range []string{"prototypes", "not part of the supported", "hosted", "mount"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("experimental --help missing %q:\n%s", want, stdout)
+		}
+	}
+	stdout, _, err = executeCommand(t, "test", "experimental", "hosted", "serve", "--help")
+	if err != nil {
+		t.Fatalf("experimental hosted serve --help error: %v", err)
+	}
+	for _, want := range []string{"prototype", "--addr", "--store", "--token", "--trusted-proxy", "--allow-public-http"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("experimental hosted serve --help missing %q:\n%s", want, stdout)
+		}
+	}
+	stdout, _, err = executeCommand(t, "test", "experimental", "mount", "--help")
+	if err != nil {
+		t.Fatalf("experimental mount --help error: %v", err)
+	}
+	for _, want := range []string{"prototype", "--preview", "--json", "--hydrate-on-lookup", "--debug"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("experimental mount --help missing %q:\n%s", want, stdout)
+		}
+	}
+	if !strings.Contains(stdout, "devspace project update") || strings.Contains(stdout, "devspace project hydrate") {
+		t.Fatalf("experimental mount help has stale project guidance:\n%s", stdout)
+	}
+	if _, _, err := executeCommand(t, "test", "experimental", "hosted", "serve", "--addr", "0.0.0.0:8787"); err == nil || !strings.Contains(err.Error(), "refusing to bind public address") {
+		t.Fatalf("experimental hosted serve public bind error = %v", err)
+	}
+}
+
+func TestSetupRunCommandPreservesUnknownAndGlobalGuards(t *testing.T) {
+	workspace := initCommandWorkspace(t)
+	projectDir := filepath.Join(workspace, "apps", "custom")
+	hardeningWriteFile(t, filepath.Join(projectDir, "setup.sh"), "#!/bin/sh\n", 0o755)
+	project := hardeningProject("apps/custom", ProjectTypeLocal, "")
+	project.Setup = Setup{PackageManager: "custom", InstallCommand: "./setup.sh --with-flags"}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{project},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := executeCommand(t, "test", "setup", "run", "custom", "--dry-run"); err == nil || !strings.Contains(err.Error(), "refusing unknown setup command") {
+		t.Fatalf("unknown setup command error = %v", err)
+	}
+	stdout, _, err := executeCommand(t, "test", "setup", "run", "custom", "--dry-run", "--allow-unknown")
+	if err != nil {
+		t.Fatalf("reviewed unknown setup command error: %v", err)
+	}
+	if !strings.Contains(stdout, "./setup.sh --with-flags") {
+		t.Fatalf("reviewed unknown setup output = %q", stdout)
+	}
+
+	project.Setup.InstallCommand = "npm install -g local-tool"
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{project},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := executeCommand(t, "test", "setup", "run", "custom", "--dry-run", "--allow-unknown"); err == nil || !strings.Contains(err.Error(), "refusing global setup command") {
+		t.Fatalf("global setup command error = %v", err)
+	}
+	stdout, _, err = executeCommand(t, "test", "setup", "run", "custom", "--dry-run", "--allow-unknown", "--allow-global")
+	if err != nil {
+		t.Fatalf("reviewed global setup command error: %v", err)
+	}
+	if !strings.Contains(stdout, "npm install -g local-tool") {
+		t.Fatalf("reviewed global setup output = %q", stdout)
 	}
 }
 
@@ -757,16 +972,16 @@ func TestPlanAndApplyCommandsRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSetupPlanCommandReportsNoSetupCommands(t *testing.T) {
+func TestSetupShowCommandReportsNoSetupCommands(t *testing.T) {
 	// An empty workspace has no detected setup commands; the plan prints the
 	// "(none)" branch of printSetupPlan and exits cleanly.
 	initCommandWorkspace(t)
-	stdout, _, err := executeCommand(t, "test", "setup", "plan")
+	stdout, _, err := executeCommand(t, "test", "setup", "show")
 	if err != nil {
-		t.Fatalf("setup plan error: %v", err)
+		t.Fatalf("setup show error: %v", err)
 	}
 	if !strings.Contains(stdout, "Setup commands:") || !strings.Contains(stdout, "(none)") {
-		t.Fatalf("setup plan output = %q", stdout)
+		t.Fatalf("setup show output = %q", stdout)
 	}
 }
 
@@ -830,7 +1045,7 @@ func TestWorkspaceDiffJSONHasStableFieldNames(t *testing.T) {
 	}
 }
 
-func TestMountPreviewJSONHasStableFieldNames(t *testing.T) {
+func TestExperimentalMountPreviewJSONHasStableFieldNames(t *testing.T) {
 	workspace := initCommandWorkspace(t)
 	if err := SaveManifest(workspace, Manifest{
 		Version:       ManifestVersion,
@@ -839,7 +1054,7 @@ func TestMountPreviewJSONHasStableFieldNames(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	stdout, _, err := executePrivateCommand(t, newMountCommand(), filepath.Join(t.TempDir(), "mnt"), "--preview", "--json")
+	stdout, _, err := executeCommand(t, "test", "experimental", "mount", filepath.Join(t.TempDir(), "mnt"), "--preview", "--json")
 	if err != nil {
 		t.Fatalf("mount --preview --json error: %v", err)
 	}
