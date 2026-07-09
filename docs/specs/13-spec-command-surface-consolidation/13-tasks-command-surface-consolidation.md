@@ -87,7 +87,7 @@
 
 ## Tasks
 
-### [~] 1.0 Establish the release command taxonomy, grouped help, and consolidated status surface
+### [x] 1.0 Establish the release command taxonomy, grouped help, and consolidated status surface
 
 #### 1.0 Proof Artifact(s)
 
