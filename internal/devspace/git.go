@@ -104,6 +104,16 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	return runCommand(ctx, dir, "git", args...)
 }
 
+func pullRepoFastForward(dir string) error {
+	if err := ensureGitAvailable(); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	_, err := runGit(ctx, dir, "pull", "--ff-only")
+	return err
+}
+
 func runCommand(ctx context.Context, dir, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // name is always the "git" literal from runGit, the only caller
 	cmd.Dir = dir

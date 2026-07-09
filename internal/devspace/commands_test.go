@@ -332,10 +332,26 @@ func TestProjectHelpDocumentsJSONFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("project --help error: %v", err)
 	}
-	for _, want := range []string{"--json", "add", "hydrate", "remove", "status"} {
+	for _, want := range []string{"--json", "add", "hydrate", "remove", "status", "update"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("project --help missing %q:\n%s", want, stdout)
 		}
+	}
+}
+
+func TestProjectUpdateCommandValidation(t *testing.T) {
+	if _, _, err := executeCommand(t, "test", "project", "update"); err == nil || !strings.Contains(err.Error(), "<project> or --all") {
+		t.Fatalf("project update error = %v, want missing target", err)
+	}
+	if _, _, err := executeCommand(t, "test", "project", "update", "--all", "app"); err == nil || !strings.Contains(err.Error(), "either --all or <project>") {
+		t.Fatalf("project update --all app error = %v, want exclusive target", err)
+	}
+	stdout, _, err := executeCommand(t, "test", "project", "update", "--help")
+	if err != nil {
+		t.Fatalf("project update --help error: %v", err)
+	}
+	if !strings.Contains(stdout, "--all") {
+		t.Fatalf("project update --help missing --all:\n%s", stdout)
 	}
 }
 

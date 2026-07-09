@@ -372,6 +372,91 @@ func TestHardeningHydrateRefusesMissingRemoteAndNonEmptyFolder(t *testing.T) {
 	}
 }
 
+func TestProjectUpdateHydratesMissingGitProject(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := hardeningBareRepo(t)
+	m := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeGit, remote)},
+	}
+	if err := SaveManifest(workspace, m); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := UpdateProjects("app", false)
+	if err != nil {
+		t.Fatalf("UpdateProjects: %v", err)
+	}
+	if len(report.Results) != 1 {
+		t.Fatalf("results = %+v, want one result", report.Results)
+	}
+	got := report.Results[0]
+	if got.Action != "hydrate" || got.Status != "updated" {
+		t.Fatalf("result = %+v, want hydrated update", got)
+	}
+	if !exists(filepath.Join(workspace, "apps", "app", ".git")) {
+		t.Fatal("project was not hydrated")
+	}
+}
+
+func TestProjectUpdatePullsCleanHydratedRepo(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := hardeningBareRepo(t)
+	local := filepath.Join(workspace, "apps", "app")
+	hardeningRun(t, workspace, "git", "clone", remote, local)
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	upstream := filepath.Join(t.TempDir(), "upstream")
+	hardeningRun(t, workspace, "git", "clone", remote, upstream)
+	hardeningWriteFile(t, filepath.Join(upstream, "REMOTE.md"), "remote\n", 0o644)
+	hardeningRun(t, upstream, "git", "add", "REMOTE.md")
+	hardeningRun(t, upstream, "git", "commit", "-m", "remote update")
+	hardeningRun(t, upstream, "git", "push", "origin", "main")
+
+	report, err := UpdateProjects("app", false)
+	if err != nil {
+		t.Fatalf("UpdateProjects: %v", err)
+	}
+	if len(report.Results) != 1 {
+		t.Fatalf("results = %+v, want one result", report.Results)
+	}
+	got := report.Results[0]
+	if got.Action != "pull" || got.Status != "updated" {
+		t.Fatalf("result = %+v, want pull update", got)
+	}
+	if !exists(filepath.Join(local, "REMOTE.md")) {
+		t.Fatal("remote update was not pulled")
+	}
+}
+
+func TestProjectUpdateSkipsDirtyRepo(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := hardeningBareRepo(t)
+	local := filepath.Join(workspace, "apps", "app")
+	hardeningRun(t, workspace, "git", "clone", remote, local)
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+	hardeningWriteFile(t, filepath.Join(local, "dirty.txt"), "dirty\n", 0o644)
+
+	report, err := UpdateProjects("app", false)
+	if err != nil {
+		t.Fatalf("UpdateProjects: %v", err)
+	}
+	if len(report.Results) != 1 {
+		t.Fatalf("results = %+v, want one result", report.Results)
+	}
+	got := report.Results[0]
+	if got.Action != "skip" || got.Status != "skipped" || !strings.Contains(got.Reason, "dirty") {
+		t.Fatalf("result = %+v, want dirty skip", got)
+	}
+	if !exists(filepath.Join(local, "dirty.txt")) {
+		t.Fatal("dirty file was changed")
+	}
+}
+
 func TestHardeningWorkspacePathsWithSpaces(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code with spaces")
 	projectPath := filepath.Join(workspace, "client apps", "web app")

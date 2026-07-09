@@ -2,7 +2,15 @@
 
 > **A local-first "Dropbox for developers" CLI prototype.**
 
-DevSpace keeps a developer workspace structurally aligned across machines by tracking project metadata, safe placeholder folders, Git remotes, setup hints, and encrypted env profiles.
+A developer working across multiple machines and many repos knows the drill: the
+workspace layout drifts between laptops, clone URLs and remotes live in whoever
+set them up last, setup steps rot in a README nobody re-reads, and `.env` files
+end up scattered, unsynced, or emailed around as plaintext. Copying the whole
+workspace isn't a fix either — it drags along secrets, client code, generated
+build output, and stale dependency folders. DevSpace keeps the *structure* of a
+workspace in sync across machines — project metadata, safe placeholder folders,
+Git remotes, setup hints, and encrypted env profiles — without ever syncing file
+contents, dependency trees, or plaintext secrets.
 
 ---
 
@@ -11,6 +19,7 @@ DevSpace keeps a developer workspace structurally aligned across machines by tra
 - [Overview](#overview)
   - [Current MVP Status](#current-mvp-status)
   - [Building from Source](#building-from-source)
+- [Topology](#topology)
 - [Environment Variables](#environment-variables)
 - [Release Packaging](#release-packaging)
 - [Capstone Artifacts](#capstone-artifacts)
@@ -19,7 +28,7 @@ DevSpace keeps a developer workspace structurally aligned across machines by tra
   - [Git-Backed Workspace Sync](#git-backed-workspace-sync)
   - [Hosted Workspace Sync](#hosted-workspace-sync)
   - [Secrets & Environment](#secrets--environment)
-- [Example Workflows](#example-workflows)
+- [Walkthrough: Two Machines, One Workspace](#walkthrough-two-machines-one-workspace)
 - [Architecture & Safety](#architecture--safety)
   - [Safety Guarantees](#safety-guarantees)
   - [Access Roles](#access-roles)
@@ -65,6 +74,46 @@ During development, you can still run the command directly from source:
 go test ./...
 go run ./cmd/devspace --help
 ```
+
+---
+
+## Topology
+
+A workspace is a root directory containing tracked projects and one manifest.
+Machines are peers that all sync against that same manifest:
+
+```
+<workspace root>/
+├── .devspace/
+│   └── manifest.json        # shared, syncable source of truth
+├── work/
+│   └── client-a-api/        # project path relative to workspace root,
+│       ...                  #   tracked in the manifest with remote,
+│                             #   default branch, setup hints, env profiles
+└── ...                      # more tracked project directories
+
+machine "mac-mini" (id, os, arch, own workspaceRoot) ─┐
+machine "thinkpad"  (id, os, arch, own workspaceRoot) ─┼─ peers registered in the same manifest.json
+machine "..."                                          ┘
+```
+
+Every project entry in the manifest records its relative `path`, `remote`,
+`defaultBranch`, `setup` hints, and `envProfiles` — see
+[`examples/manifest.json`](examples/manifest.json).
+
+State is split into three tiers, all plain JSON + `age` files, no database:
+
+| Tier | Location | Scope |
+| ---- | -------- | ----- |
+| App home | `~/.devspace/` | Per-machine: config, state, age identity |
+| Workspace manifest | `<workspace>/.devspace/manifest.json` | Shared, synced across machines |
+| Secrets | Encrypted per-project env profiles under app home | Per-machine, per-project |
+
+This hierarchy is why the CLI is shaped the way it is: `devspace workspace …`
+commands operate on the shared manifest and its sync remotes; `devspace project
+…` commands operate on a single tracked project (`project add`, `project
+hydrate <name>`); bare workspace-level commands (`scan`, `plan`, `apply`,
+`status`, `doctor`) act on the whole workspace.
 
 ---
 
@@ -215,6 +264,15 @@ devspace project hydrate client-a-api
 
 Hydrates a placeholder Git project with normal `git clone`. Refuses to clone into non-empty directories.
 
+#### `devspace project update`
+
+```bash
+devspace project update client-a-api
+devspace project update --all
+```
+
+Updates tracked Git projects from their configured remotes. Missing or empty placeholders are hydrated; clean checkouts run `git pull --ff-only`; dirty, detached, local-only, no-remote, and non-Git destinations are skipped with a reason. The command refreshes workspace metadata after it finishes and does not push the manifest.
+
 #### `devspace plan` & `devspace apply`
 
 ```bash
@@ -314,9 +372,15 @@ Reviews and executes dependency setup hints captured by `scan`.
 
 ---
 
-## Example Workflows
+## Walkthrough: Two Machines, One Workspace
 
-### Local Workflow (No Network Required)
+New laptop, twenty repos, half-remembered clone URLs — this is the workflow
+DevSpace exists for. Machine A has a working set of projects and pushes the
+*shape* of its workspace through a Git remote it owns; Machine B pulls that
+shape and rebuilds it, safely, without a single byte of source code moving
+until it explicitly asks for one project.
+
+### Machine A (the laptop)
 
 ```bash
 go build -o bin/devspace ./cmd/devspace
@@ -339,14 +403,32 @@ bin/devspace init --workspace "$workspace_a"
 mkdir -p "$workspace_a/work/client-a-api"
 git clone "$remote_bare" "$workspace_a/work/client-a-api"
 bin/devspace scan
+```
 
+`init` writes the machine identity, age key, and an empty manifest; `scan`
+walks the workspace and records `client-a-api` as a tracked Git project with
+its remote, branch, and dirty state. `init`/`scan` are idempotent — safe to
+re-run, they never rotate the machine ID or age key.
+
+```bash
 bin/devspace workspace remote create local "$manifest_remote"
 bin/devspace workspace push
+```
+
+This creates a bare Git repo to sync the manifest through (a real setup would
+use `workspace remote create github <owner/repo> --private` instead) and
+pushes `manifest.json` to it — a single committed JSON file, not a DevSpace
+server.
+
+```bash
 bin/devspace plan
 bin/devspace apply
 ```
 
-### Two-Machine Git Sync Workflow
+`plan` diffs the manifest against what's on disk locally; since Machine A
+already has `client-a-api` checked out, there's nothing unsafe to create here.
+
+### Machine B (the new machine)
 
 ```bash
 workspace_b="$tmp/workspace-b"
@@ -355,10 +437,35 @@ export DEVSPACE_HOME="$tmp/home-b"
 bin/devspace init --workspace "$workspace_b"
 bin/devspace workspace remote set "$manifest_remote"
 bin/devspace workspace pull
+```
+
+A fresh `DEVSPACE_HOME` and an empty workspace stand in for a brand-new
+machine. Pointing it at the same manifest remote and pulling brings over the
+*shape* of the workspace — no project code yet, just the plan of what should
+exist.
+
+```bash
 bin/devspace plan
 bin/devspace apply
+```
+
+`plan` shows one `SAFE` action — `PLACEHOLDER client-a-api` — and `apply`
+creates only that empty directory. Nothing is cloned, nothing is deleted, and
+apply re-checks the destination is still empty before writing.
+
+```bash
+bin/devspace project hydrate client-a-api
 bin/devspace status
 ```
+
+`hydrate` turns the placeholder into a real checkout with a normal `git
+clone` (refusing any non-empty destination), so Machine B now has an actual
+`client-a-api` repo, not just a folder. `status` confirms it: one project
+tracked, one hydrated, zero placeholders left.
+
+The core loop is **scan → plan → apply → hydrate**, safe at every step. See
+[`docs/demos/capstone-runbook.md`](docs/demos/capstone-runbook.md) for the
+fully narrated demo.
 
 ---
 

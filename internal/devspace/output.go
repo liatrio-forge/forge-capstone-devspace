@@ -49,6 +49,27 @@ func printLine(out io.Writer, format string, args ...any) {
 	fmt.Fprintln(styledWriter(out), fmt.Sprintf(format, args...))
 }
 
+func printProjectUpdateReport(out io.Writer, report ProjectUpdateReport) {
+	out = styledWriter(out)
+	updated, skipped, failed := 0, 0, 0
+	for _, result := range report.Results {
+		switch result.Status {
+		case "updated":
+			updated++
+		case "skipped":
+			skipped++
+		case "failed":
+			failed++
+		}
+		line := fmt.Sprintf("%s %s: %s", result.Action, result.Project.Name, result.Status)
+		if result.Reason != "" {
+			line = fmt.Sprintf("%s (%s)", line, result.Reason)
+		}
+		fmt.Fprintln(out, line)
+	}
+	fmt.Fprintf(out, "Updated projects: %d updated, %d skipped, %d failed\n", updated, skipped, failed)
+}
+
 // countStyle colors a count green when it is zero (nothing to worry about)
 // and amber otherwise (worth a second look).
 func countStyle(n int) func(string) string {

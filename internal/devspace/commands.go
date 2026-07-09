@@ -806,6 +806,33 @@ func newProjectCommand() *cobra.Command {
 			})
 		},
 	})
+	var updateAll bool
+	updateCmd := &cobra.Command{
+		Use:   "update [project]",
+		Short: "Hydrate or fast-forward tracked Git projects",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if updateAll && len(args) > 0 {
+				return fmt.Errorf("use either --all or <project>, not both")
+			}
+			if !updateAll && len(args) != 1 {
+				return fmt.Errorf("update requires <project> or --all")
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return withAppLock(func() error {
+				ref := ""
+				if len(args) == 1 {
+					ref = args[0]
+				}
+				report, err := UpdateProjects(ref, updateAll)
+				printProjectUpdateReport(cmd.OutOrStdout(), report)
+				return err
+			})
+		},
+	}
+	updateCmd.Flags().BoolVar(&updateAll, "all", false, "update all tracked Git projects")
+	cmd.AddCommand(updateCmd)
 	cmd.AddCommand(&cobra.Command{
 		Use:   "remove <project>",
 		Short: "Untrack a project (files on disk are not touched)",

@@ -19,6 +19,17 @@ type ScanSummary struct {
 
 const workspaceIgnoreFile = ".devspaceignore"
 
+type ProjectUpdateReport struct {
+	Results []ProjectUpdateResult
+}
+
+type ProjectUpdateResult struct {
+	Project Project
+	Action  string
+	Status  string
+	Reason  string
+}
+
 func ScanWorkspace() (ScanSummary, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -520,6 +531,88 @@ func HydrateProject(ref string) (Project, error) {
 		return Project{}, err
 	}
 	return p, nil
+}
+
+func UpdateProjects(ref string, all bool) (ProjectUpdateReport, error) {
+	ref = strings.TrimSpace(ref)
+	if all && ref != "" {
+		return ProjectUpdateReport{}, fmt.Errorf("use either --all or <project>, not both")
+	}
+	if !all && ref == "" {
+		return ProjectUpdateReport{}, fmt.Errorf("update requires <project> or --all")
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		return ProjectUpdateReport{}, err
+	}
+	m, err := LoadManifest(cfg.WorkspaceRoot)
+	if err != nil {
+		return ProjectUpdateReport{}, err
+	}
+	projects := m.Projects
+	if !all {
+		p, ok := findProject(m, ref)
+		if !ok {
+			return ProjectUpdateReport{}, fmt.Errorf("project %q not found", ref)
+		}
+		projects = []Project{p}
+	}
+
+	report := ProjectUpdateReport{}
+	failures := 0
+	for _, p := range projects {
+		result := updateProject(cfg.WorkspaceRoot, p)
+		if result.Status == "failed" {
+			failures++
+		}
+		report.Results = append(report.Results, result)
+	}
+	if _, err := ScanWorkspace(); err != nil {
+		return report, err
+	}
+	if failures > 0 {
+		return report, fmt.Errorf("project update failed for %d project(s)", failures)
+	}
+	return report, nil
+}
+
+func updateProject(workspace string, p Project) ProjectUpdateResult {
+	if p.Type != ProjectTypeGit {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: "not a Git project"}
+	}
+	if p.Remote == "" {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: "project has no Git remote"}
+	}
+	if err := validateProjectRemote(p.Remote); err != nil {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: err.Error()}
+	}
+	full, _, err := safeWorkspacePath(workspace, p.Path)
+	if err != nil {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: err.Error()}
+	}
+	if !exists(full) || isEmptyDir(full) {
+		if _, err := HydrateProject(p.ID); err != nil {
+			return ProjectUpdateResult{Project: p, Action: "hydrate", Status: "failed", Reason: err.Error()}
+		}
+		return ProjectUpdateResult{Project: p, Action: "hydrate", Status: "updated"}
+	}
+	info := gitInfo(full)
+	if !info.IsRepo {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: "destination is non-empty and is not a Git checkout"}
+	}
+	if info.Dirty {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: "dirty working tree"}
+	}
+	if info.DetachedHead {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: "detached HEAD"}
+	}
+	if len(info.Remotes) == 0 {
+		return ProjectUpdateResult{Project: p, Action: "skip", Status: "skipped", Reason: "checkout has no Git remote"}
+	}
+	if err := pullRepoFastForward(full); err != nil {
+		return ProjectUpdateResult{Project: p, Action: "pull", Status: "failed", Reason: err.Error()}
+	}
+	return ProjectUpdateResult{Project: p, Action: "pull", Status: "updated"}
 }
 
 func refreshAllProjectState(workspace string) error {
