@@ -32,3 +32,11 @@ Git history uses Conventional Commit-style prefixes: `feat:`, `fix:`, `docs:`, a
 ## Security & Configuration Tips
 
 Do not commit real `.env` files, hosted sync tokens, age identities, or generated workspace state from `~/.devspace/` or `.devspace/`. Use placeholders in docs and examples. Treat `devspace watch --sync hosted`, env profile commands, and manifest remote changes as security-sensitive paths that need focused tests.
+
+## Cursor Cloud specific instructions
+
+Standard commands live in the `Makefile` and `README.md`; use `make verify` (Go gate: test/vet/lint/govulncheck/build), `make tui-verify` (Bun typecheck + tests for `tui/`), or `make ci` for both. Non-obvious caveats:
+
+- `go.mod` pins Go 1.26.5. The VM's base `go`/`bun` are provided via symlinks in `/usr/local/bin` (Go 1.26.5 in `/usr/local/go`, Bun in `~/.bun`); the distro's `/usr/bin/go` is an older 1.22 and must not be the default. This matters for lint: `make lint` runs golangci-lint via `go run`, which inherits the base Go version — with a Go < 1.26.5 base it fails with "the Go language version ... used to build golangci-lint is lower than the targeted Go version". If lint hits that error, ensure `go version` reports 1.26.5.
+- The CLI is local-first and needs no running services for core end-to-end testing. Drive it with an isolated `DEVSPACE_HOME` (temp dir) plus a temp workspace, exactly like the Go tests do; the README "Full Local Workflow" section is a good end-to-end script (init → scan → workspace push/pull → plan → apply → status, plus `env` profiles).
+- Optional subsystems: FUSE mount tests are gated behind `go test ./internal/devspace -tags fusetest` and need `fuse3` + `/dev/fuse` (not installed by default); hosted sync uses `devspace hosted serve`; the OpenTUI companion (`tui/`, Bun) is optional and not part of `make verify`.
