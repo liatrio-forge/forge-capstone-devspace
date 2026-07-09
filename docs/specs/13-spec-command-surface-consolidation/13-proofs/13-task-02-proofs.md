@@ -44,6 +44,18 @@ $ go test ./internal/devspace -run 'TestProject(Command|Untrack|Help)' -count=1
 ok  github.com/liatrio-forge/devdrop-capstone/internal/devspace
 ```
 
+Project update progress regression RED/GREEN:
+
+```text
+$ go test ./internal/devspace -run '^TestProjectUpdateCommandHydratesWhenPiped$' -count=1
+--- FAIL: TestProjectUpdateCommandHydratesWhenPiped
+    expected plain progress line for project update, got "hydrate lazy: updated..."
+FAIL
+
+$ go test ./internal/devspace -run '^TestProjectUpdateCommandHydratesWhenPiped$' -count=1
+ok  github.com/liatrio-forge/devdrop-capstone/internal/devspace
+```
+
 Focused preservation gates:
 
 ```text
@@ -117,6 +129,7 @@ $ devspace --no-color apply
 Applied safe plan actions.
 
 $ devspace --no-color project update --all
+Updating projects...
 hydrate api: updated
 Updated projects: 1 updated, 0 skipped, 0 failed
 ```

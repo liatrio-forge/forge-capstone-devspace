@@ -816,7 +816,16 @@ func newProjectCommand() *cobra.Command {
 				if len(args) == 1 {
 					ref = args[0]
 				}
-				report, err := UpdateProjects(ref, updateAll)
+				label := "Updating projects"
+				if ref != "" {
+					label = fmt.Sprintf("Updating %s", ref)
+				}
+				var report ProjectUpdateReport
+				err := runWithSpinner(cmd.OutOrStdout(), label, func() error {
+					var updateErr error
+					report, updateErr = UpdateProjects(ref, updateAll)
+					return updateErr
+				})
 				printProjectUpdateReport(cmd.OutOrStdout(), report)
 				return err
 			})

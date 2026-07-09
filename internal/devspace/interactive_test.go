@@ -71,6 +71,9 @@ func TestProjectUpdateCommandHydratesWhenPiped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("project update error: %v", err)
 	}
+	if !strings.Contains(stdout, "Updating lazy...") {
+		t.Fatalf("expected plain progress line for project update, got %q", stdout)
+	}
 	if !strings.Contains(stdout, "hydrate lazy: updated") {
 		t.Fatalf("expected hydrate result for project update, got %q", stdout)
 	}

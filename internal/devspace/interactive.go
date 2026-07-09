@@ -177,7 +177,7 @@ func runWithSpinner(out io.Writer, label string, work func() error) error {
 // happened before this interactive layer existed. Callers of runWithSpinner
 // (project update, scan) run inside withAppLock, whose cross-process file
 // lock must stay held for the entire mutating operation; work has no
-// cancellation path of its own (HydrateProject/ScanWorkspace run to
+// cancellation path of its own (UpdateProjects/ScanWorkspace run to
 // completion once started), so returning as soon as the TUI quits would
 // release the lock while work is still writing manifest/state files. Always
 // waiting for the done channel here, regardless of why program.Run
