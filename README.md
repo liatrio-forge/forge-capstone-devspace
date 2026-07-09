@@ -122,7 +122,7 @@ Creates `~/.devspace/config.json`, `~/.devspace/state.json`, `~/.devspace/identi
 devspace scan
 ```
 
-Scans the configured workspace and updates the manifest/state with Git remote URL, current branch, last commit, dirty working tree status, `.env` file presence, and dependency/setup hints. Common build output directories are ignored by default: `node_modules`, `dist`, `build`, `.next`, `turbo`, `target`, `vendor`, `coverage`, `.cache`, `.DS_Store`, `*.log`.
+Scans the configured workspace and updates the manifest/state with Git remote URL, current branch, last commit, dirty working tree status, `.env` file presence, and dependency/setup hints. Common build output directories are ignored by default: `node_modules`, `dist`, `build`, `.next`, `turbo`, `target`, `vendor`, `coverage`, `.cache`, `.DS_Store`, `*.log`. To ignore workspace folders, add relative paths to `<workspace>/.devspaceignore`, one per line, such as `adobe/`.
 
 #### `devspace watch`
 
@@ -245,7 +245,7 @@ devspace workspace push
 devspace workspace pull
 ```
 
-Validates, caches, and pushes/pulls the `manifest.json` from the configured Git remote. It does **not** pull project repos, install dependencies, or overwrite project contents.
+Validates, caches, and pushes/pulls the `manifest.json` and `.devspaceignore` from the configured Git remote. It does **not** pull project repos, install dependencies, or overwrite project contents.
 
 #### `devspace workspace reconcile`
 

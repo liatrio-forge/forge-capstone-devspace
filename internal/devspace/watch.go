@@ -396,6 +396,9 @@ func watchEventRelevant(workspace string, event fsnotify.Event) bool {
 	if hasIgnoredWatchComponent(rel) {
 		return false
 	}
+	if loadWorkspaceIgnore(workspace).match(filepath.ToSlash(filepath.Join(rel...))) {
+		return false
+	}
 	for i, component := range rel {
 		if component != ".git" {
 			continue
@@ -421,6 +424,9 @@ func watchableDirectory(workspace, path string) bool {
 		return true
 	}
 	if hasIgnoredWatchComponent(rel) {
+		return false
+	}
+	if loadWorkspaceIgnore(workspace).match(filepath.ToSlash(filepath.Join(rel...))) {
 		return false
 	}
 	for i, component := range rel {

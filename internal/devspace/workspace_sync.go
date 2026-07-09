@@ -155,6 +155,11 @@ func PushWorkspaceManifest() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	ignoreChanged, err := writeSyncedWorkspaceIgnore(cfg.WorkspaceRoot, repo)
+	if err != nil {
+		return false, err
+	}
+	changed = changed || ignoreChanged
 	if !changed {
 		recordBaseManifestAfterSync(normalized)
 		return false, nil
@@ -221,12 +226,16 @@ func PullWorkspaceManifest() (bool, error) {
 	if err := SaveManifest(cfg.WorkspaceRoot, localized); err != nil {
 		return false, err
 	}
+	ignoreChanged, err := pullSyncedWorkspaceIgnore(repo, cfg.WorkspaceRoot)
+	if err != nil {
+		return false, err
+	}
 	after, err := os.ReadFile(manifestPath(cfg.WorkspaceRoot))
 	if err != nil {
 		return false, err
 	}
 	recordBaseManifestAfterSync(manifestForSync(localized))
-	return !bytes.Equal(before, after), nil
+	return !bytes.Equal(before, after) || ignoreChanged, nil
 }
 
 func DiffWorkspaceManifest() (ManifestDiff, error) {
@@ -477,6 +486,52 @@ func writeSyncedManifest(repo string, m Manifest) (bool, error) {
 	return true, nil
 }
 
+func writeSyncedWorkspaceIgnore(workspace, repo string) (bool, error) {
+	src := filepath.Join(workspace, workspaceIgnoreFile)
+	dst := filepath.Join(repo, workspaceIgnoreFile)
+	data, err := os.ReadFile(src)
+	if err != nil {
+		if !missing(err) {
+			return false, err
+		}
+		if !exists(dst) {
+			return false, nil
+		}
+		return true, os.Remove(dst)
+	}
+	current, err := os.ReadFile(dst)
+	if err == nil && bytes.Equal(current, data) {
+		return false, nil
+	}
+	if err != nil && !missing(err) {
+		return false, err
+	}
+	return true, atomicWriteFile(dst, data, 0o644, false)
+}
+
+func pullSyncedWorkspaceIgnore(repo, workspace string) (bool, error) {
+	src := filepath.Join(repo, workspaceIgnoreFile)
+	dst := filepath.Join(workspace, workspaceIgnoreFile)
+	data, err := os.ReadFile(src)
+	if err != nil {
+		if !missing(err) {
+			return false, err
+		}
+		if !exists(dst) {
+			return false, nil
+		}
+		return true, os.Remove(dst)
+	}
+	current, err := os.ReadFile(dst)
+	if err == nil && bytes.Equal(current, data) {
+		return false, nil
+	}
+	if err != nil && !missing(err) {
+		return false, err
+	}
+	return true, atomicWriteFile(dst, data, 0o644, true)
+}
+
 func manifestBytes(m Manifest) ([]byte, error) {
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
@@ -491,7 +546,7 @@ func commitManifestRepo(repo string, cfg Config) error {
 	if err := ensureManifestCommitIdentity(ctx, repo, cfg); err != nil {
 		return err
 	}
-	if _, err := runGit(ctx, repo, "add", syncedManifestName); err != nil {
+	if _, err := runGit(ctx, repo, "add", "-A"); err != nil {
 		return fmt.Errorf("manifest repo add failed: %w", err)
 	}
 	if _, err := runGit(ctx, repo, "-c", "commit.gpgsign=false", "commit", "-m", "Update workspace manifest"); err != nil {

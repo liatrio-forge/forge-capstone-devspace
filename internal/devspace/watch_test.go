@@ -35,6 +35,21 @@ func TestWatchEventFilteringPreservesIgnoreRules(t *testing.T) {
 	}
 }
 
+func TestWatchEventFilteringUsesWorkspaceIgnoreFile(t *testing.T) {
+	workspace := t.TempDir()
+	hardeningWriteFile(t, filepath.Join(workspace, ".devspaceignore"), "adobe/\n", 0o644)
+
+	if watchableDirectory(workspace, filepath.Join(workspace, "adobe")) {
+		t.Fatal("workspace-ignored folder should not be watched")
+	}
+	if watchEventRelevant(workspace, fsnotify.Event{Name: filepath.Join(workspace, "adobe", "protopack", "package.json"), Op: fsnotify.Write}) {
+		t.Fatal("workspace-ignored event should not refresh metadata")
+	}
+	if !watchableDirectory(workspace, filepath.Join(workspace, "apps", "api")) {
+		t.Fatal("regular project directory should be watched")
+	}
+}
+
 func TestWatchRegistryScopesToTrackedProjects(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	tracked := filepath.Join(workspace, "apps", "api")

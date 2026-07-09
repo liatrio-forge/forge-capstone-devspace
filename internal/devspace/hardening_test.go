@@ -113,6 +113,26 @@ func TestHardeningScanIgnoresDependencyFoldersAndNestedRepos(t *testing.T) {
 	hardeningAssertProjectPaths(t, m, []string{"apps/app", "services/api"})
 }
 
+func TestHardeningScanUsesWorkspaceIgnoreFile(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	hardeningWriteFile(t, filepath.Join(workspace, ".devspaceignore"), "adobe/\n# comment\n\n", 0o644)
+	hardeningGitRepo(t, filepath.Join(workspace, "adobe", "protopack"))
+	hardeningGitRepo(t, filepath.Join(workspace, "apps", "api"))
+
+	summary, err := ScanWorkspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.FoundProjects != 1 || summary.GitRepos != 1 {
+		t.Fatalf("ignored workspace path was scanned: %+v", summary)
+	}
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hardeningAssertProjectPaths(t, m, []string{"apps/api"})
+}
+
 func TestHardeningScanDisambiguatesDuplicateBasenames(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	hardeningGitRepo(t, filepath.Join(workspace, "client-a", "family-events-backend"))

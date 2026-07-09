@@ -17,6 +17,8 @@ type ScanSummary struct {
 	ProjectsWithEnv   int
 }
 
+const workspaceIgnoreFile = ".devspaceignore"
+
 func ScanWorkspace() (ScanSummary, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -36,6 +38,7 @@ func ScanWorkspace() (ScanSummary, error) {
 
 	seen := map[string]bool{}
 	summary := ScanSummary{}
+	ignore := loadWorkspaceIgnore(cfg.WorkspaceRoot)
 	var localRoot string
 	err = filepath.WalkDir(cfg.WorkspaceRoot, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -57,6 +60,9 @@ func ScanWorkspace() (ScanSummary, error) {
 		}
 		_, clean, err := safeWorkspacePath(cfg.WorkspaceRoot, rel)
 		if err != nil {
+			return filepath.SkipDir
+		}
+		if ignore.match(clean) {
 			return filepath.SkipDir
 		}
 		info := gitInfo(path)
@@ -127,6 +133,39 @@ func projectFromPath(rel, abs string, info GitInfo) Project {
 		p.HydrateMode = HydrateOnDemand
 	}
 	return p
+}
+
+type workspaceIgnore []string
+
+func loadWorkspaceIgnore(workspace string) workspaceIgnore {
+	data, err := os.ReadFile(filepath.Join(workspace, workspaceIgnoreFile))
+	if err != nil {
+		return nil
+	}
+	var rules workspaceIgnore
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(strings.TrimSuffix(line, "/"), "/")
+		line = filepath.ToSlash(filepath.Clean(line))
+		if line == "." || line == ".." || strings.HasPrefix(line, "../") {
+			continue
+		}
+		rules = append(rules, line)
+	}
+	return rules
+}
+
+func (rules workspaceIgnore) match(rel string) bool {
+	rel = filepath.ToSlash(filepath.Clean(rel))
+	for _, rule := range rules {
+		if rel == rule || strings.HasPrefix(rel+"/", rule+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func stateForProject(abs string, p Project, info GitInfo) ProjectState {

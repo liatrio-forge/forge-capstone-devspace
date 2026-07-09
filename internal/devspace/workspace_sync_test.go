@@ -121,6 +121,30 @@ func TestWorkspacePushInitializesClonedManifestRepoAndCommitsChanges(t *testing.
 	}
 }
 
+func TestWorkspacePushIncludesWorkspaceIgnoreFile(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	hardeningWriteFile(t, filepath.Join(workspace, workspaceIgnoreFile), "adobe/\n", 0o644)
+
+	if changed, err := PushWorkspaceManifest(); err != nil || !changed {
+		t.Fatalf("push changed=%t err=%v", changed, err)
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(cfg.ManifestRepoPath, workspaceIgnoreFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "adobe/\n" {
+		t.Fatalf("synced ignore = %q", data)
+	}
+}
+
 func TestWorkspacePushIdempotentWhenNothingChanged(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	remote := workspaceSyncBareRepo(t)
@@ -276,6 +300,43 @@ func TestWorkspacePullCopiesManifestToSecondWorkspaceAndCreatesBackup(t *testing
 	}
 	if !bytes.Equal(backup, before) {
 		t.Fatal("pull backup does not match previous manifest")
+	}
+}
+
+func TestWorkspacePullRestoresWorkspaceIgnoreFile(t *testing.T) {
+	root := t.TempDir()
+	remote := workspaceSyncBareRepo(t)
+	workspaceA := filepath.Join(root, "a")
+	workspaceB := filepath.Join(root, "b")
+
+	t.Setenv(envHome, filepath.Join(root, "home-a"))
+	if _, err := InitWorkspace(workspaceA); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	hardeningWriteFile(t, filepath.Join(workspaceA, workspaceIgnoreFile), "adobe/\n", 0o644)
+	if _, err := PushWorkspaceManifest(); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(envHome, filepath.Join(root, "home-b"))
+	if _, err := InitWorkspace(workspaceB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := PullWorkspaceManifest(); err != nil || !changed {
+		t.Fatalf("pull changed=%t err=%v", changed, err)
+	}
+	data, err := os.ReadFile(filepath.Join(workspaceB, workspaceIgnoreFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "adobe/\n" {
+		t.Fatalf("pulled ignore = %q", data)
 	}
 }
 
