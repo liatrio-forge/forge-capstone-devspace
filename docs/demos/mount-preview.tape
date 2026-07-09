@@ -1,13 +1,13 @@
-Output getting-started.gif
+Output mount-preview.gif
 Set Width 1000
 Set Height 700
 Set FontSize 16
 Set Shell bash
 Set TypingSpeed 40ms
 
-# Setup (not part of the visible story): isolated DEVSPACE_HOME, a fresh
-# workspace root, and two placeholder project dirs each with their own git
-# repo so `devspace scan` has something to discover.
+# `devspace mount --preview` projects the manifest-backed lazy-mount view
+# without requiring FUSE: tracked projects appear as entries whether or not
+# they are hydrated on disk yet.
 Hide
 Type "export DEVSPACE_HOME=$(mktemp -d)"
 Enter
@@ -25,35 +25,20 @@ Type "export REPO_ROOT=$(git rev-parse --show-toplevel)"
 Enter
 Type 'export PATH="$REPO_ROOT/bin:$PATH"'
 Enter
-Sleep 500ms
+Type "devspace init --workspace $DEMO_WS"
+Enter
+Sleep 1s
+Type "devspace scan"
+Enter
+Sleep 1s
 Type "clear"
 Enter
 Show
 
-Type "devspace init --workspace $DEMO_WS"
+Type "devspace mount /tmp/devspace-mnt --preview"
 Enter
-Sleep 2s
+Sleep 3s
 
-Type "devspace doctor"
+Type "devspace mount /tmp/devspace-mnt --preview --json"
 Enter
-Sleep 2.5s
-
-Type "devspace scan"
-Enter
-Sleep 2s
-
-Type "devspace status"
-Enter
-Sleep 2s
-
-Type "devspace plan"
-Enter
-Sleep 2s
-
-Type "devspace apply"
-Enter
-Sleep 2s
-
-Type "devspace status"
-Enter
-Sleep 2s
+Sleep 3s

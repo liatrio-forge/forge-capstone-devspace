@@ -60,6 +60,10 @@ Type "devspace hosted pull"
 Enter
 Sleep 2s
 
+Type "devspace hosted reconcile"
+Enter
+Sleep 3s
+
 Hide
 Type 'source "$DEMO_WS/hosted-sync-demo.env"'
 Enter

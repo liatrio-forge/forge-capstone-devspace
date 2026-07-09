@@ -14,6 +14,8 @@ contents, dependency trees, or plaintext secrets.
 
 ---
 
+
+
 ## 📖 Table of Contents
 
 - [Overview](#overview)
@@ -41,6 +43,8 @@ contents, dependency trees, or plaintext secrets.
 
 ---
 
+
+
 ## Overview
 
 ### Current MVP Status
@@ -59,6 +63,8 @@ This MVP is local-first. It proves the workflow before adding filesystem-level l
 - **Secrets:** Store encrypted per-project env profiles with native `age` encryption. Generate local `.env` files with `0600` permissions.
 - **Watching:** Keep workspace metadata fresh with an event-driven `devspace watch` mode.
 - **FUSE:** Preview a FUSE-backed lazy workspace mount prototype without requiring FUSE for normal CLI workflows.
+
+
 
 ### Building from Source
 
@@ -99,20 +105,20 @@ machine "..."                                          ┘
 
 Every project entry in the manifest records its relative `path`, `remote`,
 `defaultBranch`, `setup` hints, and `envProfiles` — see
-[`examples/manifest.json`](examples/manifest.json).
+`[examples/manifest.json](examples/manifest.json)`.
 
 State is split into three tiers, all plain JSON + `age` files, no database:
 
-| Tier | Location | Scope |
-| ---- | -------- | ----- |
-| App home | `~/.devspace/` | Per-machine: config, state, age identity |
-| Workspace manifest | `<workspace>/.devspace/manifest.json` | Shared, synced across machines |
-| Secrets | Encrypted per-project env profiles under app home | Per-machine, per-project |
+
+| Tier               | Location                                          | Scope                                    |
+| ------------------ | ------------------------------------------------- | ---------------------------------------- |
+| App home           | `~/.devspace/`                                    | Per-machine: config, state, age identity |
+| Workspace manifest | `<workspace>/.devspace/manifest.json`             | Shared, synced across machines           |
+| Secrets            | Encrypted per-project env profiles under app home | Per-machine, per-project                 |
+
 
 This hierarchy is why the CLI is shaped the way it is: `devspace workspace …`
-commands operate on the shared manifest and its sync remotes; `devspace project
-…` commands operate on a single tracked project (`project add`, `project
-hydrate <name>`); bare workspace-level commands (`scan`, `plan`, `apply`,
+commands operate on the shared manifest and its sync remotes; `devspace project …` commands operate on a single tracked project (`project add`, `project hydrate <name>`); bare workspace-level commands (`scan`, `plan`, `apply`,
 `status`, `doctor`) act on the whole workspace.
 
 ---
@@ -121,11 +127,13 @@ hydrate <name>`); bare workspace-level commands (`scan`, `plan`, `apply`,
 
 DevSpace respects the following environment variables to configure its runtime behavior:
 
-| Variable | Description |
-| -------- | ----------- |
-| `DEVSPACE_HOME` | The root directory for DevSpace application data, configuration, and state. Defaults to `~/.devspace`. |
-| `DEV_DROP_HOME` | Deprecated fallback alias for `DEVSPACE_HOME`. Maintained for backward compatibility. |
+
+| Variable                | Description                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DEVSPACE_HOME`         | The root directory for DevSpace application data, configuration, and state. Defaults to `~/.devspace`.                                                              |
+| `DEV_DROP_HOME`         | Deprecated fallback alias for `DEVSPACE_HOME`. Maintained for backward compatibility.                                                                               |
 | `DEVSPACE_HOSTED_TOKEN` | Bearer token used for hosted sync authentication. Prefer this over the `--token` CLI flag to prevent the token from appearing in shell history or process listings. |
+
 
 ---
 
@@ -141,13 +149,13 @@ make verify
 
 `make verify` runs tests, vet, lint, govulncheck, and the build — the local CI gate.
 
-See [`docs/operations/release.md`](docs/operations/release.md) for the full release process, consumer verification steps, install-from-source instructions, and the manual `make release` fallback.
+See `[docs/operations/release.md](docs/operations/release.md)` for the full release process, consumer verification steps, install-from-source instructions, and the manual `make release` fallback.
 
 ---
 
 ## Capstone Artifacts
 
-This repository is being prepared as a Liatrio Forge Module 5 capstone. See [`docs/capstone/README.md`](docs/capstone/README.md) for the capstone spec, proof checklist, case study, demo script, and playbook contribution. Open [`docs/capstone/index.html`](docs/capstone/index.html) for an interactive HTML reader generated from the repository Markdown.
+This repository is being prepared as a Liatrio Forge Module 5 capstone. See `[docs/capstone/README.md](docs/capstone/README.md)` for the capstone spec, proof checklist, case study, demo script, and playbook contribution. Open `[docs/capstone/index.html](docs/capstone/index.html)` for an interactive HTML reader generated from the repository Markdown.
 
 ---
 
@@ -227,8 +235,8 @@ devspace mount ~/devspace-view --preview
 devspace mount ~/devspace-view --preview --json
 ```
 
-Prototype read-only FUSE workspace view. Manifest project paths appear as mount entries before they are hydrated. See [`docs/architecture/fuse-lazy-mount.md`](docs/architecture/fuse-lazy-mount.md) for platform requirements.
-For macOS smoke testing, use [`docs/operations/macos-fuse-run-playbook.md`](docs/operations/macos-fuse-run-playbook.md).
+Prototype read-only FUSE workspace view. Manifest project paths appear as mount entries before they are hydrated. See `[docs/architecture/fuse-lazy-mount.md](docs/architecture/fuse-lazy-mount.md)` for platform requirements.
+For macOS smoke testing, use `[docs/operations/macos-fuse-run-playbook.md](docs/operations/macos-fuse-run-playbook.md)`.
 
 #### `devspace project`
 
@@ -458,16 +466,19 @@ bin/devspace project hydrate client-a-api
 bin/devspace status
 ```
 
-`hydrate` turns the placeholder into a real checkout with a normal `git
-clone` (refusing any non-empty destination), so Machine B now has an actual
+`hydrate` turns the placeholder into a real checkout with a normal `git clone` (refusing any non-empty destination), so Machine B now has an actual
 `client-a-api` repo, not just a folder. `status` confirms it: one project
 tracked, one hydrated, zero placeholders left.
 
 The core loop is **scan → plan → apply → hydrate**, safe at every step. See
-[`docs/demos/capstone-runbook.md`](docs/demos/capstone-runbook.md) for the
-fully narrated demo.
+`[docs/demos/capstone-runbook.md](docs/demos/capstone-runbook.md)` for the
+fully narrated demo, and the [demo index](docs/demos/README.md) for recorded
+GIFs covering the full command surface (sync, reconcile, secrets, setup,
+watch, and more).
 
 ---
+
+
 
 ## Architecture & Safety
 
@@ -495,6 +506,8 @@ Manifest sync stops with a clear error when:
 - Pull would overwrite local manifest changes.
 - Hosted push/pull would overwrite manifest changes without a matching hosted version/hash baseline.
 
+
+
 ### What This Tool Will Not Do Without Permission
 
 - Delete local projects, files, or directories.
@@ -506,6 +519,8 @@ Manifest sync stops with a clear error when:
 
 ---
 
+
+
 ## Troubleshooting & Limitations
 
 ### Known Limitations
@@ -514,19 +529,25 @@ Manifest sync stops with a clear error when:
 - Placeholder hydration uses full `git clone`; partial clone and sparse checkout are not implemented.
 - Secret profile sharing uses public `age` recipients and local re-encryption (no OS keychain or identity provider integration).
 
+
+
 ### Troubleshooting Tips
 
-- **`devspace` not found?** Build it with `go build -o bin/devspace ./cmd/devspace`.
+- `devspace` **not found?** Build it with `go build -o bin/devspace ./cmd/devspace`.
 - **Workspace remote not ready?** Create it first with `workspace remote create local` or `github`.
 - **Wrong workspace?** Check `DEVSPACE_HOME` (or `DEV_DROP_HOME`) and `~/.devspace/config.json`.
 - **Hydrate fails?** Confirm the project has a remote URL in `manifest.json` and `git clone <remote>` works.
 - **Secrets missing?** Run `devspace env list <project>` to verify keys exist before pulling.
+
+
 
 ### Migration
 
 On first run, an existing `~/.devdrop` application home is automatically migrated to `~/.devspace`. `DEV_DROP_HOME` still works as a deprecated alias for `DEVSPACE_HOME`.
 
 ---
+
+
 
 ## Roadmap
 
@@ -538,6 +559,8 @@ On first run, an existing `~/.devdrop` application home is automatically migrate
 
 ---
 
+
+
 ## Manifest Structure
 
-See [`examples/manifest.json`](examples/manifest.json). The manifest is a versioned JSON file stored at `<workspace>/.devspace/manifest.json`. Project paths are always relative to the workspace root. User, team, team-member, and project-access role fields are advisory metadata for intended responsibility; they are not a command-permission system.
+See `[examples/manifest.json](examples/manifest.json)`. The manifest is a versioned JSON file stored at `<workspace>/.devspace/manifest.json`. Project paths are always relative to the workspace root. User, team, team-member, and project-access role fields are advisory metadata for intended responsibility; they are not a command-permission system.

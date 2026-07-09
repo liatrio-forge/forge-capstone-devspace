@@ -1,13 +1,14 @@
-Output getting-started.gif
+Output ui-dashboard.gif
 Set Width 1000
 Set Height 700
 Set FontSize 16
 Set Shell bash
 Set TypingSpeed 40ms
 
-# Setup (not part of the visible story): isolated DEVSPACE_HOME, a fresh
-# workspace root, and two placeholder project dirs each with their own git
-# repo so `devspace scan` has something to discover.
+# The built-in full-screen dashboard (`devspace ui --legacy`): tracked
+# projects, scan counts, and safe actions only. --legacy forces the
+# built-in Bubble Tea view even when the devspace-tui companion is
+# installed; --no-watch keeps the recording deterministic.
 Hide
 Type "export DEVSPACE_HOME=$(mktemp -d)"
 Enter
@@ -25,35 +26,25 @@ Type "export REPO_ROOT=$(git rev-parse --show-toplevel)"
 Enter
 Type 'export PATH="$REPO_ROOT/bin:$PATH"'
 Enter
+Type "devspace init --workspace $DEMO_WS >/dev/null"
+Enter
+Type "devspace scan >/dev/null"
+Enter
 Sleep 500ms
 Type "clear"
 Enter
 Show
 
-Type "devspace init --workspace $DEMO_WS"
+Type "devspace ui --legacy --no-watch"
 Enter
-Sleep 2s
+Sleep 4s
 
-Type "devspace doctor"
-Enter
-Sleep 2.5s
+Down
+Sleep 1.5s
+Down
+Sleep 1.5s
+Up
+Sleep 1.5s
 
-Type "devspace scan"
-Enter
-Sleep 2s
-
-Type "devspace status"
-Enter
-Sleep 2s
-
-Type "devspace plan"
-Enter
-Sleep 2s
-
-Type "devspace apply"
-Enter
-Sleep 2s
-
-Type "devspace status"
-Enter
-Sleep 2s
+Type "q"
+Sleep 1.5s

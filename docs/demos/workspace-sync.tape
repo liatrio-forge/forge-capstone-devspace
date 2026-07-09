@@ -28,47 +28,63 @@ Show
 
 Type `export DEVSPACE_HOME="$HOME_A"`
 Enter
-Sleep 2s
+Sleep 1.5s
+
+Type "echo '--- MACHINE A: MY WORKSPACE ---'"
+Enter
+Sleep 1.5s
 
 Type `devspace init --workspace "$CODE_A"`
 Enter
-Sleep 2s
+Sleep 2.5s
 
 Hide
 Type `./mkgitproject.sh "$CODE_A/api-service"`
 Enter
-Sleep 500ms
+Sleep 1s
 Show
 
 Type `devspace scan`
 Enter
-Sleep 2s
+Sleep 2.5s
+
+Type `devspace project`
+Enter
+Sleep 2.5s
 
 Type `devspace workspace remote create local "$REMOTE"`
 Enter
-Sleep 2s
+Sleep 2.5s
 
 Type `devspace workspace push`
 Enter
-Sleep 2s
+Sleep 3s
 
 # --- Machine B joins the same workspace manifest ---
 
 Type `export DEVSPACE_HOME="$HOME_B"`
 Enter
-Sleep 2s
+Sleep 1.5s
+
+Type "echo '--- MACHINE B: A NEW COMPUTER ---'"
+Enter
+Sleep 1.5s
 
 Type `devspace init --workspace "$CODE_B"`
 Enter
-Sleep 2s
+Sleep 2.5s
 
 Type `devspace workspace remote set "$REMOTE"`
 Enter
-Sleep 2s
+Sleep 2.5s
 
 Type `devspace workspace pull`
 Enter
-Sleep 2s
+Sleep 3s
+
+Type `devspace project`
+Enter
+Sleep 3s
 
 # --- Back on A: a second project appears and gets pushed ---
 
@@ -77,27 +93,43 @@ Type `export DEVSPACE_HOME="$HOME_A"`
 Enter
 Type `./mkgitproject.sh "$CODE_A/worker-service"`
 Enter
-Sleep 500ms
+Sleep 1s
 Show
+
+Type "echo '--- MACHINE A: ADD A SECOND PROJECT ---'"
+Enter
+Sleep 1.5s
 
 Type `devspace scan`
 Enter
-Sleep 2s
+Sleep 2.5s
+
+Type `devspace project`
+Enter
+Sleep 2.5s
 
 Type `devspace workspace push`
 Enter
-Sleep 2s
+Sleep 3s
 
 # --- B catches up: pull the new project, then diff confirms it's clean ---
 
 Type `export DEVSPACE_HOME="$HOME_B"`
 Enter
-Sleep 2s
+Sleep 1.5s
+
+Type "echo '--- MACHINE B: CATCH UP ---'"
+Enter
+Sleep 1.5s
 
 Type `devspace workspace pull`
 Enter
-Sleep 2s
+Sleep 3s
+
+Type `devspace project`
+Enter
+Sleep 3s
 
 Type `devspace workspace diff`
 Enter
-Sleep 2s
+Sleep 3s

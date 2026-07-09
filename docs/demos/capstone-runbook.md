@@ -7,6 +7,9 @@ on a second machine, **without ever deleting or overwriting anything**.
 **Total time:** ~5 min live. Everything runs in a throwaway sandbox; your real
 `~/.devspace` is never touched (each "machine" gets its own `DEVSPACE_HOME`).
 
+**Not presenting live?** Every flow in this runbook (and the rest of the
+command surface) exists as a recorded GIF — see the [demo index](README.md).
+
 **Setup before you present:**
 
 ```bash

@@ -64,3 +64,13 @@ Sleep 2s
 Type "ls -l demo-project/.env"
 Enter
 Sleep 2s
+
+# --- sharing: profiles are age-encrypted per recipient ---
+
+Type "devspace env recipient export"
+Enter
+Sleep 2s
+
+Type "devspace env recipient list demo-project"
+Enter
+Sleep 2.5s
