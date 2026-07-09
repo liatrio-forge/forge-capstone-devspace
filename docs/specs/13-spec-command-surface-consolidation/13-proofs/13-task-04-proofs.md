@@ -58,7 +58,9 @@ $ grep -c 'devspace-tui_' dist/checksums.txt
 
 The validator extracts each archive and requires both files to have executable
 mode. `scripts/verify-release-archives_test.sh` also proves a missing companion
-fails validation.
+fails validation. `release-check.yml` runs that negative regression before
+building the release artifacts, then runs the validator against the completed
+snapshot archives.
 
 ## Release and smoke evidence
 
