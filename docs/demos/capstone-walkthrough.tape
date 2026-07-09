@@ -14,7 +14,7 @@ Set TypingSpeed 40ms
 Hide
 Type "export SANDBOX=/tmp/devspace-capstone-demo" Enter
 Type "./capstone-rehearsal.sh seed >/tmp/devspace-capstone-seed.log 2>&1" Enter
-Sleep 2s
+Wait@2m
 Type 'export PATH="$SANDBOX/bin:$PATH"; export DEVSPACE_HOME="$SANDBOX/home-b"; cd "$SANDBOX/workspace-b"' Enter
 Type "clear" Enter
 Show
