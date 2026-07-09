@@ -157,7 +157,7 @@ the full dashboard the default experience.
 
 - The system shall provide `devspace tui install` with `--version` (default:
   the running binary's release tag; required when running a `dev` build) and
-  `--repo` (default `liatrio-forge/devdrop-capstone`) flags.
+  `--repo` (default `liatrio-forge/forge-capstone-devspace`) flags.
 - The system shall download the `devspace-tui_<os>_<arch>` asset via the
   GitHub releases API, sending a Bearer token when available from
   `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` (the canonical repo is

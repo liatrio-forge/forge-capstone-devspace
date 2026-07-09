@@ -82,7 +82,7 @@ DevSpace respects the following environment variables to configure its runtime b
 
 ## Release Packaging
 
-Releases are automated with GoReleaser: pushing a `v*` tag publishes a GitHub Release with prebuilt `devspace` archives for Linux and macOS (amd64/arm64), SHA256 checksums, and build-provenance attestation. Download archives from the [releases page](https://github.com/liatrio-forge/devdrop-capstone/releases) and verify them with `sha256sum -c` and `gh attestation verify`.
+Releases are automated with GoReleaser: pushing a `v*` tag publishes a GitHub Release with prebuilt `devspace` archives for Linux and macOS (amd64/arm64), SHA256 checksums, and build-provenance attestation. Download archives from the [releases page](https://github.com/liatrio-forge/forge-capstone-devspace/releases) and verify them with `sha256sum -c` and `gh attestation verify`.
 
 CI runs `go test`, `go vet`, build, `make tui-verify` for the `devspace-tui` companion, and a `mount-integration` FUSE job on every PR and push to `main`. The same core gate is available locally:
 

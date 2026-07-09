@@ -27,7 +27,7 @@
 
 ## Tasks
 
-### [ ] 1.0 Install all target-platform native deps before cross-compiling
+### [x] 1.0 Install all target-platform native deps before cross-compiling
 
 Make the `tui-build-all` path force every target platform's `@opentui/core-*`
 native optional dependency into `node_modules` (via `bun install --frozen-lockfile
@@ -49,26 +49,26 @@ Covers spec Unit 1 (all FRs) and Unit 2 (host-native smoke test).
 
 #### 1.0 Tasks
 
-- [ ] 1.1 In `tui/build-all.sh`, add `bun install --frozen-lockfile --os '*'
+- [x] 1.1 In `tui/build-all.sh`, add `bun install --frozen-lockfile --os '*'
   --cpu '*'` immediately after the `cd "$(dirname "$0")"` line and before the
   `mkdir -p dist` / build loop, with a one-line comment explaining that
   `@opentui/core` ships `os`/`cpu`-gated native optional deps that must all be
   present for cross-compile resolution.
-- [ ] 1.2 Run `make tui-build-all`; confirm exit 0 and that all four
+- [x] 1.2 Run `make tui-build-all`; confirm exit 0 and that all four
   `tui/dist/devspace-tui_*` files are produced.
-- [ ] 1.3 Run `file tui/dist/devspace-tui_linux_amd64 tui/dist/devspace-tui_linux_arm64
+- [x] 1.3 Run `file tui/dist/devspace-tui_linux_amd64 tui/dist/devspace-tui_linux_arm64
   tui/dist/devspace-tui_darwin_amd64 tui/dist/devspace-tui_darwin_arm64`; confirm
   each reports its correct OS/arch (ELF x86-64, ELF ARM aarch64, Mach-O x86_64,
   Mach-O arm64).
-- [ ] 1.4 Run `git -C tui diff --exit-code bun.lock`; confirm exit 0 (no lockfile
+- [x] 1.4 Run `git -C tui diff --exit-code bun.lock`; confirm exit 0 (no lockfile
   drift). If it drifts, STOP — the `--os '*'` install must not rewrite the lock.
-- [ ] 1.5 Smoke-test the host-native binary: run
+- [x] 1.5 Smoke-test the host-native binary: run
   `tui/dist/devspace-tui_darwin_arm64 --help` (on a darwin-arm64 host) and confirm
   it prints the companion usage text.
-- [ ] 1.6 Run `make tui-verify`; confirm typecheck + tests still pass (the change
+- [x] 1.6 Run `make tui-verify`; confirm typecheck + tests still pass (the change
   must not regress the host-only build path).
 
-### [ ] 2.0 Verify the GoReleaser release path attaches all four TUI assets
+### [x] 2.0 Verify the GoReleaser release path attaches all four TUI assets
 
 Confirm the fix holds where `make tui-build-all` runs in CI (`release.yml` on
 `ubuntu-latest`), so GoReleaser attaches and checksums the four `devspace-tui_*`
@@ -89,14 +89,14 @@ TUI assets."
 
 #### 2.0 Tasks
 
-- [ ] 2.1 Run `goreleaser check`; confirm `1 configuration file(s) validated`.
-- [ ] 2.2 If `docker info` succeeds, run `goreleaser release --snapshot --clean
+- [x] 2.1 Run `goreleaser check`; confirm `1 configuration file(s) validated`.
+- [x] 2.2 If `docker info` succeeds, run `goreleaser release --snapshot --clean
   --skip=publish` and confirm `dist/` contains the four `devspace-tui_*` files and
   `grep -c 'devspace-tui_' dist/checksums.txt` returns `4`. If Docker is
   unavailable, do not install it — record the skip note and rely on CI
   `release-check`.
-- [ ] 2.3 Confirm no generated `tui/dist/` or `dist/` output is staged for commit
+- [x] 2.3 Confirm no generated `tui/dist/` or `dist/` output is staged for commit
   (`git status --porcelain` shows none) — build output stays ignored.
-- [ ] 2.4 Confirm `release.yml` already invokes `make tui-build-all` so no
+- [x] 2.4 Confirm `release.yml` already invokes `make tui-build-all` so no
   workflow edit is required for this spec; note that adding the same step to
   `release-check.yml` is plan 021's scope, not this task.

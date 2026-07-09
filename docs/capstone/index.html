@@ -2326,13 +2326,13 @@ parent-directory escapes are rejected.
 
 - the local config/state directory is still named `.devdrop`; a future rename/migration may be useful if the product name stays `devspace`.
 - plan/apply is intentionally conservative and may require manual cleanup or explicit future flags for advanced cases.
-- manifest sync has no force flag or merge ui; conflicts intentionally require manual reconciliation.
+- manifest sync supports conflict reconciliation via `devspace workspace reconcile`/`hosted reconcile` with global `--force-local`/`--force-remote` and repeatable `--force-project &lt;id&gt;=&lt;local|remote&gt;`; no interactive merge ui beyond these flags.
 - git inspection still avoids mutating repos, so stale/outdated remote commit detection remains shallow.
 - encrypted `.env` generation overwrites the target `.env` only when explicitly requested via `env pull`.
 
 ## recommended next feature
 
-manifest conflict reconciliation and clearer multi-machine history.
+clearer multi-machine history (manifest conflict reconciliation already shipped via `reconcile`, spec 06).
 ">
           <header class="doc-header">
             <div>
@@ -2406,11 +2406,11 @@ manifest conflict reconciliation and clearer multi-machine history.
 <h2 id="remaining-risks-39"><a class="heading-link" href="#remaining-risks-39" aria-label="Link to Remaining Risks">#</a>Remaining Risks</h2><ul>
 <li>The local config/state directory is still named <code>.devdrop</code>; a future rename/migration may be useful if the product name stays <code>devspace</code>.</li>
 <li>Plan/apply is intentionally conservative and may require manual cleanup or explicit future flags for advanced cases.</li>
-<li>Manifest sync has no force flag or merge UI; conflicts intentionally require manual reconciliation.</li>
+<li>Manifest sync supports conflict reconciliation via <code>devspace workspace reconcile</code>/<code>hosted reconcile</code> with global <code>--force-local</code>/<code>--force-remote</code> and repeatable <code>--force-project &lt;id&gt;=&lt;local|remote&gt;</code>; no interactive merge UI beyond these flags.</li>
 <li>Git inspection still avoids mutating repos, so stale/outdated remote commit detection remains shallow.</li>
 <li>Encrypted <code>.env</code> generation overwrites the target <code>.env</code> only when explicitly requested via <code>env pull</code>.</li>
 </ul>
-<h2 id="recommended-next-feature-40"><a class="heading-link" href="#recommended-next-feature-40" aria-label="Link to Recommended Next Feature">#</a>Recommended Next Feature</h2><p>Manifest conflict reconciliation and clearer multi-machine history.</p>
+<h2 id="recommended-next-feature-40"><a class="heading-link" href="#recommended-next-feature-40" aria-label="Link to Recommended Next Feature">#</a>Recommended Next Feature</h2><p>Clearer multi-machine history (manifest conflict reconciliation already shipped via <code>reconcile</code>, spec 06).</p>
 </div>
             <div class="source"><pre># Release Readiness
 
@@ -2480,13 +2480,13 @@ manifest conflict reconciliation and clearer multi-machine history.
 
 - The local config/state directory is still named `.devdrop`; a future rename/migration may be useful if the product name stays `devspace`.
 - Plan/apply is intentionally conservative and may require manual cleanup or explicit future flags for advanced cases.
-- Manifest sync has no force flag or merge UI; conflicts intentionally require manual reconciliation.
+- Manifest sync supports conflict reconciliation via `devspace workspace reconcile`/`hosted reconcile` with global `--force-local`/`--force-remote` and repeatable `--force-project &lt;id&gt;=&lt;local|remote&gt;`; no interactive merge UI beyond these flags.
 - Git inspection still avoids mutating repos, so stale/outdated remote commit detection remains shallow.
 - Encrypted `.env` generation overwrites the target `.env` only when explicitly requested via `env pull`.
 
 ## Recommended Next Feature
 
-Manifest conflict reconciliation and clearer multi-machine history.
+Clearer multi-machine history (manifest conflict reconciliation already shipped via `reconcile`, spec 06).
 </pre></div>
           </div>
         </article>

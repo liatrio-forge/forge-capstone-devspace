@@ -63,7 +63,7 @@ click. Everything after step 2 can be agent-driven.
 visibility-limited attestation gap rather than open engineering work.
 `docs/specs/01-spec-cicd-goreleaser/01-validation-cicd-goreleaser.md` records
 the rationale and the re-open condition: if visibility changes, run
-`gh attestation verify checksums.txt --repo liatrio-forge/devdrop-capstone`
+`gh attestation verify checksums.txt --repo liatrio-forge/forge-capstone-devspace`
 against the latest release assets and save the output there.
 
 ## F3 — Capstone wave-5 deliverables (P1 by deadline · M)

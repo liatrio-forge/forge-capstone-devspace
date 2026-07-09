@@ -134,8 +134,8 @@ repositories, so provenance verification applies to releases cut after the
 repo is made public:
 
 ```bash
-gh attestation verify checksums.txt --repo liatrio-forge/devdrop-capstone
-gh attestation verify devspace_v0.2.0_<goos>_<goarch>.tar.gz --repo liatrio-forge/devdrop-capstone
+gh attestation verify checksums.txt --repo liatrio-forge/forge-capstone-devspace
+gh attestation verify devspace_v0.2.0_<goos>_<goarch>.tar.gz --repo liatrio-forge/forge-capstone-devspace
 ```
 
 Then unpack and install:

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	tuiReleaseRepo = "liatrio-forge/devdrop-capstone"
+	tuiReleaseRepo = "liatrio-forge/forge-capstone-devspace"
 	tuiAPIBase     = "https://api.github.com"
 )
 

@@ -71,7 +71,7 @@ go run ./cmd/devspace tui install --help
 ~~~
 
 **Result summary:** Shows `--version` (release tag, defaulting from the
-running binary's version) and `--repo` (default `liatrio-forge/devdrop-capstone`).
+running binary's version) and `--repo` (default `liatrio-forge/forge-capstone-devspace`).
 
 ~~~text
   USAGE
@@ -80,7 +80,7 @@ running binary's version) and `--repo` (default `liatrio-forge/devdrop-capstone`
   FLAGS
     -h --help   Help for install
     --no-color  Disable styled output regardless of terminal capability
-    --repo      Github repository owner/name (liatrio-forge/devdrop-capstone)
+    --repo      GitHub repository owner/name (liatrio-forge/forge-capstone-devspace)
     --version   Release tag to install, e.g. v0.2.0 (vdev)
 ~~~
 
