@@ -35,6 +35,61 @@ func TestFindTUIBinaryUsesAppHomeBin(t *testing.T) {
 	}
 }
 
+func TestFindTUIBinaryPrefersAdjacentCompanion(t *testing.T) {
+	dir := t.TempDir()
+	executable := filepath.Join(dir, "devspace")
+	adjacent := filepath.Join(dir, tuiBinaryName)
+	home := t.TempDir()
+	pathDir := t.TempDir()
+	t.Setenv("DEVSPACE_HOME", home)
+	t.Setenv("PATH", pathDir)
+	for _, path := range []string{
+		adjacent,
+		filepath.Join(home, "bin", tuiBinaryName),
+		filepath.Join(pathDir, tuiBinaryName),
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("#!/bin/sh\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if got := findTUIBinaryFrom(executable); got != adjacent {
+		t.Fatalf("findTUIBinaryFrom = %q, want adjacent %q", got, adjacent)
+	}
+}
+
+func TestFindTUIBinaryFallsBackToPATH(t *testing.T) {
+	pathDir := t.TempDir()
+	t.Setenv("DEVSPACE_HOME", t.TempDir())
+	t.Setenv("PATH", pathDir)
+	bin := filepath.Join(pathDir, tuiBinaryName)
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := findTUIBinaryFrom(filepath.Join(t.TempDir(), "devspace")); got != bin {
+		t.Fatalf("findTUIBinaryFrom = %q, want PATH binary %q", got, bin)
+	}
+}
+
+func TestUICommandDocumentsBundledCompanionAndLegacyFallback(t *testing.T) {
+	stdout, _, err := executeCommand(t, "test", "ui", "--help")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"bundled", "next to devspace", "source build", "--legacy"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("ui --help missing %q:\n%s", want, stdout)
+		}
+	}
+	if strings.Contains(stdout, "tui install") {
+		t.Fatalf("ui --help recommends removed installer:\n%s", stdout)
+	}
+}
+
 func uiServerRoundTrip(t *testing.T, opts uiServerOptions, requests []string) []map[string]any {
 	t.Helper()
 	outR, outW := io.Pipe()

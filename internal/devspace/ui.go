@@ -23,7 +23,7 @@ func newUICommand() *cobra.Command {
 		Long: strings.Join([]string{
 			"Open a full-screen dashboard showing tracked projects, workspace scan counts, and recent filesystem refreshes.",
 			"The dashboard exposes only safe actions: scan, plan, apply-safe, and hydrate the selected project.",
-			"When the devspace-tui companion binary is installed (next to devspace, in $DEVSPACE_HOME/bin, or on PATH) it is launched instead of the built-in dashboard; --legacy forces the built-in one.",
+			"Release archives include the bundled devspace-tui companion next to devspace. A source build also looks in $DEVSPACE_HOME/bin and on PATH; --legacy forces the built-in dashboard.",
 		}, "\n\n"),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -36,7 +36,7 @@ func newUICommand() *cobra.Command {
 					return runExternalTUI(tui, noWatch)
 				}
 				fmt.Fprintln(cmd.ErrOrStderr(), currentTheme.Muted.Render(
-					"devspace-tui not found; using the built-in dashboard (run 'devspace tui install' to get the full experience)"))
+					"devspace-tui not found next to devspace, in $DEVSPACE_HOME/bin, or on PATH; using the built-in dashboard (source builds can use 'make tui-install-local')"))
 			}
 			model := newDashboardModel(noWatch)
 			program := tea.NewProgram(model, tea.WithOutput(out))
@@ -57,7 +57,14 @@ func newUICommand() *cobra.Command {
 // own control.
 func findTUIBinary() string {
 	if exe, err := os.Executable(); err == nil {
-		if candidate := filepath.Join(filepath.Dir(exe), tuiBinaryName); isExecutableFile(candidate) {
+		return findTUIBinaryFrom(exe)
+	}
+	return findTUIBinaryFrom("")
+}
+
+func findTUIBinaryFrom(executable string) string {
+	if executable != "" {
+		if candidate := filepath.Join(filepath.Dir(executable), tuiBinaryName); isExecutableFile(candidate) {
 			return candidate
 		}
 	}

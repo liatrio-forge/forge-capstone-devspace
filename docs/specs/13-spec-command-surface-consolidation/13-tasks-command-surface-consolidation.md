@@ -148,7 +148,7 @@
 - [ ] 3.7 Update mount diagnostics, logs, architecture comments, and tests to reference `experimental mount` and `project update` while preserving FUSE integration behavior.
 - [ ] 3.8 Run targeted env/setup/hosted/mount tests and write `13-proofs/13-task-03-secondary-command-workflows.txt` with masked values, file-mode evidence, help, and preview output.
 
-### [ ] 4.0 Make `devspace ui` the only release UI entry point and bundle the companion in archives
+### [~] 4.0 Make `devspace ui` the only release UI entry point and bundle the companion in archives
 
 #### 4.0 Proof Artifact(s)
 
@@ -156,17 +156,17 @@
 - Archive listing: each Linux/macOS amd64/arm64 snapshot archive contains matching `devspace` and `devspace-tui` executables.
 - CLI smoke: extracting one local-platform snapshot archive and running `devspace ui` with a controlled TTY demonstrates that the adjacent companion is selected without `tui install`.
 - Test: `go test ./internal/devspace -run 'TestFindTUIBinary|TestUICommand|TestReleaseCommandTreeContract' -count=1` and `make tui-verify` pass.
-- Evidence file: `docs/specs/13-spec-command-surface-consolidation/13-proofs/13-task-04-ui-release-archive.txt` records archive contents and sanitized launch evidence.
+- Evidence file: `docs/specs/13-spec-command-surface-consolidation/13-proofs/13-task-04-proofs.md` records archive contents and sanitized launch evidence.
 
 #### 4.0 Tasks
 
-- [ ] 4.1 Add failing tests that require `ui` as the only visible UI command, preserve `ui-server` as hidden, prefer an adjacent companion, and retain app-home/PATH lookup plus legacy fallback.
-- [ ] 4.2 Remove `newTUICommand`, installer/download/checksum code, installer-only tests, and the fallback hint that recommends `tui install`; keep maintainer-local TUI installation through the Makefile.
-- [ ] 4.3 Update `ui --help` and fallback diagnostics to describe release-bundled companion preference and source-build legacy behavior without changing dashboard actions or RPC protocol.
-- [ ] 4.4 Configure GoReleaser archives so each Go target includes the matching `tui/dist/devspace-tui_<os>_<arch>` file as executable `devspace-tui`; keep checksums and release attachments consistent.
-- [ ] 4.5 Update `release-check.yml` path filters and job steps to install Bun, run `make tui-build-all`, perform the GoReleaser snapshot, and assert all four archives contain both executables.
-- [ ] 4.6 Add or update release/archive verification scripts/tests, then run `make tui-verify`, `goreleaser check`, and a snapshot dry-run where the environment supports Docker/ko.
-- [ ] 4.7 Extract and smoke the local-platform archive, verify adjacent companion discovery, and write `13-proofs/13-task-04-ui-release-archive.txt`; record Docker-only limitations separately from source failures.
+- [x] 4.1 Add failing tests that require `ui` as the only visible UI command, preserve `ui-server` as hidden, prefer an adjacent companion, and retain app-home/PATH lookup plus legacy fallback.
+- [x] 4.2 Remove `newTUICommand`, installer/download/checksum code, installer-only tests, and the fallback hint that recommends `tui install`; keep maintainer-local TUI installation through the Makefile.
+- [x] 4.3 Update `ui --help` and fallback diagnostics to describe release-bundled companion preference and source-build legacy behavior without changing dashboard actions or RPC protocol.
+- [x] 4.4 Configure GoReleaser archives so each Go target includes the matching `tui/dist/devspace-tui_<os>_<arch>` file as executable `devspace-tui`; keep checksums and release attachments consistent.
+- [x] 4.5 Update `release-check.yml` path filters and job steps to install Bun, run `make tui-build-all`, perform the GoReleaser snapshot, and assert all four archives contain both executables.
+- [x] 4.6 Add or update release/archive verification scripts/tests, then run `make tui-verify`, `goreleaser check`, and a snapshot dry-run where the environment supports Docker/ko.
+- [x] 4.7 Extract and smoke the local-platform archive, verify adjacent companion discovery, and write `13-proofs/13-task-04-proofs.md`; record Docker-only limitations separately from source failures.
 
 ### [ ] 5.0 Migrate maintained documentation and demos, then prove release readiness
 

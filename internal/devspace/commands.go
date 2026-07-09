@@ -22,7 +22,7 @@ import (
 // their behavior to canonical commands. They are intentionally unregistered.
 var (
 	_ = newMountCommand
-	_ = newTUICommand
+	_ = printProjectList
 )
 
 func NewRootCommand(version string) *cobra.Command {

@@ -153,6 +153,13 @@ func TestReleaseCommandTreeContract(t *testing.T) {
 			t.Errorf("root still exposes removed command %q", removed)
 		}
 	}
+	uiServer, _, err := root.Find([]string{"ui-server"})
+	if err != nil {
+		t.Fatalf("hidden ui-server command missing: %v", err)
+	}
+	if !uiServer.Hidden {
+		t.Fatal("ui-server must remain hidden")
+	}
 
 	stdout, _, err = executeCommand(t, "v1.2.3-test", "--version")
 	if err != nil {

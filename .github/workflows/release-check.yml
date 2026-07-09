@@ -5,6 +5,13 @@ on:
     paths:
       - .goreleaser.yaml
       - .github/workflows/release*.yml
+      - Makefile
+      - cmd/devspace/**
+      - go.mod
+      - go.sum
+      - internal/devspace/**
+      - scripts/verify-release-archives*.sh
+      - tui/**
 
 permissions:
   contents: read
@@ -29,8 +36,18 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Build devspace-tui companion binaries
+        run: make tui-build-all
+
       - name: GoReleaser snapshot dry-run
         uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
           args: release --snapshot --clean --skip=publish
+
+      - name: Verify release archive contents
+        run: scripts/verify-release-archives.sh dist

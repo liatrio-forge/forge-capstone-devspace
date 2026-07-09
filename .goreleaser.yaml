@@ -45,6 +45,10 @@ archives:
       - src: README.md
       - src: docs/operations/release.md
         dst: RELEASE.md
+      - src: tui/dist/devspace-tui_{{ .Os }}_{{ .Arch }}
+        dst: devspace-tui
+        info:
+          mode: 0755
 
 checksum:
   name_template: checksums.txt
