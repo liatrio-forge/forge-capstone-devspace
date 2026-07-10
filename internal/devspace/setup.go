@@ -184,6 +184,12 @@ func RunProjectSetup(ref string, opts SetupRunOptions) (SetupRunResult, error) {
 }
 
 func RunAllProjectSetups(opts SetupRunOptions) ([]SetupRunResult, error) {
+	if opts.CommandKind == "" {
+		opts.CommandKind = "install"
+	}
+	if opts.CommandKind != "install" && opts.CommandKind != "dev" {
+		return nil, fmt.Errorf("unsupported setup command %q; use install or dev", opts.CommandKind)
+	}
 	cfg, err := LoadConfig()
 	if err != nil {
 		return nil, err
@@ -192,12 +198,32 @@ func RunAllProjectSetups(opts SetupRunOptions) ([]SetupRunResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	var results []SetupRunResult
+	var refs []string
+	var preflight []SetupRunResult
+	preflightOpts := opts
+	preflightOpts.DryRun = true
 	for _, p := range m.Projects {
-		if p.Setup.InstallCommand == "" {
+		command := p.Setup.InstallCommand
+		if opts.CommandKind == "dev" {
+			command = p.Setup.DevCommand
+		}
+		if strings.TrimSpace(command) == "" {
 			continue
 		}
-		result, err := RunProjectSetup(p.Name, opts)
+		result, err := RunProjectSetup(p.ID, preflightOpts)
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, p.ID)
+		preflight = append(preflight, result)
+	}
+	if opts.DryRun {
+		return preflight, nil
+	}
+
+	results := make([]SetupRunResult, 0, len(refs))
+	for _, ref := range refs {
+		result, err := RunProjectSetup(ref, opts)
 		if err != nil {
 			return results, err
 		}

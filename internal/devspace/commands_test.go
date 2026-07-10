@@ -407,6 +407,10 @@ func TestExperimentalCommandOwnsHostedServeAndMount(t *testing.T) {
 	if _, _, err := executeCommand(t, "test", "experimental", "hosted", "serve", "--addr", "0.0.0.0:8787"); err == nil || !strings.Contains(err.Error(), "refusing to bind public address") {
 		t.Fatalf("experimental hosted serve public bind error = %v", err)
 	}
+	t.Setenv(envHome, t.TempDir())
+	if _, _, err := executeCommand(t, "test", "experimental", "hosted", "serve", "--addr", "0.0.0.0:8787", "--allow-public-http", "--trusted-proxy", "not-a-cidr"); err == nil || !strings.Contains(err.Error(), "trusted-proxy") || strings.Contains(err.Error(), "refusing to bind public address") {
+		t.Fatalf("experimental hosted serve nested flag wiring error = %v", err)
+	}
 }
 
 func TestSetupRunCommandPreservesUnknownAndGlobalGuards(t *testing.T) {

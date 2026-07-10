@@ -97,6 +97,16 @@ Use either --all or <project>, not both.
 
 The command tests also prove project and all-project confirmation, unknown-command review, global-install review, JSON output, and removal of `setup plan` and `setup apply`.
 
+All-project execution is command-kind aware and validates every selected project before executing any command. The regression tests prove `--command install` selects install-capable projects, `--command dev` includes dev-only projects, and a later invalid project cannot cause an earlier valid project to run partially:
+
+```sh
+go test ./internal/devspace -run 'TestRunAllProjectSetups' -count=1
+```
+
+```text
+ok github.com/liatrio-forge/devdrop-capstone/internal/devspace
+```
+
 ## Hosted and experimental boundaries
 
 `devspace hosted --help` lists only the supported client operations:
@@ -115,7 +125,7 @@ hosted [command]              Explore the hosted sync server prototype
 mount <mountpoint> [--flags]  Mount a prototype lazy workspace view (unsupported)
 ```
 
-`devspace experimental hosted serve --help` retains `--addr`, `--store`, `--token`, `--trusted-proxy`, and `--allow-public-http`. The existing address tests plus `TestExperimentalCommandOwnsHostedServeAndMount` prove the public-bind opt-in guard remains active.
+`devspace experimental hosted serve --help` retains `--addr`, `--store`, `--token`, `--trusted-proxy`, and `--allow-public-http`. The existing address tests plus `TestExperimentalCommandOwnsHostedServeAndMount` prove the public-bind opt-in guard remains active, `--allow-public-http` reaches that guard, and invalid nested `--trusted-proxy` values remain rejected.
 
 ## FUSE-free mount preview
 

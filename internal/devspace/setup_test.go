@@ -163,6 +163,97 @@ func TestSetupRunAllCommandRequiresConfirmation(t *testing.T) {
 	}
 }
 
+func TestRunAllProjectSetupsSelectsCommandsByKind(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	projects := []Project{
+		{
+			ID: projectID("services/install-only"), Name: "install-only", Path: "services/install-only",
+			Type: ProjectTypeLocal, HydrateMode: HydrateManual,
+			Setup: Setup{PackageManager: "go", InstallCommand: "go mod download"},
+		},
+		{
+			ID: projectID("apps/dev-only"), Name: "dev-only", Path: "apps/dev-only",
+			Type: ProjectTypeLocal, HydrateMode: HydrateManual,
+			Setup: Setup{PackageManager: "npm", DevCommand: "npm run dev"},
+		},
+		{
+			ID: projectID("apps/both"), Name: "both", Path: "apps/both",
+			Type: ProjectTypeLocal, HydrateMode: HydrateManual,
+			Setup: Setup{PackageManager: "npm", InstallCommand: "npm install", DevCommand: "npm run dev"},
+		},
+	}
+	for _, project := range projects {
+		if err := os.MkdirAll(filepath.Join(workspace, project.Path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := SaveManifest(workspace, Manifest{Version: ManifestVersion, WorkspaceRoot: workspace, Projects: projects}); err != nil {
+		t.Fatal(err)
+	}
+
+	install, err := RunAllProjectSetups(SetupRunOptions{CommandKind: "install", DryRun: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertSetupRunProjects(t, install, "install-only", "both")
+	dev, err := RunAllProjectSetups(SetupRunOptions{CommandKind: "dev", DryRun: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertSetupRunProjects(t, dev, "dev-only", "both")
+}
+
+func TestRunAllProjectSetupsPreflightsBeforeExecuting(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	projects := []Project{
+		{
+			ID: projectID("apps/first"), Name: "first", Path: "apps/first",
+			Type: ProjectTypeLocal, HydrateMode: HydrateManual,
+			Setup: Setup{PackageManager: "npm", InstallCommand: "npm install"},
+		},
+		{
+			ID: projectID("apps/invalid"), Name: "invalid", Path: "apps/invalid",
+			Type: ProjectTypeLocal, HydrateMode: HydrateManual,
+			Setup: Setup{PackageManager: "custom", InstallCommand: "./setup.sh"},
+		},
+	}
+	for _, project := range projects {
+		if err := os.MkdirAll(filepath.Join(workspace, project.Path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := SaveManifest(workspace, Manifest{Version: ManifestVersion, WorkspaceRoot: workspace, Projects: projects}); err != nil {
+		t.Fatal(err)
+	}
+	logPath := setupFakeExecutable(t, "npm")
+
+	results, err := RunAllProjectSetups(SetupRunOptions{CommandKind: "install"})
+	if err == nil || !strings.Contains(err.Error(), "refusing unknown setup command") {
+		t.Fatalf("preflight error = %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("preflight returned partial results: %+v", results)
+	}
+	if data, err := os.ReadFile(logPath); err == nil && len(data) > 0 {
+		t.Fatalf("setup ran before all projects passed preflight:\n%s", data)
+	}
+}
+
+func assertSetupRunProjects(t *testing.T, results []SetupRunResult, want ...string) {
+	t.Helper()
+	if len(results) != len(want) {
+		t.Fatalf("setup results = %+v, want projects %v", results, want)
+	}
+	for i, project := range want {
+		if results[i].Project != project {
+			t.Fatalf("setup result %d = %+v, want project %q", i, results[i], project)
+		}
+		if !results[i].DryRun {
+			t.Fatalf("setup result %d is not a dry run: %+v", i, results[i])
+		}
+	}
+}
+
 func setupTestProject(t *testing.T, plan SetupPlan, name string) SetupPlanProject {
 	t.Helper()
 	for _, p := range plan.Projects {
