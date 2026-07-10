@@ -428,6 +428,8 @@ func TestProjectUpdatePullsCleanHydratedRepo(t *testing.T) {
 	}
 	upstream := filepath.Join(t.TempDir(), "upstream")
 	hardeningRun(t, workspace, "git", "clone", remote, upstream)
+	hardeningRun(t, upstream, "git", "config", "user.email", "test@example.com")
+	hardeningRun(t, upstream, "git", "config", "user.name", "Test User")
 	hardeningWriteFile(t, filepath.Join(upstream, "REMOTE.md"), "remote\n", 0o644)
 	hardeningRun(t, upstream, "git", "add", "REMOTE.md")
 	hardeningRun(t, upstream, "git", "commit", "-m", "remote update")
