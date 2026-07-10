@@ -176,7 +176,7 @@
 - Demo: `scripts/demo-check.sh` passes using only `sync`, `project list|track|untrack|update`, `env write`, `setup show|run`, `status`, `ui`, and `experimental` where relevant.
 - Verification: `make verify`, `make tui-verify`, and `goreleaser check` complete successfully.
 - Release proof: a snapshot or CI release dry-run builds the platform archives with the companion included and records any environment-only Docker limitation separately from source failures.
-- Evidence file: `docs/specs/13-spec-command-surface-consolidation/13-proofs/13-task-05-release-readiness.txt` records migration scan, demo, verification, and release-check outcomes without credentials or private workspace data.
+- Evidence file: `docs/specs/13-spec-command-surface-consolidation/13-proofs/13-task-05-proofs.md` records migration scan, demo, verification, and release-check outcomes without credentials or private workspace data.
 
 #### 5.0 Tasks
 
@@ -185,6 +185,6 @@
 - [x] 5.3 Update maintained architecture, operations, and capstone documents to the canonical vocabulary while preserving metadata-only, no-implicit-setup, no-source-sync, and no-secret-upload boundaries.
 - [x] 5.4 Update `scripts/demo-check.sh` and live demo `.sh`/`.tape` sources to use canonical commands; preserve unrelated in-progress demo edits and do not rewrite completed historical SDD evidence or generated GIFs.
 - [x] 5.5 Add the scoped command-surface check to an appropriate local/CI verification target and update release-check path filters for TUI build/archive inputs.
-- [ ] 5.6 Run the command migration scan, `scripts/demo-check.sh`, targeted CLI smoke flows, `make verify`, `make tui-verify`, and `goreleaser check`.
-- [ ] 5.7 Run the snapshot/archive proof path locally or in CI, confirm Linux/macOS amd64/arm64 archive contents, and distinguish Docker/ko environment failures from source/package failures.
-- [ ] 5.8 Reconcile overlapping entries in `plans/README.md` only after their acceptance criteria are satisfied, then write `13-proofs/13-task-05-release-readiness.txt` with sanitized scan, demo, verification, and release evidence.
+- [x] 5.6 Run the command migration scan, `scripts/demo-check.sh`, targeted CLI smoke flows, `make verify`, `make tui-verify`, and `goreleaser check`.
+- [x] 5.7 Run the snapshot/archive proof path locally or in CI, confirm Linux/macOS amd64/arm64 archive contents, and distinguish Docker/ko environment failures from source/package failures.
+- [x] 5.8 Reconcile overlapping entries in `plans/README.md` only after their acceptance criteria are satisfied, then write `13-proofs/13-task-05-proofs.md` with sanitized scan, demo, verification, and release evidence.

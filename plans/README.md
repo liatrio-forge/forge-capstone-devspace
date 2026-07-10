@@ -22,8 +22,8 @@ Generated and reconciled by the improve skill. Execute TODO plans in the order b
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 020 | Runtime-validate every devspace-tui RPC response before state updates | P1 | M | — | TODO |
-| 021 | Make release-check build devspace-tui assets before the GoReleaser dry-run | P1 | S | — | TODO |
-| 022 | Reconcile README, architecture, and follow-up docs with shipped DevSpace state | P2 | S | — | TODO |
+| 021 | Make release-check build devspace-tui assets before the GoReleaser dry-run | P1 | S | — | DONE (spec 13 task 4.0) |
+| 022 | Reconcile README, architecture, and follow-up docs with shipped DevSpace state | P2 | S | — | DONE (spec 13 task 5.0) |
 | 023 | Define the managed hosted sync production contract | P2 | M | 022 | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale — finding fixed independently or approach abandoned)
