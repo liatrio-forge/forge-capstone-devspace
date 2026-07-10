@@ -1031,6 +1031,12 @@ func TestPlanAndApplyCommandsRoundTrip(t *testing.T) {
 	if !strings.Contains(applyOut, "Applied safe plan actions.") {
 		t.Fatalf("apply output = %q", applyOut)
 	}
+	if !strings.Contains(applyOut, "Apply results:") {
+		t.Fatalf("apply output missing results heading: %q", applyOut)
+	}
+	if strings.Contains(applyOut, "Planned changes:") {
+		t.Fatalf("apply output still labels applied results as planned changes: %q", applyOut)
+	}
 }
 
 func TestSetupShowCommandReportsNoSetupCommands(t *testing.T) {

@@ -133,8 +133,12 @@ func printReconcilePlan(out io.Writer, plan ReconcilePlan, applied bool) {
 }
 
 func printPlan(out io.Writer, plan Plan) {
+	printPlanWithHeading(out, plan, "Planned changes:")
+}
+
+func printPlanWithHeading(out io.Writer, plan Plan, heading string) {
 	out = styledWriter(out)
-	fmt.Fprintln(out, currentTheme.Header.Render("Planned changes:"))
+	fmt.Fprintln(out, currentTheme.Header.Render(heading))
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, currentTheme.OK.Render("SAFE:"))
 	hasSafe := false
@@ -177,7 +181,7 @@ func printPlan(out io.Writer, plan Plan) {
 func printApply(out io.Writer, plan Plan) {
 	out = styledWriter(out)
 	fmt.Fprintln(out, currentTheme.OK.Render("Applied safe plan actions."))
-	printPlan(out, plan)
+	printPlanWithHeading(out, plan, "Apply results:")
 }
 
 func printSetupPlan(out io.Writer, plan SetupPlan) {
