@@ -62,6 +62,27 @@ fails validation. `release-check.yml` runs that negative regression before
 building the release artifacts, then runs the validator against the completed
 snapshot archives.
 
+Phase 4 found that the documented local `make snapshot` target did not build
+the companion inputs itself. The target now depends on `tui-build-all`, and the
+archive validator regression test inspects its dry-run plan to require
+`./build-all.sh` before GoReleaser. From a clean `git archive` imported into a
+temporary repository:
+
+```text
+$ DOCKER_HOST=unix://<active-docker-socket> make snapshot
+building dist/devspace-tui_linux_amd64
+building dist/devspace-tui_darwin_amd64
+building dist/devspace-tui_darwin_arm64
+building dist/devspace-tui_linux_arm64
+release succeeded
+
+$ scripts/verify-release-archives.sh dist
+devspace_v0.0.0-SNAPSHOT-none_linux_amd64.tar.gz: devspace devspace-tui
+devspace_v0.0.0-SNAPSHOT-none_linux_arm64.tar.gz: devspace devspace-tui
+devspace_v0.0.0-SNAPSHOT-none_darwin_amd64.tar.gz: devspace devspace-tui
+devspace_v0.0.0-SNAPSHOT-none_darwin_arm64.tar.gz: devspace devspace-tui
+```
+
 ## Release and smoke evidence
 
 ```text

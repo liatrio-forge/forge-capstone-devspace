@@ -227,6 +227,9 @@ results above:
   as a separate explicit workflow.
 - README points to the existing `make snapshot` dry-run instead of a nonexistent
   `make release` target.
+- Phase 4 tightened that contract: `make snapshot` builds all four TUI
+  companions before GoReleaser, while direct GoReleaser usage is documented
+  only with an explicit preceding `make tui-build-all`.
 
 Fresh review-fix verification:
 
