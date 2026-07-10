@@ -1,7 +1,7 @@
 # FUSE Lazy Workspace Mount Prototype
 
 `devspace experimental mount <mountpoint>` is a prototype for a FUSE-backed, read-only
-workspace view backed by the DevDrop manifest. A real mount requires FUSE support;
+workspace view backed by the DevSpace manifest. A real mount requires FUSE support;
 `--preview` is the FUSE-free fallback for machines that cannot mount. The feature
 is intentionally outside normal sync, plan, apply, and hydrate workflows so the
 rest of the CLI still works on machines without FUSE.
@@ -10,7 +10,7 @@ rest of the CLI still works on machines without FUSE.
 
 The prototype uses `github.com/hanwen/go-fuse/v2/fs`.
 
-- `go-fuse/v2` is the best fit for DevDrop because it is Go-native, current, and
+- `go-fuse/v2` is the best fit for DevSpace because it is Go-native, current, and
   ships a higher-level `fs` node API plus loopback filesystem support.
 - `bazil.org/fuse` is also Go-native, but its published package is older and the
   API would require more custom filesystem plumbing for this spike.
@@ -29,7 +29,7 @@ The mount exposes tracked project paths from `.devspace/manifest.json`.
   the mount does not convert them into empty successful directories.
 - Local-only, manual, metadata-only, or missing projects that cannot hydrate
   automatically are represented by a stub directory containing `.devspace-status`.
-- The mountpoint must be empty. DevDrop refuses to mount over non-empty
+- The mountpoint must be empty. DevSpace refuses to mount over non-empty
   directories so local files are not hidden.
 
 ## Platform Requirements

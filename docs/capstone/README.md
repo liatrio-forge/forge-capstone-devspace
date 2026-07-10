@@ -1,7 +1,8 @@
 # DevDrop Capstone Packet
 
 This packet maps DevDrop to the Liatrio Forge Module 5 capstone deliverables.
-DevDrop is a local-first developer workspace recovery CLI. It helps a developer
+DevDrop was the capstone working name for the product now called DevSpace. It is
+a local-first developer workspace recovery CLI that helps a developer
 recreate the shape of a working machine on a second machine without syncing
 source code, overwriting local work, or storing secrets in plaintext.
 
@@ -53,5 +54,5 @@ encrypted locally.
 4. Capture final proof links in [proof-artifacts.md](proof-artifacts.md).
 5. Add the personal reflection after demo feedback is received.
 
-Done and verified: v0.2.0 is the release of record, shipped with GitHub Release
-assets (see [proof-artifacts.md](proof-artifacts.md)).
+Done and verified: `v0.2.0` is the capstone release of record, shipped with
+GitHub Release assets (see [proof-artifacts.md](proof-artifacts.md)).

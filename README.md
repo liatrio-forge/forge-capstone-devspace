@@ -14,8 +14,6 @@ contents, dependency trees, or plaintext secrets.
 
 ---
 
-
-
 ## 📖 Table of Contents
 
 - [Overview](#overview)
@@ -45,8 +43,6 @@ contents, dependency trees, or plaintext secrets.
 
 ---
 
-
-
 ## Overview
 
 ### Current MVP Status
@@ -65,8 +61,6 @@ This MVP is local-first. It proves the workflow before adding filesystem-level l
 - **Secrets:** Store encrypted per-project env profiles with native `age` encryption. Generate local `.env` files with `0600` permissions.
 - **Watching:** Keep workspace metadata fresh with an event-driven `devspace watch` mode.
 - **FUSE:** Preview a FUSE-backed lazy workspace mount prototype without requiring FUSE for normal CLI workflows.
-
-
 
 ### Building from Source
 
@@ -90,7 +84,7 @@ go run ./cmd/devspace --help
 A workspace is a root directory containing tracked projects and one manifest.
 Machines are peers that all sync against that same manifest:
 
-```
+```text
 <workspace root>/
 ├── .devspace/
 │   └── manifest.json        # shared, syncable source of truth
@@ -107,17 +101,15 @@ machine "..."                                          ┘
 
 Every project entry in the manifest records its relative `path`, `remote`,
 `defaultBranch`, `setup` hints, and `envProfiles` — see
-`[examples/manifest.json](examples/manifest.json)`.
+[examples/manifest.json](examples/manifest.json).
 
 State is split into three tiers, all plain JSON + `age` files, no database:
-
 
 | Tier               | Location                                          | Scope                                    |
 | ------------------ | ------------------------------------------------- | ---------------------------------------- |
 | App home           | `~/.devspace/`                                    | Per-machine: config, state, age identity |
 | Workspace manifest | `<workspace>/.devspace/manifest.json`             | Shared, synced across machines           |
 | Secrets            | Encrypted per-project env profiles under app home | Per-machine, per-project                 |
-
 
 This hierarchy is why the CLI is shaped the way it is: `devspace sync …`
 commands operate on the shared manifest and its Git remote; explicit
@@ -131,13 +123,11 @@ whole workspace.
 
 DevSpace respects the following environment variables to configure its runtime behavior:
 
-
 | Variable                | Description                                                                                                                                                         |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DEVSPACE_HOME`         | The root directory for DevSpace application data, configuration, and state. Defaults to `~/.devspace`.                                                              |
 | `DEV_DROP_HOME`         | Deprecated fallback alias for `DEVSPACE_HOME`. Maintained for backward compatibility.                                                                               |
 | `DEVSPACE_HOSTED_TOKEN` | Bearer token used for hosted sync authentication. Prefer this over the `--token` CLI flag to prevent the token from appearing in shell history or process listings. |
-
 
 ---
 
@@ -153,13 +143,13 @@ make verify
 
 `make verify` runs tests, vet, lint, govulncheck, and the build — the local CI gate.
 
-See `[docs/operations/release.md](docs/operations/release.md)` for the full release process, consumer verification steps, install-from-source instructions, and the local `make snapshot` dry-run.
+See [docs/operations/release.md](docs/operations/release.md) for the full release process, consumer verification steps, install-from-source instructions, and the local `make snapshot` dry-run.
 
 ---
 
 ## Capstone Artifacts
 
-This repository is being prepared as a Liatrio Forge Module 5 capstone. See `[docs/capstone/README.md](docs/capstone/README.md)` for the capstone spec, proof checklist, case study, demo script, and playbook contribution. Open `[docs/capstone/index.html](docs/capstone/index.html)` for an interactive HTML reader generated from the repository Markdown.
+This repository is being prepared as a Liatrio Forge Module 5 capstone. See [docs/capstone/README.md](docs/capstone/README.md) for the capstone spec, proof checklist, case study, demo script, and playbook contribution. Open [docs/capstone/index.html](docs/capstone/index.html) for an interactive HTML reader generated from the repository Markdown.
 
 ---
 
@@ -292,7 +282,6 @@ hidden compatibility wrappers.
 | `devspace setup apply` | `devspace setup run --all` |
 | `devspace hosted serve` | `devspace experimental hosted serve` |
 | `devspace mount` | `devspace experimental mount` |
-| `devspace tui install` | Extract `devspace` and `devspace-tui` from the same release archive, then run `devspace ui` |
 | `devspace version` | `devspace --version` |
 <!-- command-surface-migration:end -->
 
@@ -389,14 +378,12 @@ bin/devspace status
 tracked, one hydrated, zero placeholders left.
 
 The core loop is **scan → plan → apply → project update**, safe at every step. See
-`[docs/demos/capstone-runbook.md](docs/demos/capstone-runbook.md)` for the
+[docs/demos/capstone-runbook.md](docs/demos/capstone-runbook.md) for the
 fully narrated demo, and the [demo index](docs/demos/README.md) for recorded
 GIFs covering the full command surface (sync, reconcile, secrets, setup,
 watch, and more).
 
 ---
-
-
 
 ## Architecture & Safety
 
@@ -424,8 +411,6 @@ Manifest sync stops with a clear error when:
 - Pull would overwrite local manifest changes.
 - Hosted push/pull would overwrite manifest changes without a matching hosted version/hash baseline.
 
-
-
 ### What This Tool Will Not Do Without Permission
 
 - Delete local projects, files, or directories.
@@ -437,8 +422,6 @@ Manifest sync stops with a clear error when:
 
 ---
 
-
-
 ## Troubleshooting & Limitations
 
 ### Known Limitations
@@ -446,8 +429,6 @@ Manifest sync stops with a clear error when:
 - Hosted manifest sync is a runnable prototype, not a managed deployment.
 - Placeholder hydration uses full `git clone`; partial clone and sparse checkout are not implemented.
 - Secret profile sharing uses public `age` recipients and local re-encryption (no OS keychain or identity provider integration).
-
-
 
 ### Troubleshooting Tips
 
@@ -457,15 +438,11 @@ Manifest sync stops with a clear error when:
 - **Project update fails?** Confirm the project has a remote URL in `manifest.json` and `git clone <remote>` works.
 - **Secrets missing?** Run `devspace env list <project>` to verify keys exist before writing the local `.env`.
 
-
-
 ### Migration
 
 On first run, an existing `~/.devdrop` application home is automatically migrated to `~/.devspace`. `DEV_DROP_HOME` still works as a deprecated alias for `DEVSPACE_HOME`.
 
 ---
-
-
 
 ## Roadmap
 
@@ -477,8 +454,6 @@ On first run, an existing `~/.devdrop` application home is automatically migrate
 
 ---
 
-
-
 ## Manifest Structure
 
-See `[examples/manifest.json](examples/manifest.json)`. The manifest is a versioned JSON file stored at `<workspace>/.devspace/manifest.json`. Project paths are always relative to the workspace root. User, team, team-member, and project-access role fields are advisory metadata for intended responsibility; they are not a command-permission system.
+See [examples/manifest.json](examples/manifest.json). The manifest is a versioned JSON file stored at `<workspace>/.devspace/manifest.json`. Project paths are always relative to the workspace root. User, team, team-member, and project-access role fields are advisory metadata for intended responsibility; they are not a command-permission system.

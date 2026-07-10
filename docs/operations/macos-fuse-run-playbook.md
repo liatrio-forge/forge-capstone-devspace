@@ -8,7 +8,7 @@ macFUSE has been installed and approved by macOS.
 - You are on macOS.
 - macFUSE is installed and approved in System Settings.
 - The Mac has been restarted after the macFUSE approval flow.
-- You are in a clean DevDrop checkout.
+- You are in a clean DevSpace checkout.
 - The mountpoint is empty and disposable.
 
 DevSpace does not install macFUSE, request elevated permissions, or change macOS
@@ -55,7 +55,7 @@ project by relative path:
 
 ```bash
 ./bin/devspace init --workspace ~/Projects/personal
-./bin/devspace project track devdrop
+./bin/devspace project track devspace
 ```
 
 Do not initialize the workspace at the same directory you want to track as a

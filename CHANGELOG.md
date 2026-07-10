@@ -2,12 +2,10 @@
 
 ## [0.3.0](https://github.com/liatrio-forge/forge-capstone-devspace/compare/v0.2.0...v0.3.0) (2026-07-09)
 
-
 ### Features
 
 * **tui:** add --help flag and hello-before-renderer startup ([a42928c](https://github.com/liatrio-forge/forge-capstone-devspace/commit/a42928ce3a3f87633cf96c2ed43387b7fbfcf766))
 * **ui:** opentui-based devspace-tui companion dashboard ([#39](https://github.com/liatrio-forge/forge-capstone-devspace/issues/39)) ([6502f91](https://github.com/liatrio-forge/forge-capstone-devspace/commit/6502f91a694de22aa58733ea330a293aff9caa68))
-
 
 ### Bug Fixes
 
@@ -16,7 +14,6 @@
 * update Go patch version for vulncheck ([584ca84](https://github.com/liatrio-forge/forge-capstone-devspace/commit/584ca84ae78d0496ad5f8eef1eab5113431d9450))
 
 ## [0.2.0](https://github.com/liatrio-forge/forge-capstone-devspace/compare/v0.1.0...v0.2.0) (2026-07-06)
-
 
 ### Features
 
@@ -29,7 +26,6 @@
 * **specs:** introduce hardening plan execution specification and task list ([53738b0](https://github.com/liatrio-forge/forge-capstone-devspace/commit/53738b0c73ab4e92696b1b8b73851cb5664791ec))
 * styled terminal output with Charm (lipgloss, fang, huh, bubbles, log) ([787b660](https://github.com/liatrio-forge/forge-capstone-devspace/commit/787b660d0f5bcdcd5b8f2e0de07630517cf35ee7))
 * warning-only access-role advisories (spec 07) ([#34](https://github.com/liatrio-forge/forge-capstone-devspace/issues/34)) ([7f7528e](https://github.com/liatrio-forge/forge-capstone-devspace/commit/7f7528ee30b479d9e00cc1df1df37480351713ee))
-
 
 ### Bug Fixes
 

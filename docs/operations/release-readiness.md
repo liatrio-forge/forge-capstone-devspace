@@ -56,7 +56,11 @@
 
 ## Known Limitations
 
-- Hosted sync, daemon/watch mode, FUSE lazy mounting, managed team identity, and explicit dependency install are shipped as prototypes (capstone frontier work), not part of the completed local-first MVP baseline.
+- Hosted sync, watch mode, FUSE lazy mounting, access-role advisories, and
+  explicit setup commands are shipped as prototypes or frontier capabilities,
+  not part of the completed local-first MVP baseline. A managed hosted service,
+  detached watch daemon, managed team identity, and remote secret backup are
+  not shipped.
 - No source-code syncing (manifest exchange between machines in the MVP uses user-owned Git remotes only). There is no partial clone or sparse checkout.
 - Secret profile sharing uses explicit age recipients only; there is no OS keychain integration, remote backup, managed identity provider, or guaranteed clawback after a recipient has copied or decrypted material.
 - Dependency/setup commands are detected only as hints and are never executed automatically.
@@ -70,4 +74,5 @@
 
 ## Recommended Next Feature
 
-Clearer multi-machine history (manifest conflict reconciliation already shipped via `reconcile`, spec 06).
+See the maintained roadmap in `README.md`; manifest conflict reconciliation
+already shipped via `reconcile` (spec 06).

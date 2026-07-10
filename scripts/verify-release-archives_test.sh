@@ -27,13 +27,49 @@ make_archive() {
   tar -C "$root" -czf "$tmp/devspace_v0.0.0_${os}_${arch}.tar.gz" .
 }
 
+write_checksums() {
+  (
+    cd "$tmp"
+    shasum -a 256 devspace_*.tar.gz >checksums.txt
+  )
+}
+
 for target in linux_amd64 linux_arm64 darwin_amd64 darwin_arm64; do
   make_archive "${target%_*}" "${target#*_}"
 done
+write_checksums
 "$verify" "$tmp"
 
 make_archive darwin arm64 0
-if "$verify" "$tmp" >/dev/null 2>&1; then
+write_checksums
+if output=$("$verify" "$tmp" 2>&1); then
   echo "expected missing companion validation to fail" >&2
+  exit 1
+elif [[ $output != *"missing executable devspace-tui"* ]]; then
+  echo "unexpected missing companion error: $output" >&2
+  exit 1
+fi
+
+make_archive darwin arm64
+write_checksums
+printf '%064d  devspace-tui_darwin_arm64\n' 0 >>"$tmp/checksums.txt"
+if output=$("$verify" "$tmp" 2>&1); then
+  echo "expected extra checksum entry validation to fail" >&2
+  exit 1
+elif [[ $output != *"expected four archive entries, found 5"* ]]; then
+  echo "unexpected extra checksum error: $output" >&2
+  exit 1
+fi
+
+{
+  printf '%064d  %s\n' 0 "$(awk 'NR == 1 { print $2 }' "$tmp/checksums.txt")"
+  sed -n '2,4p' "$tmp/checksums.txt"
+} >"$tmp/checksums.txt.clean"
+mv "$tmp/checksums.txt.clean" "$tmp/checksums.txt"
+if output=$("$verify" "$tmp" 2>&1); then
+  echo "expected checksum mismatch validation to fail" >&2
+  exit 1
+elif [[ $output != *"missing or invalid checksum"* ]]; then
+  echo "unexpected checksum mismatch error: $output" >&2
   exit 1
 fi

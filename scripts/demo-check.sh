@@ -5,7 +5,7 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/demo-check.sh [--output-dir PATH]
 
-Runs the full local DevDrop demo without network access:
+Runs the full local DevSpace demo without network access:
   build, capture, restore, project update, env write, and status.
 
 Without --output-dir, all generated files live in a temporary directory that is
@@ -48,7 +48,7 @@ if [[ -n "$output_dir" ]]; then
   fi
   cleanup="false"
 else
-  run_root="$(mktemp -d "${TMPDIR:-/tmp}/devdrop-demo-check.XXXXXX")"
+  run_root="$(mktemp -d "${TMPDIR:-/tmp}/devspace-demo-check.XXXXXX")"
 fi
 
 if [[ "$cleanup" == "true" ]]; then
@@ -175,7 +175,7 @@ assert_contains "$project_status" "Hydrated: true"
 assert_contains "$project_status" "Missing env: false"
 
 cat > "$run_root/demo-check-summary.txt" <<SUMMARY
-DevDrop demo-check passed.
+DevSpace demo-check passed.
 Workspace A: $workspace_a
 Workspace B: $workspace_b
 Manifest remote: $manifest_remote
@@ -183,7 +183,7 @@ Project remote: $project_remote
 Generated env mode: 600
 SUMMARY
 
-printf '\nDevDrop demo-check passed.\n'
+printf '\nDevSpace demo-check passed.\n'
 if [[ "$cleanup" == "false" ]]; then
   printf 'Proof artifacts: %s\n' "$run_root"
 fi

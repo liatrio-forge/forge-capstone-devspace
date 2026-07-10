@@ -6,7 +6,7 @@ bare Git remotes so the demo works without network access.
 
 ## Talk Track
 
-DevDrop solves workspace recovery without syncing everything. The demo shows one
+DevSpace solves workspace recovery without syncing everything. The demo shows one
 machine publishing safe workspace metadata, a second machine pulling that
 metadata, creating placeholders, updating a Git project, and materializing an
 encrypted env value only when requested.
@@ -23,14 +23,14 @@ For proof capture, keep the generated workspaces, local bare remotes, pushed
 manifest, and summary file outside the repo with an explicit output directory:
 
 ```bash
-proof_dir="$(mktemp -d /tmp/devdrop-demo-proof.XXXXXX)"
+proof_dir="$(mktemp -d /tmp/devspace-demo-proof.XXXXXX)"
 scripts/demo-check.sh --output-dir "$proof_dir"
 ```
 
 The script builds `devspace`, creates two temporary machine homes, creates a
 local bare project remote and a local bare manifest remote, runs the full
 workflow, asserts the generated `.env` mode is `0600`, and prints
-`DevDrop demo-check passed.` on success.
+`DevSpace demo-check passed.` on success.
 
 ## Machine A: Publish Workspace Metadata
 
@@ -87,7 +87,7 @@ Narration:
 
 Closing line:
 
-DevDrop is intentionally conservative. It does not delete projects, auto-run
+DevSpace is intentionally conservative. It does not delete projects, auto-run
 setup commands, sync source code, or upload secrets. The capstone value is the
 safe recovery workflow, the evidence that destructive edges are guarded, and the
 agent-delivery process that made the work auditable.

@@ -240,7 +240,7 @@ local Manifest
 
 ## Recent Commit Context
 
-`main` history (release of record: `v0.2.0`) shows the project moving from
+`main` history (release of record: `v0.3.0`) shows the project moving from
 release hardening into an interactive, sync-aware workspace manager:
 
 - `feat: add devspace ui interactive dashboard (spec 05) (#30)` added the TUI.

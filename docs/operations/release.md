@@ -117,7 +117,7 @@ The tag already exists, so re-running is safe and idempotent from the same tag:
    `release` workflow run from the Actions UI or `gh run rerun <run-id>`.
    GoReleaser runs with `--clean` and will replace partial release assets.
 2. If the release was published in a broken state, delete it
-   (`gh release delete v0.2.0`) and re-run the workflow — or cut a new
+   (`gh release delete vX.Y.Z`) and re-run the workflow — or cut a new
    `-rc.N+1` tag if the fix required code changes.
 
 ## Consumer verification
@@ -137,14 +137,16 @@ repo is made public:
 
 ```bash
 gh attestation verify checksums.txt --repo liatrio-forge/forge-capstone-devspace
-gh attestation verify devspace_v0.2.0_<goos>_<goarch>.tar.gz --repo liatrio-forge/forge-capstone-devspace
+archive=devspace_vX.Y.Z_linux_amd64.tar.gz # replace with the downloaded archive
+gh attestation verify "$archive" --repo liatrio-forge/forge-capstone-devspace
 ```
 
 Then unpack and install both adjacent executables:
 
 ```bash
+archive=devspace_vX.Y.Z_linux_amd64.tar.gz # replace with the downloaded archive
 mkdir devspace-release
-tar -xzf devspace_v0.2.0_<goos>_<goarch>.tar.gz -C devspace-release
+tar -xzf "$archive" -C devspace-release
 install -m 0755 devspace-release/devspace /usr/local/bin/devspace
 install -m 0755 devspace-release/devspace-tui /usr/local/bin/devspace-tui
 devspace ui
