@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.4.0](https://github.com/liatrio-forge/forge-capstone-devspace/compare/v0.3.0...v0.4.0) (2026-07-10)
+
+
+### Features
+
+* consolidate command taxonomy and status ([9b42c5e](https://github.com/liatrio-forge/forge-capstone-devspace/commit/9b42c5ebc7228c53ba5b0cb04f28e93c486ec41c))
+* consolidate secondary command workflows ([1ffcd2b](https://github.com/liatrio-forge/forge-capstone-devspace/commit/1ffcd2b7111294982fa95dedbacbbeaeeec2f123))
+* consolidate sync and project workflows ([0c4bf11](https://github.com/liatrio-forge/forge-capstone-devspace/commit/0c4bf1111fdc1b6102efa267cbfade76234f659f))
+* **project:** add `devspace project update` command for managing tracked Git projects ([3de3fe3](https://github.com/liatrio-forge/forge-capstone-devspace/commit/3de3fe3a76162cf3d8b14cc2987c30f09796d403))
+* **ui:** bundle companion in release archives ([a9aa8b4](https://github.com/liatrio-forge/forge-capstone-devspace/commit/a9aa8b441ddcb62a497691d8fcb26b90eb2be611))
+
+
+### Bug Fixes
+
+* align demo with project update output ([9e3b113](https://github.com/liatrio-forge/forge-capstone-devspace/commit/9e3b1133aa146b0cad7402d46f73fee6f77c283c))
+* build TUI companions for snapshots ([f77ee5f](https://github.com/liatrio-forge/forge-capstone-devspace/commit/f77ee5f1a54305aea7a69d89a55e0414dacc4c3a))
+* **ci:** isolate Git identity in update test ([90d8f3e](https://github.com/liatrio-forge/forge-capstone-devspace/commit/90d8f3e724ab219050cd4738bfc87dee6ccabea9))
+* close command surface release gaps ([31d8f11](https://github.com/liatrio-forge/forge-capstone-devspace/commit/31d8f11f06ec8ae29c2ceedcc24eb27ebd517292))
+* complete command surface guidance ([789c4ba](https://github.com/liatrio-forge/forge-capstone-devspace/commit/789c4ba1bd85872d042fb745e170a698d9021ed9))
+* **deps:** update x/crypto to 0.52.0 ([6766324](https://github.com/liatrio-forge/forge-capstone-devspace/commit/6766324484129d9e99632a6927d0e9a04c4566af))
+* detect wrapped removed command paths ([b175fc3](https://github.com/liatrio-forge/forge-capstone-devspace/commit/b175fc3502fbaa9107194bc3547aba1febc42110))
+* **docs:** harden release guidance and capstone reader ([34ed374](https://github.com/liatrio-forge/forge-capstone-devspace/commit/34ed3747f3d3142b2444c97aec978974479a4d37))
+* preflight all-project setup commands ([fcccc5d](https://github.com/liatrio-forge/forge-capstone-devspace/commit/fcccc5d22be782913d4677dbf601f476f8b275b0))
+* preserve project update progress ([5cb0d93](https://github.com/liatrio-forge/forge-capstone-devspace/commit/5cb0d93445dcc4bb0fe3f0c9fb3e5b8e06b27954))
+* **release:** run archive validator regression ([b8f6f9d](https://github.com/liatrio-forge/forge-capstone-devspace/commit/b8f6f9d218f45499842ea891462676ee2c2df36f))
+* **release:** validate archive target binaries ([bf6b867](https://github.com/liatrio-forge/forge-capstone-devspace/commit/bf6b867908c4c3558a07a5ab0a66d0257c6c70b6))
+* show help for bare project command ([3bc55ff](https://github.com/liatrio-forge/forge-capstone-devspace/commit/3bc55ff48c3ec79cb4b3f54fcea23b99ce94c342))
+* use canonical experimental mount guidance ([7a5322c](https://github.com/liatrio-forge/forge-capstone-devspace/commit/7a5322cd364abfa38f8a6e100bd5351e809a0446))
+
 ## [0.3.0](https://github.com/liatrio-forge/forge-capstone-devspace/compare/v0.2.0...v0.3.0) (2026-07-09)
 
 ### Features
