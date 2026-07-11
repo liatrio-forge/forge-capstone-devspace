@@ -160,12 +160,19 @@ func PushWorkspaceManifest() (bool, error) {
 		return false, err
 	}
 	changed = changed || ignoreChanged
-	if !changed {
-		recordBaseManifestAfterSync(normalized)
-		return false, nil
-	}
-	if err := commitManifestRepo(repo, cfg); err != nil {
-		return false, err
+	if changed {
+		if err := commitManifestRepo(repo, cfg); err != nil {
+			return false, err
+		}
+	} else {
+		pending, err := manifestRepoHasPendingCommit(repo)
+		if err != nil {
+			return false, err
+		}
+		if !pending {
+			recordBaseManifestAfterSync(normalized)
+			return false, nil
+		}
 	}
 	if err := pushManifestRepo(repo); err != nil {
 		return false, err
@@ -465,6 +472,29 @@ func aheadBehind(ctx context.Context, repo string) (int, int, error) {
 		return 0, 0, err
 	}
 	return ahead, behind, nil
+}
+
+// manifestRepoHasPendingCommit reports whether the manifest cache holds a
+// local commit that never reached the remote — the state a failed network
+// push leaves behind: the cache commits cleanly but the subsequent push
+// fails, so a retry sees no file change and must still publish that commit.
+// A HEAD commit with no upstream tracking ref yet is treated as pending too,
+// since that is the same failed-first-push case before `push -u` ever
+// succeeded.
+func manifestRepoHasPendingCommit(repo string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	if !manifestRepoHasCommit(ctx, repo) {
+		return false, nil
+	}
+	if upstreamRef(ctx, repo) == "" {
+		return true, nil
+	}
+	ahead, _, err := aheadBehind(ctx, repo)
+	if err != nil {
+		return false, err
+	}
+	return ahead > 0, nil
 }
 
 func writeSyncedManifest(repo string, m Manifest) (bool, error) {

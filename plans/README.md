@@ -22,7 +22,7 @@ Generated and reconciled by the improve skill. Execute TODO plans in the order b
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |---|---|---|---|---|---|
-| 024 | Publish a pending manifest commit when `sync push` is retried | P1 | S | — | TODO |
+| 024 | Publish a pending manifest commit when `sync push` is retried | P1 | S | — | DONE |
 | 025 | Keep credentials out of project remotes and sync artifacts | P1 | M | — | TODO |
 | 026 | Verify tagged source before publishing release artifacts | P1 | S | — | TODO |
 | 027 | Serialize diff-cache and mount hydration mutations | P1 | M | — | TODO |
