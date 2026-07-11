@@ -793,6 +793,47 @@ func TestHydrateRejectsCredentialedRemote(t *testing.T) {
 	}
 }
 
+func TestLoadManifestNamesManifestFileWhenRemoteHasCredentials(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	m := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects: []Project{{
+			ID:          projectID("work/app"),
+			Name:        "app",
+			Path:        "work/app",
+			Type:        ProjectTypeGit,
+			Remote:      "https://synthetic-user:synthetic-pat@example.invalid/app.git",
+			HydrateMode: HydrateOnDemand,
+			Ignore:      append([]string{}, DefaultIgnores...),
+		}},
+	}
+	if err := writeJSON(manifestPath(workspace), m, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := LoadManifest(workspace)
+	if err == nil {
+		t.Fatal("expected credentialed manifest to fail loading")
+	}
+	// The only remedy is hand-editing the manifest, so the error must say where it is.
+	// No %v: the error wraps credential-shaped input and must never be echoed.
+	if !strings.Contains(err.Error(), manifestPath(workspace)) {
+		t.Fatal("error does not name the manifest file")
+	}
+	if !strings.Contains(err.Error(), "credentials") {
+		t.Fatal("expected a credentials error")
+	}
+	if strings.Contains(err.Error(), "synthetic-pat") {
+		t.Fatal("load error leaked the credential")
+	}
+}
+
 func TestBuildPlanRedactsRemoteMismatchWarning(t *testing.T) {
 	home := t.TempDir()
 	workspace := filepath.Join(t.TempDir(), "code")
