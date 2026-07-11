@@ -27,7 +27,7 @@ Generated and reconciled by the improve skill. Execute TODO plans in the order b
 | 026 | Verify tagged source before publishing release artifacts | P1 | S | — | DONE |
 | 027 | Serialize diff-cache and mount hydration mutations | P1 | M | — | DONE |
 | 020 | Runtime-validate every devspace-tui RPC result and server event | P1 | M | — | DONE |
-| 028 | Exit devspace-tui with an error when ui-server dies | P2 | S | 020 | TODO |
+| 028 | Exit devspace-tui with an error when ui-server dies | P2 | S | 020 | DONE |
 
 ### Dependency notes
 

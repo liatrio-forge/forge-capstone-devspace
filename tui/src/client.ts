@@ -208,7 +208,10 @@ export function connect(options: ConnectOptions = {}): DevspaceClient {
   void (async () => {
     await pumpText(proc.stdout, (text) => client.feed(text));
     const tail = stderrLines.join("\n").trim();
-    client.closed(tail ? new Error(`devspace ui-server exited: ${tail}`) : undefined);
+    // The spawned server going away is always unexpected termination — never
+    // silently look like a clean close. In-memory/manual callers can still
+    // pass `undefined` to closed() directly (see DevspaceClient.closed()).
+    client.closed(new Error(tail ? `devspace ui-server exited: ${tail}` : "devspace ui-server exited"));
   })();
   return client;
 }
