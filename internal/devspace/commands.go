@@ -475,7 +475,12 @@ func newSyncCommand() *cobra.Command {
 		Example: "  devspace sync diff\n  devspace sync reconcile",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			diff, err := DiffWorkspaceManifest()
+			var diff ManifestDiff
+			err := withAppLock(func() error {
+				var err error
+				diff, err = DiffWorkspaceManifest()
+				return err
+			})
 			if err != nil {
 				return err
 			}

@@ -8,7 +8,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gofrs/flock"
 	"github.com/spf13/cobra"
 )
 
@@ -636,6 +638,43 @@ func TestSyncCommandPushPullDiffJSONAndReconcileFlags(t *testing.T) {
 	}
 	if _, _, err := executeCommand(t, "test", "sync", "reconcile", "--force-local", "--force-remote"); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Fatalf("sync reconcile force error = %v", err)
+	}
+}
+
+// TestSyncDiffUsesAppLockAndRejectsWhenHeld proves `sync diff` mutates the
+// shared manifest cache only while holding the app lock: with another handle
+// already holding it, the command must return the standard lock-contention
+// error before it ever touches the configured remote.
+func TestSyncDiffUsesAppLockAndRejectsWhenHeld(t *testing.T) {
+	initCommandWorkspace(t)
+	remote := workspaceSyncBareRepo(t)
+	if _, _, err := executeCommand(t, "test", "sync", "remote", "set", remote); err != nil {
+		t.Fatal(err)
+	}
+
+	previousTimeout := appLockTimeout
+	previousPoll := appLockPoll
+	appLockTimeout = 30 * time.Millisecond
+	appLockPoll = 5 * time.Millisecond
+	t.Cleanup(func() {
+		appLockTimeout = previousTimeout
+		appLockPoll = previousPoll
+	})
+
+	home, err := appHome()
+	if err != nil {
+		t.Fatal(err)
+	}
+	held := flock.New(filepath.Join(home, ".lock"))
+	if err := held.Lock(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = held.Unlock()
+	}()
+
+	if _, _, err := executeCommand(t, "test", "sync", "diff"); err == nil || !strings.Contains(err.Error(), "another devspace process holds the lock") {
+		t.Fatalf("sync diff error = %v, want lock contention error", err)
 	}
 }
 

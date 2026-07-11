@@ -53,9 +53,9 @@ func gitInfo(path string) GitInfo {
 	// back to empty. A failing `status` is genuinely anomalous and would make
 	// Dirty silently unreliable, so surface it.
 	remoteNames := strings.Fields(mustGit(ctx, path, "remote"))
-	remote := mustGit(ctx, path, "config", "--get", "remote.origin.url")
+	remote := stripRemoteUserinfo(mustGit(ctx, path, "config", "--get", "remote.origin.url"))
 	if remote == "" && len(remoteNames) == 1 {
-		remote = mustGit(ctx, path, "remote", "get-url", remoteNames[0])
+		remote = stripRemoteUserinfo(mustGit(ctx, path, "remote", "get-url", remoteNames[0]))
 	}
 	commit := mustGit(ctx, path, "rev-parse", "--short", "HEAD")
 	status, statusErr := runGit(ctx, path, "status", "--porcelain")
@@ -147,10 +147,35 @@ func cloneRepo(remote, dest string) error {
 		if msg == "" {
 			msg = err.Error()
 		}
+		// remote may still embed credentials if a caller bypasses
+		// validateProjectRemote; redact defensively before it reaches output.
+		msg = sanitizeRemoteInText(remote, msg)
+		safeRemote := redactRemote(remote)
 		//nolint:staticcheck // multi-line message deliberately formatted for direct CLI display, not wrapped
-		return fmt.Errorf("git clone failed for %s into %s: %s\n\nNext steps:\n- Confirm you have access to the repository.\n- Confirm your SSH key or local remote path is configured.\n- Try running `git ls-remote %s`.", remote, dest, msg, remote)
+		return fmt.Errorf("git clone failed for %s into %s: %s\n\nNext steps:\n- Confirm you have access to the repository.\n- Confirm your SSH key or local remote path is configured.\n- Try running `git ls-remote %s`.", safeRemote, dest, msg, safeRemote)
 	}
 	return nil
+}
+
+// stripRemoteUserinfo removes an embedded credential from an absolute Git
+// remote URL before it is persisted, so a token or password observed via
+// `git config --get remote.origin.url` never reaches the manifest. SSH
+// scp-style remotes (git@host:owner/repo) and local paths are not valid
+// URLs, fail url.Parse, and are returned unchanged; they carry no parseable
+// userinfo. ssh://user@host is left alone too: the login user (conventionally
+// "git") is required to clone and carries no secret, since SSH auth happens
+// out of band via keys. Use this for storage; use redactRemote for display,
+// which keeps a placeholder username instead of dropping it.
+func stripRemoteUserinfo(remote string) string {
+	u, err := url.Parse(remote)
+	if err != nil || u.Scheme == "" || u.User == nil {
+		return remote
+	}
+	if _, hasPassword := u.User.Password(); !hasPassword && u.Scheme == "ssh" {
+		return remote
+	}
+	u.User = nil
+	return u.String()
 }
 
 func validateProjectRemote(remote string) error {
@@ -170,6 +195,16 @@ func validateProjectRemote(remote string) error {
 		return fmt.Errorf("git remote uses unsupported transport-helper syntax: %q", remote)
 	}
 	if u, err := url.Parse(remote); err == nil && u.Scheme != "" {
+		// ssh://user@host is the standard way to name the remote login user
+		// (e.g. git@host) and is not a credential on its own, since SSH auth
+		// happens out of band via keys. A password component, or any userinfo
+		// on non-SSH schemes (e.g. a PAT used as the HTTPS username), is an
+		// embedded credential and must be rejected.
+		if u.User != nil {
+			if _, hasPassword := u.User.Password(); hasPassword || u.Scheme != "ssh" {
+				return fmt.Errorf("git remote must not embed credentials in the URL; use a Git credential helper or SSH key instead")
+			}
+		}
 		switch u.Scheme {
 		case "https", "ssh":
 			if u.Host == "" {

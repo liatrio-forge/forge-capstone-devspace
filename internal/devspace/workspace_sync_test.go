@@ -215,6 +215,151 @@ func TestWorkspacePushIdempotentWhenNothingChanged(t *testing.T) {
 	}
 }
 
+func TestWorkspacePushRetriesPendingCommit(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := PushWorkspaceManifest(); err != nil || !changed {
+		t.Fatalf("first push changed=%t err=%v", changed, err)
+	}
+
+	// Simulate the state a failed network push leaves behind: the workspace
+	// manifest changes, the cache is updated and committed, but the push to
+	// origin never happens. Do this directly against the cache (rather than
+	// with a flaky network-failure harness) so the cache ends up exactly one
+	// commit ahead of origin with content matching the workspace.
+	second := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects: []Project{
+			hardeningProject("apps/app", ProjectTypeLocal, ""),
+			hardeningProject("apps/other", ProjectTypeLocal, ""),
+		},
+	}
+	if err := SaveManifest(workspace, second); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writeSyncedManifest(cfg.ManifestRepoPath, manifestForSync(second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := commitManifestRepo(cfg.ManifestRepoPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if ahead := workspaceSyncRun(t, cfg.ManifestRepoPath, "git", "rev-list", "--count", "HEAD", "^origin/main"); strings.TrimSpace(ahead) != "1" {
+		t.Fatalf("test setup: cache ahead-of-origin count = %s, want 1", ahead)
+	}
+
+	changed, err := PushWorkspaceManifest()
+	if err != nil {
+		t.Fatalf("retry push failed: %v", err)
+	}
+	if !changed {
+		t.Fatal("retry push should report changed=true when publishing a pending commit")
+	}
+
+	localHead := strings.TrimSpace(workspaceSyncRun(t, cfg.ManifestRepoPath, "git", "rev-parse", "HEAD"))
+	upstreamHead := strings.TrimSpace(workspaceSyncRun(t, cfg.ManifestRepoPath, "git", "rev-parse", "origin/main"))
+	if localHead != upstreamHead {
+		t.Fatalf("local HEAD %s != upstream HEAD %s after retry", localHead, upstreamHead)
+	}
+	if got := workspaceSyncRun(t, cfg.ManifestRepoPath, "git", "rev-list", "--count", "HEAD"); strings.TrimSpace(got) != "2" {
+		t.Fatalf("commit count after retry = %s, want 2 (retry must publish, not re-commit)", got)
+	}
+
+	clone := filepath.Join(t.TempDir(), "verify-clone")
+	hardeningRun(t, filepath.Dir(clone), "git", "clone", remote, clone)
+	data, err := os.ReadFile(filepath.Join(clone, syncedManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("apps/other")) {
+		t.Fatalf("published manifest missing pending change:\n%s", data)
+	}
+
+	base, hasBase, err := loadBaseManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasBase {
+		t.Fatal("base manifest was not recorded after retry")
+	}
+	baseData, err := manifestBytes(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(baseData, []byte("apps/other")) {
+		t.Fatalf("base manifest does not match published content:\n%s", baseData)
+	}
+}
+
+func TestWorkspacePushFailureDoesNotRecordBase(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeLocal, "")},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := PushWorkspaceManifest(); err != nil || !changed {
+		t.Fatalf("first push changed=%t err=%v", changed, err)
+	}
+
+	// Reject all future pushes at the remote while leaving fetch untouched:
+	// a pre-receive hook that exits nonzero fails the push deterministically,
+	// exactly like an unreachable network remote would, without flakiness.
+	hardeningWriteFile(t, filepath.Join(remote, "hooks", "pre-receive"), "#!/bin/sh\nexit 1\n", 0o755)
+
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects: []Project{
+			hardeningProject("apps/app", ProjectTypeLocal, ""),
+			hardeningProject("apps/other", ProjectTypeLocal, ""),
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PushWorkspaceManifest(); err == nil || !strings.Contains(err.Error(), "remote push failed") {
+		t.Fatalf("push against rejecting remote should fail at the push step, got err=%v", err)
+	}
+
+	base, hasBase, err := loadBaseManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasBase {
+		t.Fatal("base manifest from the first successful push is missing")
+	}
+	baseData, err := manifestBytes(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(baseData, []byte("apps/other")) {
+		t.Fatalf("base manifest recorded unpublished content after failed push:\n%s", baseData)
+	}
+	if !bytes.Contains(baseData, []byte("apps/app")) {
+		t.Fatalf("base manifest no longer matches last published content:\n%s", baseData)
+	}
+}
+
 func TestWorkspacePushUsesConfiguredCommitIdentity(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	remote := workspaceSyncBareRepo(t)
@@ -781,6 +926,37 @@ func TestWorkspaceDiffRefusesInvalidRemoteProjectPath(t *testing.T) {
 	_, err = DiffWorkspaceManifest()
 	if err == nil || !strings.Contains(err.Error(), "escapes workspace") {
 		t.Fatalf("diff traversal error = %v", err)
+	}
+}
+
+func TestWorkspaceDiffRefusesCredentialedRemoteProject(t *testing.T) {
+	hardeningInitWorkspace(t, "code")
+	remote, repo := workspaceSyncRemoteWithClone(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+	const credentialedRemote = "https://synthetic-user:synthetic-pat@example.invalid/app.git"
+	unsafe := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: ".",
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeGit, credentialedRemote)},
+	}
+	data, err := manifestBytes(unsafe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hardeningWriteFile(t, filepath.Join(repo, syncedManifestName), string(data), 0o600)
+	workspaceSyncCommitAndPush(t, repo, "credentialed manifest")
+
+	_, err = DiffWorkspaceManifest()
+	if err == nil {
+		t.Fatal("expected credentialed remote to be rejected")
+	}
+	if !strings.Contains(err.Error(), "credentials") {
+		t.Fatal("expected a credentials error")
+	}
+	if strings.Contains(err.Error(), "synthetic-pat") {
+		t.Fatal("diff error leaked the credential")
 	}
 }
 

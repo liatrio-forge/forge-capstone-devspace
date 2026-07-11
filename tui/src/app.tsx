@@ -91,7 +91,7 @@ export function App({ client, hello, quit }: AppProps) {
       dispatch({ type: "server-event", event });
       if (event.type === "watch-refresh") refreshStatus();
     });
-    const offClose = client.onClose(() => quit());
+    const offClose = client.onClose((err) => quit(err ? err.message : "devspace ui-server exited"));
     return () => {
       offEvent();
       offClose();

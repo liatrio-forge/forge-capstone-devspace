@@ -393,3 +393,31 @@ export interface RequestMap {
 }
 
 export type Method = keyof RequestMap;
+
+/** Runtime-validates a JSON-RPC result against the DTO contract for its method. */
+export function parseResult<M extends Method>(method: M, result: unknown): RequestMap[M]["result"] {
+  const valid = ((): boolean => {
+    switch (method) {
+      case "hello":
+        return isHello(result);
+      case "projects":
+      case "scan":
+      case "refresh":
+      case "plan":
+      case "apply":
+      case "hydrate":
+      case "remove":
+        return isSnapshot(result);
+      case "status":
+        return isSyncStatus(result);
+      case "workspace":
+        return isWorkspaceOverview(result);
+      case "lastPlan":
+        return isPlan(result);
+      default:
+        return false;
+    }
+  })();
+  if (!valid) throw new Error(`invalid ${method} response from devspace ui-server`);
+  return result as RequestMap[M]["result"];
+}

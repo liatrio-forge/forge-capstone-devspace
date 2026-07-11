@@ -141,6 +141,9 @@ func TestValidateProjectRemote(t *testing.T) {
 		{name: "https missing host", remote: "https:///path", wantErr: "missing host"},
 		{name: "ssh host dash", remote: "ssh://-oProxyCommand=sh/repo", wantErr: "host must not begin"},
 		{name: "embedded control", remote: "https://github.com/x\ny.git", wantErr: "control character"},
+		{name: "https userinfo", remote: "https://synthetic-user:synthetic-pat@github.test/o/r.git", wantErr: "credentials"},
+		{name: "https username-only userinfo", remote: "https://synthetic-pat@github.test/o/r.git", wantErr: "credentials"},
+		{name: "ssh url userinfo", remote: "ssh://synthetic-user:synthetic-pat@github.test/o/r.git", wantErr: "credentials"},
 	}
 
 	for _, tc := range cases {
@@ -153,12 +156,27 @@ func TestValidateProjectRemote(t *testing.T) {
 				return
 			}
 			if err == nil {
-				t.Fatalf("validateProjectRemote(%q) returned nil", tc.remote)
+				// tc.name, not tc.remote: credential-shaped rows must never be echoed.
+				t.Fatalf("validateProjectRemote returned nil for %s", tc.name)
 			}
 			if !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestValidateProjectRemoteRejectsCredentialsWithoutEchoingThem(t *testing.T) {
+	const credentialedRemote = "https://synthetic-user:synthetic-pat@github.test/o/r.git"
+	err := validateProjectRemote(credentialedRemote)
+	if err == nil {
+		t.Fatal("expected credentialed remote to be rejected")
+	}
+	if !strings.Contains(err.Error(), "credentials") {
+		t.Fatal("expected a credentials error")
+	}
+	if strings.Contains(err.Error(), "synthetic-pat") || strings.Contains(err.Error(), "synthetic-user") {
+		t.Fatal("validation error echoed the credentialed remote")
 	}
 }
 
@@ -217,6 +235,102 @@ func TestWorkspaceScanDetectsGitAndSetup(t *testing.T) {
 	}
 	if !st.Projects[p.ID].Dirty {
 		t.Fatal("dirty git repo was not reported dirty")
+	}
+}
+
+func TestGitInfoStripsRemoteUserinfo(t *testing.T) {
+	dir := t.TempDir()
+	run(t, dir, "git", "init", "-b", "main")
+	run(t, dir, "git", "config", "user.email", "test@example.com")
+	run(t, dir, "git", "config", "user.name", "Test User")
+	run(t, dir, "git", "remote", "add", "origin", "https://synthetic-user:synthetic-pat@example.invalid/app.git")
+
+	info := gitInfo(dir)
+	if !info.IsRepo {
+		t.Fatal("expected repo to be detected")
+	}
+	if strings.Contains(info.Remote, "synthetic-pat") {
+		t.Fatal("gitInfo persisted a credential in the remote")
+	}
+	if info.Remote != "https://example.invalid/app.git" {
+		t.Fatalf("gitInfo.Remote = %q, want credential-free URL", info.Remote)
+	}
+}
+
+func TestStripRemoteUserinfo(t *testing.T) {
+	cases := map[string]string{
+		"https://synthetic-user:synthetic-pat@github.test/o/r.git": "https://github.test/o/r.git",
+		// PAT-as-username shape: username-only userinfo is still a credential on HTTPS.
+		"https://synthetic-pat@github.test/o/r.git":   "https://github.test/o/r.git",
+		"ssh://git@github.test/o/r.git":               "ssh://git@github.test/o/r.git",
+		"ssh://git:synthetic-pat@github.test/o/r.git": "ssh://github.test/o/r.git",
+		"git@github.test:o/r.git":                     "git@github.test:o/r.git",
+		"/local/bare/repo.git":                        "/local/bare/repo.git",
+	}
+	for in, want := range cases {
+		if got := stripRemoteUserinfo(in); got != want {
+			// want only, never the credential-shaped input.
+			t.Errorf("stripRemoteUserinfo did not produce %q", want)
+		}
+	}
+}
+
+func TestGitInfoPreservesSSHLoginUserWithoutPassword(t *testing.T) {
+	dir := t.TempDir()
+	run(t, dir, "git", "init", "-b", "main")
+	run(t, dir, "git", "config", "user.email", "test@example.com")
+	run(t, dir, "git", "config", "user.name", "Test User")
+	const sshRemote = "ssh://git@example.invalid/app.git"
+	run(t, dir, "git", "remote", "add", "origin", sshRemote)
+
+	info := gitInfo(dir)
+	if info.Remote != sshRemote {
+		t.Fatalf("gitInfo.Remote = %q, want unchanged %q (SSH login user is not a credential)", info.Remote, sshRemote)
+	}
+}
+
+func TestWorkspaceScanNeverPersistsRemoteCredentials(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+
+	app := filepath.Join(workspace, "work", "app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, app, "git", "init", "-b", "main")
+	run(t, app, "git", "config", "user.email", "test@example.com")
+	run(t, app, "git", "config", "user.name", "Test User")
+	write(t, filepath.Join(app, "README.md"), "hello\n")
+	run(t, app, "git", "add", "README.md")
+	run(t, app, "git", "commit", "-m", "initial")
+	run(t, app, "git", "remote", "add", "origin", "https://synthetic-user:synthetic-pat@example.invalid/app.git")
+
+	if _, err := ScanWorkspace(); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := os.ReadFile(manifestPath(workspace))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(raw, []byte("synthetic-pat")) {
+		t.Fatal("manifest on disk contains a credential")
+	}
+
+	m, err := LoadManifest(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, ok := findProject(m, "app")
+	if !ok {
+		t.Fatal("scanned project not in manifest")
+	}
+	if p.Remote != "https://example.invalid/app.git" {
+		t.Fatalf("scanned remote = %q, want credential-free URL", p.Remote)
 	}
 }
 
@@ -634,6 +748,155 @@ func TestHydrateRejectsUnsupportedRemote(t *testing.T) {
 	}
 	if exists(filepath.Join(workspace, "work", "app")) {
 		t.Fatal("hydrate created destination for unsupported remote")
+	}
+}
+
+func TestHydrateRejectsCredentialedRemote(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	cfg, err := InitWorkspace(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const credentialedRemote = "https://synthetic-user:synthetic-pat@example.invalid/app.git"
+	m := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Machines:      []Machine{machineFromConfig(cfg)},
+		Projects: []Project{{
+			ID:          projectID("work/app"),
+			Name:        "app",
+			Path:        "work/app",
+			Type:        ProjectTypeGit,
+			Remote:      credentialedRemote,
+			HydrateMode: HydrateOnDemand,
+			Ignore:      append([]string{}, DefaultIgnores...),
+		}},
+	}
+	if err := writeJSON(manifestPath(workspace), m, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = HydrateProject("app")
+	if err == nil {
+		t.Fatal("expected credentialed remote to be rejected")
+	}
+	if !strings.Contains(err.Error(), "credentials") {
+		t.Fatal("expected a credentials error")
+	}
+	if strings.Contains(err.Error(), "synthetic-pat") {
+		t.Fatal("hydrate error leaked the credential")
+	}
+	if exists(filepath.Join(workspace, "work", "app")) {
+		t.Fatal("hydrate created destination for credentialed remote")
+	}
+}
+
+func TestLoadManifestNamesManifestFileWhenRemoteHasCredentials(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+	m := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects: []Project{{
+			ID:          projectID("work/app"),
+			Name:        "app",
+			Path:        "work/app",
+			Type:        ProjectTypeGit,
+			Remote:      "https://synthetic-user:synthetic-pat@example.invalid/app.git",
+			HydrateMode: HydrateOnDemand,
+			Ignore:      append([]string{}, DefaultIgnores...),
+		}},
+	}
+	if err := writeJSON(manifestPath(workspace), m, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := LoadManifest(workspace)
+	if err == nil {
+		t.Fatal("expected credentialed manifest to fail loading")
+	}
+	// The only remedy is hand-editing the manifest, so the error must say where it is.
+	// No %v: the error wraps credential-shaped input and must never be echoed.
+	if !strings.Contains(err.Error(), manifestPath(workspace)) {
+		t.Fatal("error does not name the manifest file")
+	}
+	if !strings.Contains(err.Error(), "credentials") {
+		t.Fatal("expected a credentials error")
+	}
+	if strings.Contains(err.Error(), "synthetic-pat") {
+		t.Fatal("load error leaked the credential")
+	}
+}
+
+func TestBuildPlanRedactsRemoteMismatchWarning(t *testing.T) {
+	home := t.TempDir()
+	workspace := filepath.Join(t.TempDir(), "code")
+	t.Setenv(envHome, home)
+	if _, err := InitWorkspace(workspace); err != nil {
+		t.Fatal(err)
+	}
+
+	app := filepath.Join(workspace, "work", "app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, app, "git", "init", "-b", "main")
+	run(t, app, "git", "config", "user.email", "test@example.com")
+	run(t, app, "git", "config", "user.name", "Test User")
+	write(t, filepath.Join(app, "README.md"), "hello\n")
+	run(t, app, "git", "add", "README.md")
+	run(t, app, "git", "commit", "-m", "initial")
+	// Simulate a checkout whose local origin still carries a credential,
+	// independent of whatever the synced manifest records.
+	run(t, app, "git", "remote", "add", "origin", "https://synthetic-user:synthetic-pat@example.invalid/app.git")
+
+	m := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects: []Project{{
+			ID:          projectID("work/app"),
+			Name:        "app",
+			Path:        "work/app",
+			Type:        ProjectTypeGit,
+			Remote:      "https://example.invalid/app-manifest.git",
+			HydrateMode: HydrateOnDemand,
+			Ignore:      append([]string{}, DefaultIgnores...),
+		}},
+	}
+	if err := SaveManifest(workspace, m); err != nil {
+		t.Fatal(err)
+	}
+
+	plan, err := BuildPlan()
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(plan.Warnings, "\n")
+	if strings.Contains(joined, "synthetic-pat") {
+		t.Fatal("plan warning leaked a credential")
+	}
+	if !strings.Contains(joined, "different Git remote") {
+		t.Fatalf("expected a remote mismatch warning, got %v", plan.Warnings)
+	}
+}
+
+func TestCloneRepoRedactsCredentialsOnFailure(t *testing.T) {
+	const credentialedRemote = "https://synthetic-user:synthetic-pat@127.0.0.1:1/repo.git"
+	err := cloneRepo(credentialedRemote, filepath.Join(t.TempDir(), "out"))
+	if err == nil {
+		t.Fatal("expected clone against a closed port to fail")
+	}
+	if strings.Contains(err.Error(), "synthetic-pat") {
+		t.Fatal("clone error leaked the credential")
+	}
+	if !strings.Contains(err.Error(), "redacted") {
+		t.Fatalf("expected the redacted remote to appear in the clone error, got %v", err)
 	}
 }
 

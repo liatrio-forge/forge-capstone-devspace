@@ -22,12 +22,12 @@ Generated and reconciled by the improve skill. Execute TODO plans in the order b
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |---|---|---|---|---|---|
-| 024 | Publish a pending manifest commit when `sync push` is retried | P1 | S | — | TODO |
-| 025 | Keep credentials out of project remotes and sync artifacts | P1 | M | — | TODO |
-| 026 | Verify tagged source before publishing release artifacts | P1 | S | — | TODO |
-| 027 | Serialize diff-cache and mount hydration mutations | P1 | M | — | TODO |
-| 020 | Runtime-validate every devspace-tui RPC result and server event | P1 | M | — | TODO |
-| 028 | Exit devspace-tui with an error when ui-server dies | P2 | S | 020 | TODO |
+| 024 | Publish a pending manifest commit when `sync push` is retried | P1 | S | — | DONE |
+| 025 | Keep credentials out of project remotes and sync artifacts | P1 | M | — | DONE |
+| 026 | Verify tagged source before publishing release artifacts | P1 | S | — | DONE |
+| 027 | Serialize diff-cache and mount hydration mutations | P1 | M | — | DONE |
+| 020 | Runtime-validate every devspace-tui RPC result and server event | P1 | M | — | DONE |
+| 028 | Exit devspace-tui with an error when ui-server dies | P2 | S | 020 | DONE |
 
 ### Dependency notes
 
@@ -79,7 +79,7 @@ These were audited but not selected for plans in this wave.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 020 | Runtime-validate every devspace-tui RPC result and server event | P1 | M | — | TODO (refreshed 2026-07-10) |
+| 020 | Runtime-validate every devspace-tui RPC result and server event | P1 | M | — | DONE |
 | 021 | Make release-check build devspace-tui assets before the GoReleaser dry-run | P1 | S | — | DONE (spec 13 task 4.0) |
 | 022 | Reconcile README, architecture, and follow-up docs with shipped DevSpace state | P2 | S | — | DONE (spec 13 task 5.0) |
 | 023 | Define the managed hosted sync production contract | P2 | M | 022 | TODO |

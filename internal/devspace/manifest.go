@@ -17,7 +17,12 @@ func LoadManifest(workspace string) (Manifest, error) {
 	if err != nil {
 		return m, err
 	}
-	return m, ValidateManifest(m)
+	if err := ValidateManifest(m); err != nil {
+		// Name the file so a user with an invalid persisted manifest (e.g. a
+		// credentialed remote) knows what to hand-edit; every command loads it.
+		return m, fmt.Errorf("invalid manifest %s: %w", manifestPath(workspace), err)
+	}
+	return m, nil
 }
 
 func SaveManifest(workspace string, m Manifest) error {

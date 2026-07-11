@@ -327,7 +327,7 @@ func (n *workspaceMountNode) projectInode(ctx context.Context, p Project) (*fs.I
 		return nil, syscall.EIO
 	}
 	if n.shouldHydrate(full, p) {
-		if _, err := HydrateProject(p.ID); err != nil {
+		if err := hydrateForLookup(full, p, n.shouldHydrate); err != nil {
 			logger.Warn(fmt.Sprintf("hydrate %s failed", p.Path), "error", err)
 			return nil, syscall.EIO
 		}
@@ -354,6 +354,21 @@ func (n *workspaceMountNode) shouldHydrate(full string, p Project) bool {
 		return false
 	}
 	return !exists(full) || isEmptyDir(full)
+}
+
+// hydrateForLookup serializes FUSE-triggered hydration across concurrent
+// lookups. Two lookups can both observe shouldHydrate == true before either
+// acquires the app lock, so the predicate is re-checked once inside the lock
+// and HydrateProject only runs if hydration is still needed. The lock is held
+// only for this single attempt, never for the mount lifetime.
+func hydrateForLookup(full string, p Project, shouldHydrate func(string, Project) bool) error {
+	return withAppLock(func() error {
+		if !shouldHydrate(full, p) {
+			return nil
+		}
+		_, err := HydrateProject(p.ID)
+		return err
+	})
 }
 
 type mountChild struct {

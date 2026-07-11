@@ -1,7 +1,8 @@
 import type { Subprocess } from "bun";
-import type { Method, RequestMap, ServerEvent } from "./protocol";
+import { parseResult, isServerEvent, type Method, type RequestMap, type ServerEvent } from "./protocol";
 
 interface Pending {
+  method: Method;
   resolve: (value: unknown) => void;
   reject: (err: Error) => void;
   timer?: ReturnType<typeof setTimeout>;
@@ -42,7 +43,7 @@ export class DevspaceClient {
     const id = this.nextId++;
     const params = args[0];
     return new Promise((resolve, reject) => {
-      const pending: Pending = { resolve: resolve as (v: unknown) => void, reject };
+      const pending: Pending = { method, resolve: resolve as (v: unknown) => void, reject };
       if (this.requestTimeoutMs > 0) {
         pending.timer = setTimeout(() => {
           this.pending.delete(id);
@@ -103,7 +104,7 @@ export class DevspaceClient {
     let msg: {
       id?: number;
       method?: string;
-      params?: ServerEvent;
+      params?: unknown;
       result?: unknown;
       error?: { message: string };
     };
@@ -112,13 +113,15 @@ export class DevspaceClient {
     } catch {
       return; // ignore non-JSON noise on the stream
     }
-    if (msg.method === "event" && msg.params) {
+    if (msg.method === "event" && msg.params !== undefined) {
+      if (!isServerEvent(msg.params)) return; // drop malformed/unknown events; keep the stream alive
+      const event = msg.params;
       if (this.eventListeners.size === 0) {
-        this.earlyEvents.push(msg.params);
+        this.earlyEvents.push(event);
         this.earlyEvents = this.earlyEvents.slice(-20);
         return;
       }
-      for (const listener of this.eventListeners) listener(msg.params);
+      for (const listener of this.eventListeners) listener(event);
       return;
     }
     if (typeof msg.id !== "number") return;
@@ -126,8 +129,15 @@ export class DevspaceClient {
     if (!pending) return;
     this.pending.delete(msg.id);
     if (pending.timer) clearTimeout(pending.timer);
-    if (msg.error) pending.reject(new Error(msg.error.message));
-    else pending.resolve(msg.result);
+    if (msg.error) {
+      pending.reject(new Error(msg.error.message));
+      return;
+    }
+    try {
+      pending.resolve(parseResult(pending.method, msg.result));
+    } catch (err) {
+      pending.reject(err instanceof Error ? err : new Error(String(err)));
+    }
   }
 }
 
@@ -198,7 +208,10 @@ export function connect(options: ConnectOptions = {}): DevspaceClient {
   void (async () => {
     await pumpText(proc.stdout, (text) => client.feed(text));
     const tail = stderrLines.join("\n").trim();
-    client.closed(tail ? new Error(`devspace ui-server exited: ${tail}`) : undefined);
+    // The spawned server going away is always unexpected termination — never
+    // silently look like a clean close. In-memory/manual callers can still
+    // pass `undefined` to closed() directly (see DevspaceClient.closed()).
+    client.closed(new Error(tail ? `devspace ui-server exited: ${tail}` : "devspace ui-server exited"));
   })();
   return client;
 }

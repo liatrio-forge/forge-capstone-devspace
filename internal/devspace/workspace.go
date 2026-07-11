@@ -397,7 +397,7 @@ func BuildPlan() (Plan, error) {
 				plan.Actions = append(plan.Actions, PlanAction{Safety: "skipped", Kind: "skip", Path: p.Path, Project: p.Name, Reason: "repo is dirty; DevSpace will not pull or modify it"})
 			}
 			if p.Remote != "" && info.Remote != "" && info.Remote != p.Remote {
-				plan.Warnings = append(plan.Warnings, fmt.Sprintf("%s has a different Git remote than manifest: %s != %s", p.Path, info.Remote, p.Remote))
+				plan.Warnings = append(plan.Warnings, fmt.Sprintf("%s has a different Git remote than manifest: %s != %s", p.Path, redactRemote(info.Remote), redactRemote(p.Remote)))
 				plan.Actions = append(plan.Actions, PlanAction{Safety: "skipped", Kind: "skip", Path: p.Path, Project: p.Name, Reason: "Git remote differs from manifest"})
 			}
 			if info.InspectWarning != "" {
@@ -516,7 +516,7 @@ func HydrateProject(ref string) (Project, error) {
 	}
 	defer os.RemoveAll(tmp)
 	if err := cloneRepo(p.Remote, tmp); err != nil {
-		return Project{}, fmt.Errorf("cannot hydrate %s.\n\nReason:\n%w\n\nRemote:\n%s", p.Path, err, p.Remote)
+		return Project{}, fmt.Errorf("cannot hydrate %s.\n\nReason:\n%w\n\nRemote:\n%s", p.Path, err, redactRemote(p.Remote))
 	}
 	if exists(full) {
 		// Verified empty above; remove the empty placeholder so Rename succeeds.

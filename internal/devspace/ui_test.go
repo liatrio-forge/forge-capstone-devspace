@@ -12,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/fsnotify/fsnotify"
+	"github.com/gofrs/flock"
 )
 
 func TestDashboardInitialModelRendersScan(t *testing.T) {
@@ -189,6 +190,52 @@ func TestDashboardSyncStatusCmdUsesDiffAndSavedReconcilePlan(t *testing.T) {
 	}
 	if status.LastSyncAt == "" {
 		t.Fatalf("status LastSyncAt missing: %+v", status)
+	}
+}
+
+// TestDashboardSyncStatusCmdReportsLockContentionAsUnavailable proves the
+// dashboard's cache-mutating diff runs inside the same non-reentrant lock
+// boundary as its config/state reads: with the app lock already held
+// elsewhere, the whole status command must surface the lock-contention error
+// as UnavailableReason rather than racing DiffWorkspaceManifest unlocked.
+func TestDashboardSyncStatusCmdReportsLockContentionAsUnavailable(t *testing.T) {
+	dashboardSyncStatusTestWorkspace(t)
+	remote := workspaceSyncBareRepo(t)
+	if _, err := SetManifestRemote(remote); err != nil {
+		t.Fatal(err)
+	}
+
+	previousTimeout := appLockTimeout
+	previousPoll := appLockPoll
+	appLockTimeout = 30 * time.Millisecond
+	appLockPoll = 5 * time.Millisecond
+	t.Cleanup(func() {
+		appLockTimeout = previousTimeout
+		appLockPoll = previousPoll
+	})
+
+	home, err := appHome()
+	if err != nil {
+		t.Fatal(err)
+	}
+	held := flock.New(filepath.Join(home, ".lock"))
+	if err := held.Lock(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = held.Unlock()
+	}()
+
+	msg := dashboardSyncStatusCmd()()
+	loaded, ok := msg.(syncStatusLoadedMsg)
+	if !ok {
+		t.Fatalf("msg = %T, want syncStatusLoadedMsg", msg)
+	}
+	if !strings.Contains(loaded.status.UnavailableReason, "another devspace process holds the lock") {
+		t.Fatalf("status = %+v, want lock contention unavailable reason", loaded.status)
+	}
+	if loaded.status.DiffAdded != 0 || loaded.status.DiffRemoved != 0 || loaded.status.DiffChanged != 0 {
+		t.Fatalf("status = %+v, want no diff fields populated while contended", loaded.status)
 	}
 }
 

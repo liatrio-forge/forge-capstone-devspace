@@ -186,20 +186,18 @@ func dashboardSyncStatusCmd() tea.Cmd {
 				status.GitDiffUnavailable = syncStatusHostedUnavailable
 				return nil
 			}
+			diff, err := DiffWorkspaceManifest()
+			if err != nil {
+				return err
+			}
+			status.DiffAdded = len(diff.Added)
+			status.DiffRemoved = len(diff.Removed)
+			status.DiffChanged = len(diff.Changed)
+			status.LocalDiffers = status.DiffAdded+status.DiffRemoved+status.DiffChanged > 0
 			return nil
 		})
 		if err != nil {
 			status.UnavailableReason = err.Error()
-		} else if cfg.ManifestRemote != "" {
-			diff, err := DiffWorkspaceManifest()
-			if err != nil {
-				status.UnavailableReason = err.Error()
-			} else {
-				status.DiffAdded = len(diff.Added)
-				status.DiffRemoved = len(diff.Removed)
-				status.DiffChanged = len(diff.Changed)
-				status.LocalDiffers = status.DiffAdded+status.DiffRemoved+status.DiffChanged > 0
-			}
 		}
 		return syncStatusLoadedMsg{status: status}
 	}

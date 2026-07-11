@@ -149,4 +149,61 @@ describe("DevspaceClient", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]?.message).toBe("first");
   });
+
+  test("rejects with a method-specific error when the hello result fails validation", async () => {
+    const { client } = pair();
+    const req = client.request("hello");
+    client.feed(`{"id":1,"result":{"workspaceRoot":"/w"}}\n`);
+    await expect(req).rejects.toThrow("invalid hello response from devspace ui-server");
+  });
+
+  test("rejects with a method-specific error when the status result fails validation", async () => {
+    const { client } = pair();
+    const req = client.request("status");
+    client.feed(`{"id":1,"result":{"configured":"yes"}}\n`);
+    await expect(req).rejects.toThrow("invalid status response from devspace ui-server");
+  });
+
+  test("rejects with a method-specific error when the snapshot result fails validation", async () => {
+    const { client } = pair();
+    const req = client.request("projects");
+    client.feed(`{"id":1,"result":{"rows":"not-an-array"}}\n`);
+    await expect(req).rejects.toThrow("invalid projects response from devspace ui-server");
+  });
+
+  test("a valid result still resolves and clears its timer", async () => {
+    const { client } = pair(30);
+    const req = client.request("hello");
+    client.feed(
+      `{"id":1,"result":{"protocol":1,"workspaceRoot":"/w","machineId":"m","machineName":"mac","syncMode":"off","watch":true}}\n`,
+    );
+    expect((await req).workspaceRoot).toBe("/w");
+    // Wait past the timeout window to prove the cleared timer doesn't fire a stray rejection.
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  });
+
+  test("drops malformed events without delivering or buffering them", () => {
+    const { client } = pair();
+    client.feed(`{"method":"event","params":{"type":"watch-error","message":42}}\n`);
+    const events: ServerEvent[] = [];
+    client.onEvent((ev) => events.push(ev));
+    expect(events).toHaveLength(0);
+  });
+
+  test("drops unknown event types without delivering or buffering them", () => {
+    const { client } = pair();
+    client.feed(`{"method":"event","params":{"type":"mystery"}}\n`);
+    const events: ServerEvent[] = [];
+    client.onEvent((ev) => events.push(ev));
+    expect(events).toHaveLength(0);
+  });
+
+  test("a valid event after a malformed event is still delivered", () => {
+    const { client } = pair();
+    const events: ServerEvent[] = [];
+    client.onEvent((ev) => events.push(ev));
+    client.feed(`{"method":"event","params":{"type":"watch-error","message":42}}\n`);
+    client.feed(`{"method":"event","params":{"type":"watch-error","message":"ok"}}\n`);
+    expect(events).toEqual([{ type: "watch-error", message: "ok" }]);
+  });
 });

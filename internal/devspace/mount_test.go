@@ -5,6 +5,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -130,6 +131,50 @@ func TestStatusFileAttrReportsGeneratedContentSize(t *testing.T) {
 	}
 	if attr.Size == 0 {
 		t.Fatal("status file size must be non-zero")
+	}
+}
+
+// TestMountHydrationSerializesConcurrentLookups proves concurrent FUSE
+// lookups deciding hydration is needed for the same project perform at most
+// one clone: without the lock-and-recheck helper, two lookups can both
+// observe an empty destination, race HydrateProject, and one loses to
+// "destination folder is non-empty" because the other already renamed its
+// clone into place.
+func TestMountHydrationSerializesConcurrentLookups(t *testing.T) {
+	workspace := hardeningInitWorkspace(t, "code")
+	remote := hardeningBareRepo(t)
+	p := hardeningProject("apps/lazy", ProjectTypeGit, remote)
+	if err := SaveManifest(workspace, Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: workspace,
+		Projects:      []Project{p},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	full := filepath.Join(workspace, "apps", "lazy")
+	shouldHydrate := func(full string, p Project) bool {
+		return !exists(full) || isEmptyDir(full)
+	}
+
+	const lookups = 5
+	var wg sync.WaitGroup
+	errs := make(chan error, lookups)
+	for range lookups {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- hydrateForLookup(full, p, shouldHydrate)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent hydration failed: %v", err)
+		}
+	}
+	if !exists(filepath.Join(full, ".git")) {
+		t.Fatal("expected project to be hydrated exactly once")
 	}
 }
 

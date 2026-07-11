@@ -356,6 +356,29 @@ func TestHostedServerRejectsUnsafeProjectPaths(t *testing.T) {
 	}
 }
 
+func TestHostedServerRejectsCredentialedProjectRemote(t *testing.T) {
+	server := hostedSyncTestServer(t)
+	const credentialedRemote = "https://synthetic-user:synthetic-pat@example.invalid/app.git"
+	unsafe := Manifest{
+		Version:       ManifestVersion,
+		WorkspaceRoot: ".",
+		Projects:      []Project{hardeningProject("apps/app", ProjectTypeGit, credentialedRemote)},
+	}
+	resp := hostedSyncPutRaw(t, server.URL, "team-a", hostedManifestPutRequest{ExpectedVersion: 0, Manifest: unsafe})
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(body, []byte("synthetic-pat")) {
+		t.Fatal("hosted server response leaked a credential")
+	}
+}
+
 func TestHostedPushDetectsRemoteVersionConflict(t *testing.T) {
 	workspace := hardeningInitWorkspace(t, "code")
 	server := hostedSyncTestServer(t)
