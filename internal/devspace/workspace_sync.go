@@ -393,7 +393,11 @@ func pullManifestRepo(repo, remote string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if !manifestRepoHasCommit(ctx, repo) {
+	hasCommit, err := manifestRepoHasCommit(ctx, repo)
+	if err != nil {
+		return err
+	}
+	if !hasCommit {
 		return nil
 	}
 	if upstreamRef(ctx, repo) == "" {
@@ -409,7 +413,11 @@ func pullManifestRepo(repo, remote string) error {
 }
 
 func ensureManifestRepoNoUnpushedCommits(ctx context.Context, repo string) error {
-	if !manifestRepoHasCommit(ctx, repo) || upstreamRef(ctx, repo) == "" {
+	hasCommit, err := manifestRepoHasCommit(ctx, repo)
+	if err != nil {
+		return err
+	}
+	if !hasCommit || upstreamRef(ctx, repo) == "" {
 		return nil
 	}
 	ahead, _, err := aheadBehind(ctx, repo)
@@ -425,7 +433,11 @@ func ensureManifestRepoNoUnpushedCommits(ctx context.Context, repo string) error
 func ensureManifestRepoNotBehind(repo string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if !manifestRepoHasCommit(ctx, repo) || upstreamRef(ctx, repo) == "" {
+	hasCommit, err := manifestRepoHasCommit(ctx, repo)
+	if err != nil {
+		return err
+	}
+	if !hasCommit || upstreamRef(ctx, repo) == "" {
 		return nil
 	}
 	ahead, behind, err := aheadBehind(ctx, repo)
@@ -441,9 +453,19 @@ func ensureManifestRepoNotBehind(repo string) error {
 	return nil
 }
 
-func manifestRepoHasCommit(ctx context.Context, repo string) bool {
-	_, err := runGit(ctx, repo, "rev-parse", "--verify", "HEAD")
-	return err == nil
+// manifestRepoHasCommit reports whether HEAD resolves to a commit. A repo
+// with no commits yet ("unborn HEAD") also fails rev-parse, so that failure
+// is only treated as "no commit" once the repo itself is confirmed usable;
+// any other rev-parse failure (corrupt repo, missing dir, git error) is
+// returned as an error rather than silently folded into "no commit".
+func manifestRepoHasCommit(ctx context.Context, repo string) (bool, error) {
+	if _, err := runGit(ctx, repo, "rev-parse", "--verify", "HEAD"); err != nil {
+		if _, gitErr := runGit(ctx, repo, "rev-parse", "--git-dir"); gitErr != nil {
+			return false, fmt.Errorf("manifest repo unusable: %w", gitErr)
+		}
+		return false, nil
+	}
+	return true, nil
 }
 
 func upstreamRef(ctx context.Context, repo string) string {
@@ -484,7 +506,11 @@ func aheadBehind(ctx context.Context, repo string) (int, int, error) {
 func manifestRepoHasPendingCommit(repo string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if !manifestRepoHasCommit(ctx, repo) {
+	hasCommit, err := manifestRepoHasCommit(ctx, repo)
+	if err != nil {
+		return false, err
+	}
+	if !hasCommit {
 		return false, nil
 	}
 	if upstreamRef(ctx, repo) == "" {
